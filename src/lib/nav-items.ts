@@ -31,6 +31,7 @@ export const NAV_ITEMS: NavItem[] = [
     module: PermissionModule.ACTIVITY_LOGS,
   },
   { label: 'Staff', href: '/staff', module: PermissionModule.STAFF },
+  { label: 'Push Notifications', href: '/push-notifications', module: PermissionModule.NOTIFICATIONS },
 ];
 
 export const NAV_REQUIRED_ACTION = PermissionAction.VIEW;
@@ -58,4 +59,5 @@ export const NAV_ICONS: Record<PermissionModule, string> = {
   [PermissionModule.PRODUCTS]: 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z M3.3 7L12 12l8.7-5 M12 22V12',
   [PermissionModule.PARTNERS]: 'M3 9l1.5-5h15L21 9 M4 9v10h16V9 M9 19v-6h6v6',
   [PermissionModule.ADS]: 'M3 3v18h18 M7 14l3-3 3 3 5-6',
+  [PermissionModule.NOTIFICATIONS]: 'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9 M13.73 21a2 2 0 0 1-3.46 0',
 };

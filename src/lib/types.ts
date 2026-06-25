@@ -239,3 +239,4 @@ export interface AdminActivityLog {
   vendor?: { _id: string; name?: string; businessName?: string } | string;
   createdAt?: string;
 }
+

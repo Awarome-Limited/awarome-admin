@@ -8,12 +8,14 @@ export function PaginationControls({
   totalCount,
   basePath,
   searchParams,
+  skipParam = 'skip',
 }: {
   skip: number;
   limit: number;
   totalCount: number;
   basePath: string;
   searchParams: Record<string, string | undefined>;
+  skipParam?: string;
 }) {
   const hasPrev = skip > 0;
   const hasNext = skip + limit < totalCount;
@@ -21,19 +23,20 @@ export function PaginationControls({
   const buildHref = (newSkip: number) => {
     const params = new URLSearchParams();
     Object.entries(searchParams).forEach(([key, value]) => {
-      if (value) params.set(key, value);
+      if (value && key !== skipParam) params.set(key, value);
     });
-    params.set('skip', String(newSkip));
-    return `${basePath}?${params.toString()}`;
+    if (newSkip > 0) params.set(skipParam, String(newSkip));
+    const qs = params.toString();
+    return `${basePath}${qs ? `?${qs}` : ''}`;
   };
 
   const navClass = (enabled: boolean) =>
     cn(buttonVariants({ variant: 'outline', size: 'sm' }), !enabled && 'pointer-events-none opacity-50');
 
   return (
-    <div className="flex items-center justify-between pt-4">
+    <div className="flex items-center justify-between">
       <p className="text-sm text-muted-foreground">
-        Showing {totalCount === 0 ? 0 : skip + 1}-
+        Showing {totalCount === 0 ? 0 : skip + 1}–
         {Math.min(skip + limit, totalCount)} of {totalCount}
       </p>
       <div className="flex gap-2">

@@ -83,7 +83,12 @@ async function AnalyticsSection({ rangeKey }: { rangeKey?: string }) {
   const recentOrders =
     ordersResult.status === 'fulfilled' ? ordersResult.value.data : [];
 
-  const { summary, revenueOverTime, ordersByStatus, topVendors } = overview;
+  const {
+    summary,
+    revenueOverTime = [],
+    ordersByStatus = [],
+    topVendors = [],
+  } = overview;
 
   const statCards = [
     {

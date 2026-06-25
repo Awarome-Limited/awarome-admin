@@ -18,6 +18,7 @@ import {
 import { formatDate } from '@/lib/format';
 import { setVendorSuspended, updateVendor } from '../actions';
 import { SuspendToggle } from '@/components/suspend-toggle';
+import { PaginationControls } from '@/components/pagination-controls';
 
 function initials(name?: string) {
   return (name || '')
@@ -37,12 +38,18 @@ function formatSales(naira?: number) {
   return `₦${naira.toLocaleString()}`;
 }
 
+const PRODUCTS_LIMIT = 10;
+
 export default async function VendorDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
+  const productSkip = Number(sp.pSkip ?? 0);
 
   let vendor: AdminVendor;
   let stats: VendorStatistics | null = null;
@@ -69,11 +76,16 @@ export default async function VendorDetailPage({
   }
 
   let products: AdminProduct[] = [];
+  let productsTotalCount = 0;
   try {
+    const pq = new URLSearchParams();
+    pq.set('limit', String(PRODUCTS_LIMIT));
+    pq.set('skip', String(productSkip));
     const productsRes = await authedFetch<PaginatedResponse<AdminProduct>>(
-      `/vendors/admin/${id}/products?limit=10`
+      `/vendors/admin/${id}/products?${pq.toString()}`
     );
     products = (productsRes as any).data?.products ?? productsRes.data ?? [];
+    productsTotalCount = productsRes.totalCount ?? products.length;
   } catch {
     // non-fatal
   }
@@ -107,13 +119,10 @@ export default async function VendorDetailPage({
   ];
 
   const statCards = [
-    { label: 'Products', value: String(stats?.totalProductsCount ?? '—') },
-    { label: 'Orders', value: String(stats?.totalOrdersCount ?? '—') },
-    { label: 'Total sales', value: stats ? formatSales(stats.totalSales) : '—' },
-    {
-      label: 'Rating',
-      value: vendor.rating ? `${vendor.rating.toFixed(1)} ★` : '—',
-    },
+    { label: 'Products', value: String(stats?.totalProductsCount ?? '—'), href: undefined },
+    { label: 'Orders', value: String(stats?.totalOrdersCount ?? '—'), href: `/orders?vendor=${id}` },
+    { label: 'Total sales', value: stats ? formatSales(stats.totalSales) : '—', href: undefined },
+    { label: 'Rating', value: vendor.rating ? `${vendor.rating.toFixed(1)} ★` : '—', href: undefined },
   ];
 
   return (
@@ -175,17 +184,37 @@ export default async function VendorDetailPage({
 
       {/* Stat cards */}
       <div className="grid gap-3.5 [grid-template-columns:repeat(auto-fit,minmax(170px,1fr))]">
-        {statCards.map((s) => (
-          <div
-            key={s.label}
-            className="flex flex-col gap-1.5 rounded-[14px] border border-border bg-card p-[16px_18px] shadow-[var(--shadow-card)]"
-          >
-            <span className="text-[12.5px] font-medium text-muted-foreground">{s.label}</span>
-            <span className="text-[23px] font-bold tabular-nums tracking-tight text-primary">
-              {s.value}
-            </span>
-          </div>
-        ))}
+        {statCards.map((s) => {
+          const inner = (
+            <>
+              <span className="text-[12.5px] font-medium text-muted-foreground">{s.label}</span>
+              <span className="text-[23px] font-bold tabular-nums tracking-tight text-primary">
+                {s.value}
+              </span>
+              {s.href && (
+                <span className="mt-1 text-[12px] font-semibold text-primary">
+                  View orders →
+                </span>
+              )}
+            </>
+          );
+          return s.href ? (
+            <Link
+              key={s.label}
+              href={s.href}
+              className="flex flex-col gap-1.5 rounded-[14px] border border-border bg-card p-[16px_18px] shadow-[var(--shadow-card)] transition-colors hover:border-primary/40 hover:bg-brand-tint"
+            >
+              {inner}
+            </Link>
+          ) : (
+            <div
+              key={s.label}
+              className="flex flex-col gap-1.5 rounded-[14px] border border-border bg-card p-[16px_18px] shadow-[var(--shadow-card)]"
+            >
+              {inner}
+            </div>
+          );
+        })}
       </div>
 
       {/* Vendor information */}
@@ -273,6 +302,18 @@ export default async function VendorDetailPage({
             </TableBody>
           </Table>
         </div>
+        {productsTotalCount > PRODUCTS_LIMIT && (
+          <div className="border-t border-border px-4 py-3">
+            <PaginationControls
+              skip={productSkip}
+              limit={PRODUCTS_LIMIT}
+              totalCount={productsTotalCount}
+              basePath={`/vendors/${id}`}
+              searchParams={sp}
+              skipParam="pSkip"
+            />
+          </div>
+        )}
       </div>
 
       {/* Edit vendor */}

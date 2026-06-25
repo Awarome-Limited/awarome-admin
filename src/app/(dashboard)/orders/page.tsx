@@ -54,12 +54,14 @@ export default async function OrdersPage({
   const skip = Number(params.skip ?? 0);
   const search = params.search ?? '';
   const activeFilter = params.filter ?? 'all';
+  const vendor = params.vendor ?? '';
   const filterQ = filterToQuery(activeFilter);
 
   const query = new URLSearchParams();
   query.set('skip', String(skip));
   query.set('limit', String(LIMIT));
   if (search) query.set('search', search);
+  if (vendor) query.set('vendor', vendor);
   Object.entries(filterQ).forEach(([k, v]) => query.set(k, v));
 
   let result: PaginatedResponse<AdminOrder>;
@@ -93,9 +95,22 @@ export default async function OrdersPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-[23px] font-bold tracking-tight text-foreground">Orders</h1>
-        <p className="mt-1 text-[14px] text-muted-foreground">All customer orders</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-[23px] font-bold tracking-tight text-foreground">Orders</h1>
+          <p className="mt-1 text-[14px] text-muted-foreground">All customer orders</p>
+        </div>
+        {vendor && (
+          <Link
+            href="/orders"
+            className="inline-flex h-[34px] items-center gap-1.5 rounded-[9px] border border-border-strong bg-card px-3 text-[13px] font-semibold text-foreground-secondary hover:bg-muted"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+            Clear vendor filter
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -117,6 +132,7 @@ export default async function OrdersPage({
             const href = (() => {
               const p = new URLSearchParams();
               if (search) p.set('search', search);
+              if (vendor) p.set('vendor', vendor);
               if (f.key !== 'all') p.set('filter', f.key);
               const s = p.toString();
               return `/orders${s ? `?${s}` : ''}`;
