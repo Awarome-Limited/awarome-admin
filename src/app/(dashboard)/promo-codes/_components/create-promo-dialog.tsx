@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { PlusIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 import { createPromoCode, PromoCodePayload } from '../actions';
 
 const selectClass =
@@ -39,28 +40,28 @@ export function CreatePromoDialog() {
     const usageLimit = formData.get('usageLimit')?.toString();
 
     startTransition(async () => {
-      try {
-        await createPromoCode({
-          code,
-          discountType,
-          discountValue,
-          applicability: formData.get('applicability')?.toString() as PromoCodePayload['applicability'],
-          maxDiscountAmount: maxDiscountAmount ? Number(maxDiscountAmount) : undefined,
-          expiryDate: expiryDate || undefined,
-          usageLimit: usageLimit ? Number(usageLimit) : undefined,
-          description: formData.get('description')?.toString() || undefined,
-        });
+      const result = await createPromoCode({
+        code,
+        discountType,
+        discountValue,
+        applicability: formData.get('applicability')?.toString() as PromoCodePayload['applicability'],
+        maxDiscountAmount: maxDiscountAmount ? Number(maxDiscountAmount) : undefined,
+        expiryDate: expiryDate || undefined,
+        usageLimit: usageLimit ? Number(usageLimit) : undefined,
+        description: formData.get('description')?.toString() || undefined,
+      });
+      if (result.error) {
+        setError(result.error);
+      } else {
         setOpen(false);
         setDiscountType('percentage');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to create promo code.');
       }
     });
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm" />}>
+      <DialogTrigger className={cn(buttonVariants({ size: 'sm' }))}>
         <PlusIcon data-icon="inline-start" />
         Create promo code
       </DialogTrigger>
@@ -69,7 +70,13 @@ export function CreatePromoDialog() {
           <DialogTitle>Create promo code</DialogTitle>
           <DialogDescription>Set up a new discount campaign</DialogDescription>
         </DialogHeader>
-        <form action={handleSubmit} className="flex flex-col gap-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit(new FormData(e.currentTarget));
+          }}
+          className="flex flex-col gap-4"
+        >
           <div className="flex flex-col gap-2">
             <Label htmlFor="code">Promo code</Label>
             <Input id="code" name="code" placeholder="e.g. WELCOME15" className="font-mono uppercase" required />

@@ -69,7 +69,10 @@ export function Sidebar({
         ))}
       </nav>
       <div className="border-t border-sidebar-border p-3">
-        <div className="flex items-center gap-2.5 px-1.5 py-2">
+        <Link
+          href="/profile"
+          className="flex items-center gap-2.5 rounded-[9px] px-1.5 py-2 transition-colors hover:bg-secondary"
+        >
           <AvatarInitials name={`${profile.firstName} ${profile.lastName}`} size="sm" />
           <div className="flex min-w-0 flex-col gap-px">
             <span className="truncate text-[13px] font-semibold text-sidebar-foreground">
@@ -77,7 +80,7 @@ export function Sidebar({
             </span>
             <span className="text-[11px] text-muted-foreground">{profile.role}</span>
           </div>
-        </div>
+        </Link>
         <form action={logout}>
           <button
             type="submit"

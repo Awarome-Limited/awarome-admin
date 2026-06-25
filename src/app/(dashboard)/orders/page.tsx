@@ -153,18 +153,7 @@ export default async function OrdersPage({
             );
           })}
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="inline-flex h-[34px] items-center gap-1.5 rounded-[9px] border border-border-strong bg-card px-3.5 text-[13px] font-semibold text-foreground-secondary hover:bg-muted"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
-            </svg>
-            Export
-          </button>
-          <SearchBox placeholder="Search by order ID or customer…" />
-        </div>
+        <SearchBox placeholder="Search by order ID or customer…" />
       </div>
 
       <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">

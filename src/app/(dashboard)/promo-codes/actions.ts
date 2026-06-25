@@ -14,9 +14,14 @@ export interface PromoCodePayload {
   description?: string;
 }
 
-export async function createPromoCode(payload: PromoCodePayload) {
-  await authedFetch('/promo-codes', { method: 'POST', body: payload });
-  revalidatePath('/promo-codes');
+export async function createPromoCode(payload: PromoCodePayload): Promise<{ error?: string }> {
+  try {
+    await authedFetch('/promo-codes', { method: 'POST', body: payload });
+    revalidatePath('/promo-codes');
+    return {};
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Something went wrong.' };
+  }
 }
 
 export async function updatePromoCode(id: string, payload: PromoCodePayload) {
@@ -25,10 +30,15 @@ export async function updatePromoCode(id: string, payload: PromoCodePayload) {
   revalidatePath(`/promo-codes/${id}`);
 }
 
-export async function togglePromoCodeActive(id: string) {
-  await authedFetch(`/promo-codes/${id}/toggle-active`, { method: 'PATCH' });
-  revalidatePath('/promo-codes');
-  revalidatePath(`/promo-codes/${id}`);
+export async function togglePromoCodeActive(id: string): Promise<{ error?: string }> {
+  try {
+    await authedFetch(`/promo-codes/${id}/toggle-active`, { method: 'PATCH' });
+    revalidatePath('/promo-codes');
+    revalidatePath(`/promo-codes/${id}`);
+    return {};
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Something went wrong.' };
+  }
 }
 
 export async function deletePromoCode(id: string) {

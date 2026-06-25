@@ -153,23 +153,22 @@ export default async function ProductsPage({
 
       {/* Table card */}
       <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="overflow-x-auto">
-          <Table>
+          <Table className="table-fixed">
             <TableHeader>
               <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead>Vendor</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead className="text-right">Price</TableHead>
-                <TableHead className="text-right">Stock</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead className="w-[38%]">Product</TableHead>
+                <TableHead className="w-[20%]">Vendor</TableHead>
+                <TableHead className="w-[15%]">Category</TableHead>
+                <TableHead className="w-[10%] text-right">Price</TableHead>
+                <TableHead className="w-[7%] text-right">Stock</TableHead>
+                <TableHead className="w-[10%]">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {result.data.map((product) => (
                 <TableRow key={product._id} className="cursor-pointer">
-                  <TableCell>
-                    <Link href={`/products/${product._id}`} className="flex items-center gap-3">
+                  <TableCell className="min-w-0">
+                    <Link href={`/products/${product._id}`} className="flex min-w-0 items-center gap-3">
                       {product.image ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -182,15 +181,15 @@ export default async function ProductsPage({
                           {(product.name ?? '?').charAt(0).toUpperCase()}
                         </div>
                       )}
-                      <span className="font-semibold text-foreground hover:underline">
+                      <span className="truncate font-semibold text-foreground hover:underline">
                         {product.name || '—'}
                       </span>
                     </Link>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="truncate text-muted-foreground">
                     {productVendorName(product)}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="truncate text-muted-foreground">
                     {productCategoryName(product)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums font-medium">
@@ -215,7 +214,6 @@ export default async function ProductsPage({
               )}
             </TableBody>
           </Table>
-        </div>
         <div className="border-t border-border px-4 py-3">
           <PaginationControls
             skip={result.skip}

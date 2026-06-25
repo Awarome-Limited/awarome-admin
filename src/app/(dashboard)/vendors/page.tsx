@@ -68,18 +68,21 @@ export default async function VendorsPage({
   const monthStart = startOfMonthISO();
 
   let result: PaginatedResponse<AdminVendor>;
-  let activeCount = 0;
+  let totalAllVendors = 0;
   let categoriesCount = 0;
   let newThisMonth = 0;
   let suspendedCount = 0;
 
   try {
-    [result, activeCount, categoriesCount, newThisMonth, suspendedCount] = await Promise.all([
+    // skip=1 on safeCount calls: the backend resets limit→0 when skip is absent
+    // (pagination.skip defaults to 0, and !0 === true triggers the reset).
+    // Sending skip=1 keeps the string truthy so limit=1 is honoured.
+    [result, totalAllVendors, categoriesCount, newThisMonth, suspendedCount] = await Promise.all([
       authedFetch<PaginatedResponse<AdminVendor>>(`/vendors/admin?${query.toString()}`),
-      safeCount('/vendors/admin?suspended=false&limit=1'),
+      safeCount('/vendors/admin?skip=1&limit=1'),
       safeCount('/products/categories?limit=1'),
-      safeCount(`/vendors/admin?createdFrom=${encodeURIComponent(monthStart)}&limit=1`),
-      safeCount('/vendors/admin?suspended=true&limit=1'),
+      safeCount(`/vendors/admin?createdFrom=${encodeURIComponent(monthStart)}&skip=1&limit=1`),
+      safeCount('/vendors/admin?suspended=true&skip=1&limit=1'),
     ]);
   } catch (error) {
     return (
@@ -88,6 +91,8 @@ export default async function VendorsPage({
       />
     );
   }
+
+  const activeCount = Math.max(0, totalAllVendors - suspendedCount);
 
   const chips = [
     { label: 'Active vendors', value: activeCount.toLocaleString() },

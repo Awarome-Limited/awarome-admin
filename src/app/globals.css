@@ -2,6 +2,12 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@keyframes nav-scan {
+  0%   { left: -40%; width: 40%; }
+  50%  { left: 30%;  width: 60%; }
+  100% { left: 110%; width: 40%; }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

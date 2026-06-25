@@ -375,7 +375,11 @@ export default async function OrderDetailPage({
               <p className="mb-4 text-[12.5px] text-muted-foreground">
                 Manually update this order. Written to activity log.
               </p>
-              <form action={handleStatusUpdate} className="flex flex-col gap-4">
+              <form
+                key={`${order.status}-${order.orderDeliveryStatus}-${order.orderVendorStatus}`}
+                action={handleStatusUpdate}
+                className="flex flex-col gap-4"
+              >
                 <StatusField
                   label="Order status"
                   name="status"
