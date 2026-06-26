@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { AvatarInitials } from '@/components/avatar-initials';
@@ -30,9 +29,7 @@ export function Header({
       <div className="flex items-center gap-2.5">
         <ThemeToggle />
         <div className="h-6 w-px bg-border" />
-        <Link href="/profile">
-          <AvatarInitials name={`${profile.firstName} ${profile.lastName}`} size="sm" />
-        </Link>
+        <AvatarInitials name={`${profile.firstName} ${profile.lastName}`} size="sm" />
       </div>
     </header>
   );
