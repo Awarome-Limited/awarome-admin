@@ -6,9 +6,8 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center gap-3 text-center">
-          <div className="flex size-11 items-center justify-center rounded-xl bg-primary text-lg font-extrabold tracking-tight text-primary-foreground">
-            A
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="Awarome" width={44} height={44} className="rounded-xl" />
           <div>
             <CardTitle className="text-lg">Awarome Admin</CardTitle>
             <CardDescription className="mt-1">Sign in with your staff account</CardDescription>

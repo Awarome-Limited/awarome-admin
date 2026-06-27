@@ -44,9 +44,8 @@ export function Sidebar({
   return (
     <aside className="flex w-[248px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
       <div className="flex items-center gap-[11px] px-[18px] pt-5 pb-3.5">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-primary text-base font-extrabold tracking-tight text-primary-foreground">
-          A
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.svg" alt="Awarome" width={36} height={36} className="shrink-0 rounded-[10px]" />
         <div className="flex flex-col gap-px">
           <span className="text-[15px] font-bold tracking-tight text-sidebar-foreground">
             Awarome

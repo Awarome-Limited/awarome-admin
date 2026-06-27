@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { authedFetch, ApiError, PaginatedResponse } from '@/lib/api-client';
-import { AdminOrder } from '@/lib/types';
+import { AdminOrder, AdminVendor } from '@/lib/types';
 import { ApiErrorCard } from '@/components/api-error-card';
 import { SearchBox } from '@/components/search-box';
 import { PaginationControls } from '@/components/pagination-controls';
@@ -36,6 +36,12 @@ function customerName(user: AdminOrder['user']) {
   return [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || '—';
 }
 
+function vendorName(vendor: AdminOrder['vendor'], vendorMap: Map<string, string>) {
+  if (!vendor) return '—';
+  if (typeof vendor === 'string') return vendorMap.get(vendor) ?? '—';
+  return vendor.businessName || vendor.name || '—';
+}
+
 async function safeCount(url: string): Promise<number> {
   try {
     const r = await authedFetch<PaginatedResponse<unknown>>(url);
@@ -69,8 +75,12 @@ export default async function OrdersPage({
   let confirmedCount = 0;
   let pendingCount = 0;
   let failedCount = 0;
+  let vendors: AdminVendor[] = [];
 
   try {
+    const vendorsRes = await authedFetch<PaginatedResponse<AdminVendor>>('/vendors?limit=200').catch(() => null);
+    vendors = vendorsRes?.data ?? [];
+
     [result, totalOrdersCount, confirmedCount, pendingCount, failedCount] = await Promise.all([
       authedFetch<PaginatedResponse<AdminOrder>>(`/admins/orders?${query.toString()}`),
       safeCount('/admins/orders?limit=1'),
@@ -86,6 +96,8 @@ export default async function OrdersPage({
     );
   }
 
+  const vendorMap = new Map(vendors.map((v) => [v._id, v.businessName || v.name || '—']));
+
   const chips = [
     { label: 'Total orders', value: totalOrdersCount.toLocaleString() },
     { label: 'Confirmed', value: confirmedCount.toLocaleString() },
@@ -95,22 +107,9 @@ export default async function OrdersPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[23px] font-bold tracking-tight text-foreground">Orders</h1>
-          <p className="mt-1 text-[14px] text-muted-foreground">All customer orders</p>
-        </div>
-        {vendor && (
-          <Link
-            href="/orders"
-            className="inline-flex h-[34px] items-center gap-1.5 rounded-[9px] border border-border-strong bg-card px-3 text-[13px] font-semibold text-foreground-secondary hover:bg-muted"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
-            Clear vendor filter
-          </Link>
-        )}
+      <div>
+        <h1 className="text-[23px] font-bold tracking-tight text-foreground">Orders</h1>
+        <p className="mt-1 text-[14px] text-muted-foreground">All customer orders</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -163,6 +162,7 @@ export default async function OrdersPage({
               <TableRow>
                 <TableHead>Order ID</TableHead>
                 <TableHead>Customer</TableHead>
+                <TableHead>Vendor</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Delivery</TableHead>
                 <TableHead className="text-right">Total</TableHead>
@@ -181,6 +181,7 @@ export default async function OrdersPage({
                     </Link>
                   </TableCell>
                   <TableCell className="font-medium">{customerName(order.user)}</TableCell>
+                  <TableCell className="text-muted-foreground">{vendorName(order.vendor, vendorMap)}</TableCell>
                   <TableCell>
                     <Badge variant={statusBadgeVariant(order.status)} dot>
                       {order.status}
@@ -201,7 +202,7 @@ export default async function OrdersPage({
               ))}
               {result.data.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                     No orders found.
                   </TableCell>
                 </TableRow>
