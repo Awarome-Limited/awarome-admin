@@ -9,6 +9,7 @@ export interface AdminUser {
   phone?: string;
   role?: string;
   state?: string;
+  source?: string;
   suspended?: boolean;
   deleted?: boolean;
   createdAt?: string;
@@ -84,6 +85,17 @@ export interface AdminOrderCart {
   product?: { _id: string; name?: string; image?: string } | string;
   price?: number;
   quantity?: number;
+}
+
+export interface AdminCart {
+  _id: string;
+  user?: { _id: string; firstName?: string; lastName?: string; email?: string; phone?: string } | string;
+  product?: { _id: string; name?: string; image?: string; price?: number } | string;
+  vendor?: { _id: string; name?: string; businessName?: string } | string;
+  quantity?: number;
+  price?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AdminOrder {
@@ -225,6 +237,24 @@ export interface AdminStaff {
   isActive: boolean;
   lastLoginAt?: string;
   createdAt?: string;
+}
+
+export interface AdminAudienceList {
+  _id: string;
+  name: string;
+  totalPhones: number;
+  matchedCount: number;
+  createdAt?: string;
+}
+
+export interface AdminAudienceListDetail extends AdminAudienceList {
+  users: Array<{
+    _id: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+  }>;
 }
 
 export interface AdminActivityLog {

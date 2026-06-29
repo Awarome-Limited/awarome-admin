@@ -57,6 +57,7 @@ export default async function UserDetailPage({
           <DetailRow label="Email" value={user.email} />
           <DetailRow label="Phone" value={user.phone} />
           <DetailRow label="Role" value={<Badge variant="outline">{user.role}</Badge>} />
+          <DetailRow label="Source" value={user.source} />
           <DetailRow label="State" value={user.state} />
           <DetailRow label="Joined" value={formatDate(user.createdAt)} />
           <DetailRow

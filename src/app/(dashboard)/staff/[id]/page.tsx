@@ -74,6 +74,11 @@ export default async function StaffDetailPage({
     });
   }
 
+  async function handleSetActive(suspended: boolean) {
+    'use server';
+    await setStaffActive(staff._id, !suspended);
+  }
+
   async function handleDelete() {
     'use server';
     await deleteStaff(id);
@@ -111,7 +116,7 @@ export default async function StaffDetailPage({
               ) : (
                 <SuspendToggle
                   suspended={!staff.isActive}
-                  action={(suspended) => setStaffActive(staff._id, !suspended)}
+                  action={handleSetActive}
                 />
               )
             }

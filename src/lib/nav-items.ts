@@ -30,6 +30,7 @@ export const NAV_ITEMS: NavItem[] = [
     href: '/activity-logs',
     module: PermissionModule.ACTIVITY_LOGS,
   },
+  { label: 'Carts', href: '/carts', module: PermissionModule.CARTS },
   { label: 'Staff', href: '/staff', module: PermissionModule.STAFF },
   { label: 'Push Notifications', href: '/push-notifications', module: PermissionModule.NOTIFICATIONS },
 ];
@@ -60,4 +61,5 @@ export const NAV_ICONS: Record<PermissionModule, string> = {
   [PermissionModule.PARTNERS]: 'M3 9l1.5-5h15L21 9 M4 9v10h16V9 M9 19v-6h6v6',
   [PermissionModule.ADS]: 'M3 3v18h18 M7 14l3-3 3 3 5-6',
   [PermissionModule.NOTIFICATIONS]: 'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9 M13.73 21a2 2 0 0 1-3.46 0',
+  [PermissionModule.CARTS]: 'M9 22a1 1 0 1 0 0-2 1 1 0 0 0 0 2 M20 22a1 1 0 1 0 0-2 1 1 0 0 0 0 2 M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6',
 };

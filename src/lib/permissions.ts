@@ -24,6 +24,7 @@ export enum PermissionModule {
   PARTNERS = 'partners',
   ADS = 'ads',
   NOTIFICATIONS = 'notifications',
+  CARTS = 'carts',
 }
 
 export enum PermissionAction {

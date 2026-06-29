@@ -1,7 +1,9 @@
-import { broadcastPushNotification } from './actions';
-import { ComposeForm } from './_components/compose-form';
+import { getAudienceLists } from './actions';
+import { PushNotificationsClient } from './_components/push-notifications-client';
 
 export default async function PushNotificationsPage() {
+  const audienceLists = await getAudienceLists().catch(() => []);
+
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -9,14 +11,11 @@ export default async function PushNotificationsPage() {
           Push notifications
         </h1>
         <p className="mt-1 text-[14px] text-muted-foreground">
-          Broadcast a promotional push notification to your users
+          Broadcast a message to everyone, or target a saved audience list.
         </p>
       </div>
 
-      <div className="max-w-2xl rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]">
-        <div className="mb-5 text-[15px] font-semibold text-foreground">Compose</div>
-        <ComposeForm action={broadcastPushNotification} />
-      </div>
+      <PushNotificationsClient initialLists={audienceLists} />
     </div>
   );
 }

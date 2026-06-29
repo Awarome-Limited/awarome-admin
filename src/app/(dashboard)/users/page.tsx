@@ -18,6 +18,8 @@ import {
 import { formatDate } from '@/lib/format';
 import { setUserSuspended } from './actions';
 import { cn } from '@/lib/utils';
+import { DateRangeFilter } from './_components/date-range-filter';
+import { ExportButton } from './_components/export-button';
 
 const LIMIT = 20;
 
@@ -61,12 +63,16 @@ export default async function UsersPage({
   const skip = Number(params.skip ?? 0);
   const search = params.search ?? '';
   const activeFilter = (params.filter ?? 'all') as string;
+  const dateFrom = params.dateFrom ?? '';
+  const dateTo = params.dateTo ?? '';
   const filterQ = filterToQuery(activeFilter);
 
   const query = new URLSearchParams();
   query.set('skip', String(skip));
   query.set('limit', String(LIMIT));
   if (search) query.set('search', search);
+  if (dateFrom) query.set('createdFrom', dateFrom);
+  if (dateTo) query.set('createdTo', dateTo);
   Object.entries(filterQ).forEach(([k, v]) => query.set(k, v));
 
   const weekStart = startOfWeekISO();
@@ -119,35 +125,46 @@ export default async function UsersPage({
         ))}
       </div>
 
-      {/* Toolbar: filter pills + search */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {FILTERS.map((f) => {
-            const active = activeFilter === f.key;
-            const href = (() => {
-              const p = new URLSearchParams();
-              if (search) p.set('search', search);
-              if (f.key !== 'all') p.set('filter', f.key);
-              const s = p.toString();
-              return `/users${s ? `?${s}` : ''}`;
-            })();
-            return (
-              <Link
-                key={f.key}
-                href={href}
-                className={cn(
-                  'rounded-[9px] border px-3.5 py-[7px] text-[13px] font-semibold transition-colors',
-                  active
-                    ? 'border-transparent bg-brand-tint text-primary'
-                    : 'border-border-strong bg-card text-foreground-secondary hover:bg-muted'
-                )}
-              >
-                {f.label}
-              </Link>
-            );
-          })}
+      {/* Toolbar */}
+      <div className="flex flex-col gap-2.5">
+        {/* Row 1: filter pills + search + export */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {FILTERS.map((f) => {
+              const active = activeFilter === f.key;
+              const href = (() => {
+                const p = new URLSearchParams();
+                if (search) p.set('search', search);
+                if (f.key !== 'all') p.set('filter', f.key);
+                const s = p.toString();
+                return `/users${s ? `?${s}` : ''}`;
+              })();
+              return (
+                <Link
+                  key={f.key}
+                  href={href}
+                  className={cn(
+                    'rounded-[9px] border px-3.5 py-[7px] text-[13px] font-semibold transition-colors',
+                    active
+                      ? 'border-transparent bg-brand-tint text-primary'
+                      : 'border-border-strong bg-card text-foreground-secondary hover:bg-muted'
+                  )}
+                >
+                  {f.label}
+                </Link>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-2">
+            <SearchBox placeholder="Search by name, email, phone…" />
+            <ExportButton />
+          </div>
         </div>
-        <SearchBox placeholder="Search by name, email, phone…" />
+
+        {/* Row 2: date range filter */}
+        <div className="flex items-center">
+          <DateRangeFilter />
+        </div>
       </div>
 
       {/* Table card */}
@@ -159,6 +176,7 @@ export default async function UsersPage({
                 <TableHead>User</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Source</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Joined</TableHead>
               </TableRow>
@@ -184,6 +202,9 @@ export default async function UsersPage({
                   <TableCell>
                     <Badge variant="outline">{user.role}</Badge>
                   </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {user.source || '—'}
+                  </TableCell>
                   <TableCell>
                     <SuspendToggle
                       suspended={!!user.suspended}
@@ -195,7 +216,7 @@ export default async function UsersPage({
               ))}
               {result.data.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                     No users found.
                   </TableCell>
                 </TableRow>
