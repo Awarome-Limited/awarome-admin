@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LogOut, X } from 'lucide-react';
+import { LogOut, Settings, X } from 'lucide-react';
 import { logout } from '@/lib/actions';
 import { AvatarInitials } from '@/components/avatar-initials';
 import { NavItem, NAV_ICONS, DASHBOARD_ICON } from '@/lib/nav-items';
@@ -91,15 +91,29 @@ export function Sidebar({
             <span className="text-[11px] text-muted-foreground">{profile.role}</span>
           </div>
         </div>
-        <form action={logout}>
-          <button
-            type="submit"
-            className="mt-1.5 flex w-full items-center justify-center gap-[7px] rounded-[9px] border border-border-strong bg-transparent py-2 text-[13px] font-medium text-foreground-secondary transition-colors hover:bg-secondary"
+        <div className="mt-1.5 flex flex-col gap-1">
+          <Link
+            href="/settings"
+            className={cn(
+              'flex w-full items-center gap-[7px] rounded-[9px] px-3 py-2 text-[13px] font-medium transition-colors',
+              pathname === '/settings' || pathname.startsWith('/settings/')
+                ? 'bg-sidebar-accent font-semibold text-sidebar-accent-foreground'
+                : 'text-foreground-secondary hover:bg-secondary hover:text-foreground'
+            )}
           >
-            <LogOut className="size-[15px]" />
-            Sign out
-          </button>
-        </form>
+            <Settings className="size-[15px]" />
+            Settings
+          </Link>
+          <form action={logout}>
+            <button
+              type="submit"
+              className="flex w-full items-center justify-center gap-[7px] rounded-[9px] border border-border-strong bg-transparent py-2 text-[13px] font-medium text-foreground-secondary transition-colors hover:bg-secondary"
+            >
+              <LogOut className="size-[15px]" />
+              Sign out
+            </button>
+          </form>
+        </div>
       </div>
     </aside>
   );
