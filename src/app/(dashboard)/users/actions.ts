@@ -52,6 +52,15 @@ export async function setUserSuspended(id: string, suspended: boolean) {
   revalidatePath(`/users/${id}`);
 }
 
+export async function updateUser(
+  id: string,
+  body: { firstName?: string; lastName?: string; phone?: string; state?: string; source?: string }
+) {
+  await authedFetch(`/users/admin/${id}`, { method: 'PATCH', body });
+  revalidatePath('/users');
+  revalidatePath(`/users/${id}`);
+}
+
 export async function deleteUser(id: string) {
   await authedFetch(`/users/admin/${id}`, { method: 'DELETE' });
   revalidatePath('/users');

@@ -1,6 +1,22 @@
 // Mirrors the subset of awarome-BE response shapes the admin UI renders.
 // Keep in sync manually with the BE models until the two repos share types.
 
+export interface UserAddressEntry {
+  address?: string;
+  description?: string;
+  state?: string;
+  lga?: string;
+  country?: string;
+  tag?: string;
+  isActive?: boolean;
+}
+
+export interface UserAddresses {
+  home?: UserAddressEntry | null;
+  work?: UserAddressEntry | null;
+  others?: UserAddressEntry[] | null;
+}
+
 export interface AdminUser {
   _id: string;
   firstName?: string;

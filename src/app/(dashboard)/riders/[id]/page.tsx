@@ -137,8 +137,8 @@ export default async function RiderDetailPage({
             </TableBody>
           </Table>
           <PaginationControls
-            skip={orders.skip}
-            limit={orders.limit || LIMIT}
+            skip={skip}
+            limit={LIMIT}
             totalCount={orders.totalCount}
             basePath={`/riders/${id}`}
             searchParams={query}

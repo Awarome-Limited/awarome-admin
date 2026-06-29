@@ -210,8 +210,8 @@ export default async function StaffPage({
         </div>
         <div className="border-t border-border px-4 py-3">
           <PaginationControls
-            skip={result.skip}
-            limit={result.limit || LIMIT}
+            skip={skip}
+            limit={LIMIT}
             totalCount={result.totalCount}
             basePath="/staff"
             searchParams={params}

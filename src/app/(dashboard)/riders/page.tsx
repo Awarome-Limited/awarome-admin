@@ -189,8 +189,8 @@ export default async function RidersPage({
         </div>
         <div className="border-t border-border px-4 py-3">
           <PaginationControls
-            skip={result.skip}
-            limit={result.limit || LIMIT}
+            skip={skip}
+            limit={LIMIT}
             totalCount={result.totalCount}
             basePath="/riders"
             searchParams={params}
