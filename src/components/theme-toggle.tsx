@@ -25,11 +25,8 @@ export function ThemeToggle() {
   function toggle() {
     const next = !dark;
     document.documentElement.classList.toggle('dark', next);
-    try {
-      localStorage.setItem(STORAGE_KEY, next ? '1' : '0');
-    } catch {
-      // localStorage unavailable (private browsing, etc.) - theme just won't persist
-    }
+    // Persist in cookie so the server can apply the class on next render (no flash)
+    document.cookie = `awarome.theme=${next ? 'dark' : 'light'}; path=/; max-age=31536000; SameSite=Lax`;
     window.dispatchEvent(new Event(THEME_EVENT));
   }
 

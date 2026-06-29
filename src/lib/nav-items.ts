@@ -10,29 +10,17 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Users', href: '/users', module: PermissionModule.USERS },
   { label: 'Vendors', href: '/vendors', module: PermissionModule.VENDORS },
   { label: 'Products', href: '/products', module: PermissionModule.PRODUCTS },
-  { label: 'Riders', href: '/riders', module: PermissionModule.RIDERS },
   { label: 'Orders', href: '/orders', module: PermissionModule.ORDERS },
-  {
-    label: 'Deliveries',
-    href: '/deliveries',
-    module: PermissionModule.DELIVERIES,
-  },
+  { label: 'Carts', href: '/carts', module: PermissionModule.CARTS },
+  { label: 'Deliveries', href: '/deliveries', module: PermissionModule.DELIVERIES },
+  { label: 'Riders', href: '/riders', module: PermissionModule.RIDERS },
   { label: 'Payments', href: '/payments', module: PermissionModule.PAYMENTS },
   { label: 'Wallets', href: '/payments/wallets', module: PermissionModule.PAYMENTS },
-  { label: 'Pricing', href: '/pricing', module: PermissionModule.PRICING },
-  {
-    label: 'Promo Codes',
-    href: '/promo-codes',
-    module: PermissionModule.PROMO_CODES,
-  },
-  {
-    label: 'Activity Logs',
-    href: '/activity-logs',
-    module: PermissionModule.ACTIVITY_LOGS,
-  },
-  { label: 'Carts', href: '/carts', module: PermissionModule.CARTS },
-  { label: 'Staff', href: '/staff', module: PermissionModule.STAFF },
   { label: 'Push Notifications', href: '/push-notifications', module: PermissionModule.NOTIFICATIONS },
+  { label: 'Pricing', href: '/pricing', module: PermissionModule.PRICING },
+  { label: 'Promo Codes', href: '/promo-codes', module: PermissionModule.PROMO_CODES },
+  { label: 'Staff', href: '/staff', module: PermissionModule.STAFF },
+  { label: 'Activity Logs', href: '/activity-logs', module: PermissionModule.ACTIVITY_LOGS },
 ];
 
 export const NAV_REQUIRED_ACTION = PermissionAction.VIEW;

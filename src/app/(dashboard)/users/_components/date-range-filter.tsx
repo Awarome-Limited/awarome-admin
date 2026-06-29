@@ -27,7 +27,7 @@ export function DateRangeFilter() {
   }
 
   const inputClass =
-    'h-8 rounded-[9px] border border-input bg-card px-2.5 text-[13px] text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50';
+    'w-full sm:w-auto h-8 rounded-[9px] border border-input bg-card px-2.5 text-[13px] text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50';
 
   return (
     <div className="flex flex-wrap items-center gap-2">

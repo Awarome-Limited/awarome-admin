@@ -46,7 +46,7 @@ export function SearchBox({ placeholder = 'Search…' }: { placeholder?: string 
         defaultValue={initialValue}
         onChange={(event) => handleChange(event.target.value)}
         placeholder={placeholder}
-        className="w-56 rounded-[9px] border border-border-strong bg-card py-[7px] pl-8 pr-3 text-[13px] font-medium text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+        className="w-full sm:w-56 rounded-[9px] border border-border-strong bg-card py-[7px] pl-8 pr-3 text-[13px] font-medium text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
       />
     </div>
   );

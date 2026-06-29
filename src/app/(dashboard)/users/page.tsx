@@ -155,7 +155,7 @@ export default async function UsersPage({
               );
             })}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <SearchBox placeholder="Search by name, email, phone…" />
             <ExportButton />
           </div>

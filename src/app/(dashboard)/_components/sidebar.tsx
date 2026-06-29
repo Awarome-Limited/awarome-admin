@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LogOut } from 'lucide-react';
+import { LogOut, X } from 'lucide-react';
 import { logout } from '@/lib/actions';
 import { AvatarInitials } from '@/components/avatar-initials';
 import { NavItem, NAV_ICONS, DASHBOARD_ICON } from '@/lib/nav-items';
@@ -30,23 +30,25 @@ function NavIcon({ d }: { d: string }) {
 export function Sidebar({
   profile,
   navItems,
+  onClose,
 }: {
   profile: StaffProfile;
   navItems: NavItem[];
+  onClose?: () => void;
 }) {
   const pathname = usePathname();
 
-  // Only highlight the most-specific matching item (longest href wins).
   const activeHref = navItems
     .filter((item) => pathname === item.href || pathname.startsWith(item.href + '/'))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
-    <aside className="flex w-[248px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
+    <aside className="flex h-full w-[248px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
+      {/* Logo + close button row */}
       <div className="flex items-center gap-[11px] px-[18px] pt-5 pb-3.5">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.svg" alt="Awarome" width={36} height={36} className="shrink-0 rounded-[10px]" />
-        <div className="flex flex-col gap-px">
+        <div className="flex flex-col gap-px flex-1 min-w-0">
           <span className="text-[15px] font-bold tracking-tight text-sidebar-foreground">
             Awarome
           </span>
@@ -54,7 +56,18 @@ export function Sidebar({
             Admin console
           </span>
         </div>
+        {/* Close button — mobile only */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="flex lg:hidden h-7 w-7 shrink-0 items-center justify-center rounded-[7px] text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+            aria-label="Close menu"
+          >
+            <X size={16} />
+          </button>
+        )}
       </div>
+
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-1.5">
         <NavLink href="/" label="Dashboard" icon={DASHBOARD_ICON} active={pathname === '/'} />
         {navItems.map((item) => (
@@ -67,6 +80,7 @@ export function Sidebar({
           />
         ))}
       </nav>
+
       <div className="border-t border-sidebar-border p-3">
         <div className="flex items-center gap-2.5 px-1.5 py-2">
           <AvatarInitials name={`${profile.firstName} ${profile.lastName}`} size="sm" />
