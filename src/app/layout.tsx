@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+import { cookies } from "next/headers";
 import { Toaster } from "@/components/ui/sonner";
 import { NavigationProgress } from "@/components/navigation-progress";
 import "./globals.css";
@@ -19,27 +20,20 @@ export const metadata: Metadata = {
   description: "Internal admin dashboard for Awarome",
 };
 
-const THEME_BOOTSTRAP = `
-try {
-  var dark = localStorage.getItem('awarome.dark');
-  if (dark === '1') document.documentElement.classList.add('dark');
-} catch (e) {}
-`;
-
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const isDark = cookieStore.get("awarome.theme")?.value === "dark";
+
   return (
     <html
       lang="en"
-      className={`${sans.variable} ${mono.variable} h-full antialiased`}
+      className={`${sans.variable} ${mono.variable} h-full antialiased${isDark ? " dark" : ""}`}
       suppressHydrationWarning
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
-      </head>
       <body className="min-h-full flex flex-col">
         <NavigationProgress />
         {children}

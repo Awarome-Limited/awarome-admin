@@ -104,7 +104,7 @@ export default async function VendorsPage({
   return (
     <div className="flex flex-col gap-4">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-[23px] font-bold tracking-tight text-foreground">Vendors</h1>
           <p className="mt-1 text-[14px] text-muted-foreground">Stores selling on Awarome</p>
