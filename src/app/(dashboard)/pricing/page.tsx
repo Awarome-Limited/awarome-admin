@@ -42,6 +42,9 @@ export default async function PricingPage() {
       batchDeliveryShortCharge: num('batchDeliveryShortCharge'),
       batchDeliveryMediumCharge: num('batchDeliveryMediumCharge'),
       batchDeliveryLongCharge: num('batchDeliveryLongCharge'),
+      batchFlatFeeBike: num('batchFlatFeeBike'),
+      batchFlatFeeCar: num('batchFlatFeeCar'),
+      batchFlatFeeTruck: num('batchFlatFeeTruck'),
     });
   }
 
@@ -60,13 +63,22 @@ export default async function PricingPage() {
     },
     {
       title: 'Batch / eco pricing',
-      sub: 'Distance bands for batched and eco deliveries',
+      sub: 'Distance bands for batched and eco product deliveries',
       fields: [
         { label: 'Short-distance threshold', name: 'batchDeliveryShortDistanceKm', unit: 'km', value: config.batchDeliveryShortDistanceKm },
         { label: 'Medium-distance threshold', name: 'batchDeliveryMediumDistanceKm', unit: 'km', value: config.batchDeliveryMediumDistanceKm },
         { label: 'Short-band charge', name: 'batchDeliveryShortCharge', unit: '₦', value: config.batchDeliveryShortCharge },
         { label: 'Medium-band charge', name: 'batchDeliveryMediumCharge', unit: '₦', value: config.batchDeliveryMediumCharge },
         { label: 'Long-band charge', name: 'batchDeliveryLongCharge', unit: '₦', value: config.batchDeliveryLongCharge },
+      ],
+    },
+    {
+      title: 'Package batch window floors',
+      sub: 'The 4PM–8PM window price per vehicle. Earlier windows are scaled up toward the instant fee. Keep below the minimum delivery charge.',
+      fields: [
+        { label: 'Flat floor — bike', name: 'batchFlatFeeBike', unit: '₦', value: config.batchFlatFeeBike },
+        { label: 'Flat floor — car', name: 'batchFlatFeeCar', unit: '₦', value: config.batchFlatFeeCar },
+        { label: 'Flat floor — truck', name: 'batchFlatFeeTruck', unit: '₦', value: config.batchFlatFeeTruck },
       ],
     },
   ];

@@ -175,6 +175,10 @@ export interface PricingConfig {
   batchDeliveryShortCharge: number;
   batchDeliveryMediumCharge: number;
   batchDeliveryLongCharge: number;
+  // Package-delivery batch window floor (4PM-8PM price) per vehicle.
+  batchFlatFeeBike: number;
+  batchFlatFeeCar: number;
+  batchFlatFeeTruck: number;
 }
 
 export interface AdminTransaction {
