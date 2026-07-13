@@ -181,6 +181,16 @@ export interface PricingConfig {
   batchFlatFeeTruck: number;
 }
 
+export interface DeliveryZone {
+  name: string;
+  keywords: string[];
+  active: boolean;
+}
+
+export interface DeliveryZoneConfig {
+  zones: DeliveryZone[];
+}
+
 export interface AdminTransaction {
   _id: string;
   user?: { _id: string; firstName?: string; lastName?: string; email?: string } | string;

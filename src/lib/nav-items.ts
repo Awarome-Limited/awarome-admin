@@ -18,6 +18,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Wallets', href: '/payments/wallets', module: PermissionModule.PAYMENTS },
   { label: 'Push Notifications', href: '/push-notifications', module: PermissionModule.NOTIFICATIONS },
   { label: 'Pricing', href: '/pricing', module: PermissionModule.PRICING },
+  { label: 'Delivery Zones', href: '/zones', module: PermissionModule.PRICING },
   { label: 'Promo Codes', href: '/promo-codes', module: PermissionModule.PROMO_CODES },
   { label: 'Staff', href: '/staff', module: PermissionModule.STAFF },
   { label: 'Activity Logs', href: '/activity-logs', module: PermissionModule.ACTIVITY_LOGS },
