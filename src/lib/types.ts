@@ -46,6 +46,7 @@ export interface AdminVendor {
   suspended?: boolean;
   deleted?: boolean;
   isTestVendor?: boolean;
+  status?: 'pending' | 'approved' | 'rejected';
   createdAt?: string;
   users?: Array<{ _id: string; firstName?: string; lastName?: string; email?: string; phone?: string }>;
 }

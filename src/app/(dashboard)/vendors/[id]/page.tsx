@@ -106,6 +106,7 @@ export default async function VendorDetailPage({
       email: formData.get('email')?.toString(),
       phone: formData.get('phone')?.toString(),
       address: formData.get('address')?.toString(),
+      status: formData.get('status')?.toString(),
     });
   }
 
@@ -158,6 +159,9 @@ export default async function VendorDetailPage({
               {displayName}
             </h1>
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <Badge variant={vendor.status === 'approved' ? 'positive' : vendor.status === 'rejected' ? 'destructive' : 'warning'} dot>
+                {vendor.status === 'approved' ? 'Approved' : vendor.status === 'rejected' ? 'Rejected' : 'Pending Review'}
+              </Badge>
               <Badge variant={vendor.suspended ? 'destructive' : 'positive'} dot>
                 {vendor.suspended ? 'Suspended' : 'Active'}
               </Badge>
@@ -329,6 +333,19 @@ export default async function VendorDetailPage({
             <Field label="Email" name="email" defaultValue={vendor.email} />
             <Field label="Phone" name="phone" defaultValue={vendor.phone} />
             <Field label="Address" name="address" defaultValue={vendor.address} className="sm:col-span-2" />
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="status">Approval Status</Label>
+              <select
+                id="status"
+                name="status"
+                defaultValue={vendor.status ?? 'pending'}
+                className="flex h-[36px] w-full rounded-[9px] border border-input bg-card px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus:border-primary/50"
+              >
+                <option value="pending">Pending Review</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
           </div>
           <div>
             <Button type="submit">Save changes</Button>
