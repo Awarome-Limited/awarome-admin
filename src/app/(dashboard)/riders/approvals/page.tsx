@@ -38,7 +38,7 @@ function filterToQuery(filter: string): Record<string, string> {
 async function safeCount(url: string): Promise<number> {
   try {
     const r = await authedFetch<PaginatedResponse<unknown>>(url);
-    return r.totalCount ?? 0;
+    return r?.totalCount ?? 0;
   } catch {
     return 0;
   }
@@ -61,7 +61,7 @@ export default async function RiderApprovalsPage({
   if (search) query.set('search', search);
   Object.entries(filterQ).forEach(([k, v]) => query.set(k, v));
 
-  let result: PaginatedResponse<AdminRider>;
+  let result: PaginatedResponse<AdminRider> | undefined;
   let totalCount = 0;
   let pendingCount = 0;
   let approvedCount = 0;
@@ -82,6 +82,14 @@ export default async function RiderApprovalsPage({
       />
     );
   }
+
+  const ridersList: AdminRider[] = Array.isArray(result?.data)
+    ? result.data
+    : Array.isArray((result?.data as any)?.riders)
+    ? (result?.data as any).riders
+    : [];
+
+  const listTotalCount = result?.totalCount ?? totalCount ?? ridersList.length;
 
   const chips = [
     { label: 'Pending approval', value: pendingCount.toLocaleString() },
@@ -157,7 +165,7 @@ export default async function RiderApprovalsPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {result.data.map((rider) => {
+              {ridersList.map((rider) => {
                 const vStatus = rider.verificationStatus || (rider.suspended ? 'rejected' : 'pending');
                 const isApproved = vStatus === 'approved';
                 const isRejected = vStatus === 'rejected';
@@ -232,7 +240,7 @@ export default async function RiderApprovalsPage({
                   </TableRow>
                 );
               })}
-              {result.data.length === 0 && (
+              {ridersList.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                     No riders found for approval review.
@@ -246,7 +254,7 @@ export default async function RiderApprovalsPage({
           <PaginationControls
             skip={skip}
             limit={LIMIT}
-            totalCount={result.totalCount}
+            totalCount={listTotalCount}
             basePath="/riders/approvals"
             searchParams={params}
           />

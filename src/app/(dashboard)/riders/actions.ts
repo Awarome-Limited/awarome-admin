@@ -15,15 +15,22 @@ export async function setRiderSuspended(id: string, suspended: boolean) {
 
 export async function updateRiderProfileStatus(id: string, status: 'approved' | 'rejected') {
   try {
-    await authedFetch(`/riders/admin/${id}/approve`, {
+    await authedFetch(`/riders/admin/${id}/verify`, {
       method: 'PATCH',
-      body: { status },
+      body: { status, verificationStatus: status },
     });
   } catch {
-    await authedFetch(`/riders/admin/${id}`, {
-      method: 'PATCH',
-      body: { profileStatus: status, status },
-    });
+    try {
+      await authedFetch(`/riders/admin/${id}/approve`, {
+        method: 'PATCH',
+        body: { status },
+      });
+    } catch {
+      await authedFetch(`/riders/admin/${id}`, {
+        method: 'PATCH',
+        body: { profileStatus: status, verificationStatus: status, status },
+      });
+    }
   }
   revalidatePath('/riders');
   revalidatePath('/riders/approvals');
