@@ -42,6 +42,14 @@ export function Sidebar({
     .filter((item) => pathname === item.href || pathname.startsWith(item.href + '/'))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
+  // Group nav items by category
+  const categories = navItems.reduce<Record<string, NavItem[]>>((acc, item) => {
+    const cat = item.category || 'General';
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(item);
+    return acc;
+  }, {});
+
   return (
     <aside className="flex h-full w-[248px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
       {/* Logo + close button row */}
@@ -68,16 +76,24 @@ export function Sidebar({
         )}
       </div>
 
-      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-1.5">
+      <nav className="flex flex-1 flex-col gap-2.5 overflow-y-auto px-3 py-1.5">
         <NavLink href="/" label="Dashboard" icon={DASHBOARD_ICON} active={pathname === '/'} />
-        {navItems.map((item) => (
-          <NavLink
-            key={item.href}
-            href={item.href}
-            label={item.label}
-            icon={item.icon}
-            active={item.href === activeHref}
-          />
+
+        {Object.entries(categories).map(([categoryName, items]) => (
+          <div key={categoryName} className="flex flex-col gap-0.5">
+            <div className="px-2 pt-2 pb-0.5 text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground/60">
+              {categoryName}
+            </div>
+            {items.map((item) => (
+              <NavLink
+                key={item.href}
+                href={item.href}
+                label={item.label}
+                icon={item.icon}
+                active={item.href === activeHref}
+              />
+            ))}
+          </div>
         ))}
       </nav>
 

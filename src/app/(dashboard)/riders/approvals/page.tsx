@@ -29,9 +29,9 @@ const FILTERS = [
 ] as const;
 
 function filterToQuery(filter: string): Record<string, string> {
-  if (filter === 'pending') return { profileStatus: 'pending' };
-  if (filter === 'approved') return { profileStatus: 'approved' };
-  if (filter === 'rejected') return { profileStatus: 'rejected' };
+  if (filter === 'pending') return { verificationStatus: 'pending' };
+  if (filter === 'approved') return { verificationStatus: 'approved' };
+  if (filter === 'rejected') return { verificationStatus: 'rejected' };
   return {};
 }
 
@@ -71,9 +71,9 @@ export default async function RiderApprovalsPage({
     [result, totalCount, pendingCount, approvedCount, rejectedCount] = await Promise.all([
       authedFetch<PaginatedResponse<AdminRider>>(`/riders/admin?${query.toString()}`),
       safeCount('/riders/admin?limit=1'),
-      safeCount('/riders/admin?profileStatus=pending&limit=1'),
-      safeCount('/riders/admin?profileStatus=approved&limit=1'),
-      safeCount('/riders/admin?profileStatus=rejected&limit=1'),
+      safeCount('/riders/admin?verificationStatus=pending&limit=1'),
+      safeCount('/riders/admin?verificationStatus=approved&limit=1'),
+      safeCount('/riders/admin?verificationStatus=rejected&limit=1'),
     ]);
   } catch (error) {
     return (
@@ -96,7 +96,7 @@ export default async function RiderApprovalsPage({
         <div>
           <h1 className="text-[23px] font-bold tracking-tight text-foreground">Rider Approvals</h1>
           <p className="mt-1 text-[14px] text-muted-foreground">
-            Review rider profile submissions, verify documents, and grant access to the fleet pool
+            Review rider verification applications, vehicle details, and grant access to order dispatches
           </p>
         </div>
       </div>
@@ -150,17 +150,17 @@ export default async function RiderApprovalsPage({
               <TableRow>
                 <TableHead>Rider</TableHead>
                 <TableHead>Contact</TableHead>
-                <TableHead>Vehicle</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Vehicle & Plate</TableHead>
+                <TableHead>Verification</TableHead>
                 <TableHead>Registered</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {result.data.map((rider) => {
-                const pStatus = rider.profileStatus || (rider.suspended ? 'rejected' : 'pending');
-                const isApproved = pStatus === 'approved';
-                const isRejected = pStatus === 'rejected';
+                const vStatus = rider.verificationStatus || (rider.suspended ? 'rejected' : 'pending');
+                const isApproved = vStatus === 'approved';
+                const isRejected = vStatus === 'rejected';
 
                 return (
                   <TableRow key={rider._id}>
@@ -177,9 +177,16 @@ export default async function RiderApprovalsPage({
                     </TableCell>
                     <TableCell className="text-[13px] text-muted-foreground">{rider.phone || '—'}</TableCell>
                     <TableCell>
-                      <span className="rounded bg-chip px-2 py-0.5 text-xs font-medium capitalize text-foreground-secondary">
-                        {rider.vehicleType || 'Bike'}
-                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="w-fit rounded bg-chip px-2 py-0.5 text-xs font-medium capitalize text-foreground-secondary">
+                          {rider.vehicleType || 'Bike'}
+                        </span>
+                        {rider.plateNumber && (
+                          <span className="font-mono text-[11px] text-muted-foreground">
+                            {rider.plateNumber}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -188,7 +195,7 @@ export default async function RiderApprovalsPage({
                         }
                         dot
                       >
-                        {isApproved ? 'Approved' : isRejected ? 'Rejected' : 'Pending review'}
+                        {isApproved ? 'Approved' : isRejected ? 'Rejected' : vStatus === 'unsubmitted' ? 'Unsubmitted' : 'Pending review'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-[13px] text-muted-foreground">
@@ -200,7 +207,7 @@ export default async function RiderApprovalsPage({
                           <ConfirmActionButton
                             label="Approve"
                             title="Approve rider profile?"
-                            description={`Approve ${rider.firstName} ${rider.lastName}'s profile to allow them to receive order dispatches.`}
+                            description={`Approve ${rider.firstName} ${rider.lastName}'s verification application to allow them to receive order dispatches.`}
                             variant="default"
                             action={async () => {
                               'use server';
@@ -212,7 +219,7 @@ export default async function RiderApprovalsPage({
                           <ConfirmActionButton
                             label="Reject"
                             title="Reject rider profile?"
-                            description={`Reject ${rider.firstName} ${rider.lastName}'s profile application.`}
+                            description={`Reject ${rider.firstName} ${rider.lastName}'s verification application.`}
                             variant="destructive"
                             action={async () => {
                               'use server';

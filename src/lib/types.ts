@@ -85,6 +85,12 @@ export interface AdminProduct {
   createdAt?: string;
 }
 
+export interface AdminRiderDocuments {
+  govId?: string;
+  license?: string;
+  vehiclePapers?: string;
+}
+
 export interface AdminRider {
   _id: string;
   firstName?: string;
@@ -92,11 +98,14 @@ export interface AdminRider {
   email?: string;
   phone?: string;
   status?: string;
-  profileStatus?: 'pending' | 'approved' | 'rejected' | string;
-  vehicleType?: string;
-  guarantorName?: string;
-  guarantorPhone?: string;
-  profileImage?: string;
+  verificationStatus?: 'unsubmitted' | 'pending' | 'approved' | 'rejected' | string;
+  verificationNote?: string;
+  vehicleType?: 'bike' | 'car' | 'truck' | string;
+  plateNumber?: string;
+  documents?: AdminRiderDocuments;
+  emergencyContact?: string;
+  isInHouse?: boolean;
+  rating?: number;
   ordersCompleted?: number;
   suspended?: boolean;
   createdAt?: string;
