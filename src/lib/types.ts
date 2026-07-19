@@ -92,6 +92,11 @@ export interface AdminRider {
   email?: string;
   phone?: string;
   status?: string;
+  profileStatus?: 'pending' | 'approved' | 'rejected' | string;
+  vehicleType?: string;
+  guarantorName?: string;
+  guarantorPhone?: string;
+  profileImage?: string;
   ordersCompleted?: number;
   suspended?: boolean;
   createdAt?: string;

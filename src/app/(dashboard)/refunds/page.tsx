@@ -93,26 +93,24 @@ export default async function RefundsPage({
   const isPending = activeFilter === 'pending';
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Refunds</h1>
-          <p className="text-sm text-muted-foreground">
-            Paid orders and package deliveries that were cancelled and owe the
-            customer money. Mark one refunded once the money has been returned —
-            refunded jobs never re-enter the delivery pool.
+          <h1 className="text-[23px] font-bold tracking-tight text-foreground">Refunds</h1>
+          <p className="mt-1 text-[14px] text-muted-foreground">
+            Paid orders and package deliveries that were cancelled and owe the customer money.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           {FILTERS.map((f) => (
             <Link
               key={f.key}
               href={`/refunds?filter=${f.key}`}
               className={cn(
-                'rounded-full border px-3 py-1 text-sm',
+                'rounded-[9px] border px-3.5 py-[7px] text-[13px] font-semibold transition-colors',
                 activeFilter === f.key
-                  ? 'border-primary bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted'
+                  ? 'border-transparent bg-brand-tint text-primary'
+                  : 'border-border-strong bg-card text-foreground-secondary hover:bg-muted'
               )}
             >
               {f.label}
@@ -121,129 +119,137 @@ export default async function RefundsPage({
         </div>
       </div>
 
-      <section className="space-y-2">
-        <h2 className="text-lg font-medium">Orders ({orders.length})</h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Order</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Contact</TableHead>
-              <TableHead>Vendor</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>{isPending ? 'Cancelled' : 'Refunded'}</TableHead>
-              {isPending && <TableHead />}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {orders.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">
-                  No {isPending ? 'pending refunds' : 'refunded orders'}
-                </TableCell>
-              </TableRow>
-            )}
-            {orders.map((order) => (
-              <TableRow key={order._id}>
-                <TableCell>
-                  <Link href={`/orders/${order._id}`} className="font-medium hover:underline">
-                    {order.orderId || order._id}
-                  </Link>
-                </TableCell>
-                <TableCell>{partyName(order.user)}</TableCell>
-                <TableCell>{partyContact(order.user)}</TableCell>
-                <TableCell>
-                  {typeof order.vendor === 'object'
-                    ? order.vendor?.businessName || order.vendor?.name || '—'
-                    : '—'}
-                </TableCell>
-                <TableCell>₦{(order.totalPrice ?? 0).toLocaleString()}</TableCell>
-                <TableCell>
-                  <Badge variant={statusBadgeVariant(order.refundStatus)}>
-                    {order.refundStatus}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {formatDate(isPending ? order.updatedAt : order.refundedAt)}
-                </TableCell>
-                {isPending && (
-                  <TableCell>
-                    <ConfirmActionButton
-                      label="Mark refunded"
-                      title="Mark this order refunded?"
-                      description={`Confirms ₦${(order.totalPrice ?? 0).toLocaleString()} has been returned to ${partyName(order.user)}. This cannot be undone.`}
-                      variant="default"
-                      action={async () => {
-                        'use server';
-                        await markRefunded('order', order._id);
-                      }}
-                    />
-                  </TableCell>
+      <div className="flex flex-col gap-4">
+        <div className="text-[15px] font-semibold text-foreground">Orders ({orders.length})</div>
+        <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Vendor</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>{isPending ? 'Cancelled' : 'Refunded'}</TableHead>
+                  {isPending && <TableHead className="text-right">Action</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {orders.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
+                      No {isPending ? 'pending refunds' : 'refunded orders'}
+                    </TableCell>
+                  </TableRow>
                 )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </section>
+                {orders.map((order) => (
+                  <TableRow key={order._id}>
+                    <TableCell>
+                      <Link href={`/orders/${order._id}`} className="font-medium hover:underline">
+                        {order.orderId || order._id}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{partyName(order.user)}</TableCell>
+                    <TableCell className="text-muted-foreground">{partyContact(order.user)}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {typeof order.vendor === 'object'
+                        ? order.vendor?.businessName || order.vendor?.name || '—'
+                        : '—'}
+                    </TableCell>
+                    <TableCell className="font-semibold tabular-nums">₦{(order.totalPrice ?? 0).toLocaleString()}</TableCell>
+                    <TableCell>
+                      <Badge variant={statusBadgeVariant(order.refundStatus)} dot>
+                        {order.refundStatus}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatDate(isPending ? order.updatedAt : order.refundedAt)}
+                    </TableCell>
+                    {isPending && (
+                      <TableCell className="text-right">
+                        <ConfirmActionButton
+                          label="Mark refunded"
+                          title="Mark this order refunded?"
+                          description={`Confirms ₦${(order.totalPrice ?? 0).toLocaleString()} has been returned to ${partyName(order.user)}. This cannot be undone.`}
+                          variant="default"
+                          action={async () => {
+                            'use server';
+                            await markRefunded('order', order._id);
+                          }}
+                        />
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </div>
 
-      <section className="space-y-2">
-        <h2 className="text-lg font-medium">Package deliveries ({deliveries.length})</h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Delivery</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Contact</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>{isPending ? 'Cancelled' : 'Refunded'}</TableHead>
-              {isPending && <TableHead />}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {deliveries.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
-                  No {isPending ? 'pending refunds' : 'refunded deliveries'}
-                </TableCell>
-              </TableRow>
-            )}
-            {deliveries.map((delivery) => (
-              <TableRow key={delivery._id}>
-                <TableCell className="font-medium">
-                  {delivery.deliveryId || delivery._id}
-                </TableCell>
-                <TableCell>{partyName(delivery.user)}</TableCell>
-                <TableCell>{partyContact(delivery.user)}</TableCell>
-                <TableCell>₦{(delivery.deliveryFee ?? 0).toLocaleString()}</TableCell>
-                <TableCell>
-                  <Badge variant={statusBadgeVariant(delivery.refundStatus)}>
-                    {delivery.refundStatus}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {formatDate(isPending ? delivery.updatedAt : delivery.refundedAt)}
-                </TableCell>
-                {isPending && (
-                  <TableCell>
-                    <ConfirmActionButton
-                      label="Mark refunded"
-                      title="Mark this delivery refunded?"
-                      description={`Confirms ₦${(delivery.deliveryFee ?? 0).toLocaleString()} has been returned to ${partyName(delivery.user)}. This cannot be undone.`}
-                      variant="default"
-                      action={async () => {
-                        'use server';
-                        await markRefunded('delivery', delivery._id);
-                      }}
-                    />
-                  </TableCell>
+      <div className="flex flex-col gap-4">
+        <div className="text-[15px] font-semibold text-foreground">Package deliveries ({deliveries.length})</div>
+        <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Delivery</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>{isPending ? 'Cancelled' : 'Refunded'}</TableHead>
+                  {isPending && <TableHead className="text-right">Action</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {deliveries.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
+                      No {isPending ? 'pending refunds' : 'refunded deliveries'}
+                    </TableCell>
+                  </TableRow>
                 )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </section>
+                {deliveries.map((delivery) => (
+                  <TableRow key={delivery._id}>
+                    <TableCell className="font-medium">
+                      {delivery.deliveryId || delivery._id}
+                    </TableCell>
+                    <TableCell>{partyName(delivery.user)}</TableCell>
+                    <TableCell className="text-muted-foreground">{partyContact(delivery.user)}</TableCell>
+                    <TableCell className="font-semibold tabular-nums">₦{(delivery.deliveryFee ?? 0).toLocaleString()}</TableCell>
+                    <TableCell>
+                      <Badge variant={statusBadgeVariant(delivery.refundStatus)} dot>
+                        {delivery.refundStatus}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatDate(isPending ? delivery.updatedAt : delivery.refundedAt)}
+                    </TableCell>
+                    {isPending && (
+                      <TableCell className="text-right">
+                        <ConfirmActionButton
+                          label="Mark refunded"
+                          title="Mark this delivery refunded?"
+                          description={`Confirms ₦${(delivery.deliveryFee ?? 0).toLocaleString()} has been returned to ${partyName(delivery.user)}. This cannot be undone.`}
+                          variant="default"
+                          action={async () => {
+                            'use server';
+                            await markRefunded('delivery', delivery._id);
+                          }}
+                        />
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

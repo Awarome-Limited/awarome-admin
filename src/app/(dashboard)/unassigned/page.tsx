@@ -78,180 +78,214 @@ export default async function UnassignedPage() {
 
   const { orders, deliveries, batches } = payload;
 
+  const chips = [
+    { label: 'Unassigned orders', value: orders.length.toLocaleString() },
+    { label: 'Package deliveries', value: deliveries.length.toLocaleString() },
+    { label: 'Batches', value: batches.length.toLocaleString() },
+  ];
+
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-2xl font-semibold">Unassigned jobs</h1>
-        <p className="text-sm text-muted-foreground">
-          Paid jobs no rider accepted within the dispatch window (30 minutes),
-          and batches with no in-house rider for their vehicle. Re-dispatching
-          gives the job a fresh window and clears previous declines.
+        <h1 className="text-[23px] font-bold tracking-tight text-foreground">Unassigned jobs</h1>
+        <p className="mt-1 text-[14px] text-muted-foreground">
+          Paid jobs no rider accepted within the dispatch window (30 minutes), and batches with no in-house rider for their vehicle.
         </p>
       </div>
 
-      <section className="space-y-2">
-        <h2 className="text-lg font-medium">Orders ({orders.length})</h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Order</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Vendor</TableHead>
-              <TableHead>Vehicle</TableHead>
-              <TableHead>Delivery fee</TableHead>
-              <TableHead>Since</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {orders.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
-                  No unassigned orders
-                </TableCell>
-              </TableRow>
-            )}
-            {orders.map((order) => (
-              <TableRow key={order._id}>
-                <TableCell>
-                  <Link href={`/orders/${order._id}`} className="font-medium hover:underline">
-                    {order.orderId || order._id}
-                  </Link>
-                </TableCell>
-                <TableCell>{partyName(order.user)}</TableCell>
-                <TableCell>
-                  {typeof order.vendor === 'object'
-                    ? order.vendor?.businessName || order.vendor?.name || '—'
-                    : '—'}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline">{order.vehicleType || 'bike'}</Badge>
-                </TableCell>
-                <TableCell>₦{(order.deliveryFee ?? 0).toLocaleString()}</TableCell>
-                <TableCell>{formatDate(order.updatedAt)}</TableCell>
-                <TableCell>
-                  <ConfirmActionButton
-                    label="Re-dispatch"
-                    title="Re-dispatch this order?"
-                    description="The order goes back to pending and is broadcast to nearby riders with a fresh window."
-                    variant="default"
-                    action={async () => {
-                      'use server';
-                      await redispatchJob('order', order._id);
-                    }}
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </section>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {chips.map((chip) => (
+          <div
+            key={chip.label}
+            className="flex flex-col gap-1 rounded-[12px] border border-border bg-card p-[13px_16px] shadow-[var(--shadow-card)]"
+          >
+            <span className="text-[12px] font-medium text-muted-foreground">{chip.label}</span>
+            <span className="text-[20px] font-bold tabular-nums text-foreground">{chip.value}</span>
+          </div>
+        ))}
+      </div>
 
-      <section className="space-y-2">
-        <h2 className="text-lg font-medium">Package deliveries ({deliveries.length})</h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Delivery</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Route</TableHead>
-              <TableHead>Vehicle</TableHead>
-              <TableHead>Fee</TableHead>
-              <TableHead>Since</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {deliveries.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
-                  No unassigned deliveries
-                </TableCell>
-              </TableRow>
-            )}
-            {deliveries.map((delivery) => (
-              <TableRow key={delivery._id}>
-                <TableCell className="font-medium">
-                  {delivery.deliveryId || delivery._id}
-                </TableCell>
-                <TableCell>{partyName(delivery.user)}</TableCell>
-                <TableCell className="max-w-64 truncate">
-                  {[delivery.pickupAddress?.address, delivery.dropoffAddress?.address]
-                    .filter(Boolean)
-                    .join(' → ') || '—'}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline">{delivery.vehicleType || 'bike'}</Badge>
-                </TableCell>
-                <TableCell>₦{(delivery.deliveryFee ?? 0).toLocaleString()}</TableCell>
-                <TableCell>{formatDate(delivery.updatedAt)}</TableCell>
-                <TableCell>
-                  <ConfirmActionButton
-                    label="Re-dispatch"
-                    title="Re-dispatch this delivery?"
-                    description="The delivery goes back to pending and is broadcast to nearby riders with a fresh window."
-                    variant="default"
-                    action={async () => {
-                      'use server';
-                      await redispatchJob('delivery', delivery._id);
-                    }}
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </section>
+      <div className="flex flex-col gap-4">
+        <div className="text-[15px] font-semibold text-foreground">Orders ({orders.length})</div>
+        <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Vendor</TableHead>
+                  <TableHead>Vehicle</TableHead>
+                  <TableHead>Delivery fee</TableHead>
+                  <TableHead>Since</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {orders.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
+                      No unassigned orders
+                    </TableCell>
+                  </TableRow>
+                )}
+                {orders.map((order) => (
+                  <TableRow key={order._id}>
+                    <TableCell>
+                      <Link href={`/orders/${order._id}`} className="font-medium hover:underline">
+                        {order.orderId || order._id}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{partyName(order.user)}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {typeof order.vendor === 'object'
+                        ? order.vendor?.businessName || order.vendor?.name || '—'
+                        : '—'}
+                    </TableCell>
+                    <TableCell>
+                      <span className="rounded bg-chip px-2 py-0.5 text-xs font-medium capitalize text-foreground-secondary">
+                        {order.vehicleType || 'bike'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="font-semibold tabular-nums">₦{(order.deliveryFee ?? 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-muted-foreground">{formatDate(order.updatedAt)}</TableCell>
+                    <TableCell className="text-right">
+                      <ConfirmActionButton
+                        label="Re-dispatch"
+                        title="Re-dispatch this order?"
+                        description="The order goes back to pending and is broadcast to nearby riders with a fresh window."
+                        variant="default"
+                        action={async () => {
+                          'use server';
+                          await redispatchJob('order', order._id);
+                        }}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </div>
 
-      <section className="space-y-2">
-        <h2 className="text-lg font-medium">Batches ({batches.length})</h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Batch</TableHead>
-              <TableHead>Window</TableHead>
-              <TableHead>Vehicle</TableHead>
-              <TableHead>Stops</TableHead>
-              <TableHead>Mode</TableHead>
-              <TableHead>Since</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {batches.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
-                  No unassigned batches
-                </TableCell>
-              </TableRow>
-            )}
-            {batches.map((batch) => (
-              <TableRow key={batch._id}>
-                <TableCell className="font-medium">{batch.batchId}</TableCell>
-                <TableCell>{batch.window || '—'}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">{batch.vehicleType || 'bike'}</Badge>
-                </TableCell>
-                <TableCell>{batch.stops?.length ?? 0}</TableCell>
-                <TableCell>{batch.assignmentMode || '—'}</TableCell>
-                <TableCell>{formatDate(batch.updatedAt)}</TableCell>
-                <TableCell>
-                  <ConfirmActionButton
-                    label="Re-dispatch"
-                    title="Re-dispatch this batch?"
-                    description="The batch goes back on offer with a fresh window and cleared declines."
-                    variant="default"
-                    action={async () => {
-                      'use server';
-                      await redispatchBatch(batch.batchId);
-                    }}
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </section>
+      <div className="flex flex-col gap-4">
+        <div className="text-[15px] font-semibold text-foreground">Package deliveries ({deliveries.length})</div>
+        <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Delivery</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Route</TableHead>
+                  <TableHead>Vehicle</TableHead>
+                  <TableHead>Fee</TableHead>
+                  <TableHead>Since</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {deliveries.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
+                      No unassigned deliveries
+                    </TableCell>
+                  </TableRow>
+                )}
+                {deliveries.map((delivery) => (
+                  <TableRow key={delivery._id}>
+                    <TableCell className="font-medium">
+                      {delivery.deliveryId || delivery._id}
+                    </TableCell>
+                    <TableCell>{partyName(delivery.user)}</TableCell>
+                    <TableCell className="max-w-64 truncate text-muted-foreground">
+                      {[delivery.pickupAddress?.address, delivery.dropoffAddress?.address]
+                        .filter(Boolean)
+                        .join(' → ') || '—'}
+                    </TableCell>
+                    <TableCell>
+                      <span className="rounded bg-chip px-2 py-0.5 text-xs font-medium capitalize text-foreground-secondary">
+                        {delivery.vehicleType || 'bike'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="font-semibold tabular-nums">₦{(delivery.deliveryFee ?? 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-muted-foreground">{formatDate(delivery.updatedAt)}</TableCell>
+                    <TableCell className="text-right">
+                      <ConfirmActionButton
+                        label="Re-dispatch"
+                        title="Re-dispatch this delivery?"
+                        description="The delivery goes back to pending and is broadcast to nearby riders with a fresh window."
+                        variant="default"
+                        action={async () => {
+                          'use server';
+                          await redispatchJob('delivery', delivery._id);
+                        }}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <div className="text-[15px] font-semibold text-foreground">Batches ({batches.length})</div>
+        <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Batch</TableHead>
+                  <TableHead>Window</TableHead>
+                  <TableHead>Vehicle</TableHead>
+                  <TableHead>Stops</TableHead>
+                  <TableHead>Mode</TableHead>
+                  <TableHead>Since</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {batches.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
+                      No unassigned batches
+                    </TableCell>
+                  </TableRow>
+                )}
+                {batches.map((batch) => (
+                  <TableRow key={batch._id}>
+                    <TableCell className="font-medium">{batch.batchId}</TableCell>
+                    <TableCell className="text-muted-foreground">{batch.window || '—'}</TableCell>
+                    <TableCell>
+                      <span className="rounded bg-chip px-2 py-0.5 text-xs font-medium capitalize text-foreground-secondary">
+                        {batch.vehicleType || 'bike'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="tabular-nums font-medium">{batch.stops?.length ?? 0}</TableCell>
+                    <TableCell className="text-muted-foreground">{batch.assignmentMode || '—'}</TableCell>
+                    <TableCell className="text-muted-foreground">{formatDate(batch.updatedAt)}</TableCell>
+                    <TableCell className="text-right">
+                      <ConfirmActionButton
+                        label="Re-dispatch"
+                        title="Re-dispatch this batch?"
+                        description="The batch goes back on offer with a fresh window and cleared declines."
+                        variant="default"
+                        action={async () => {
+                          'use server';
+                          await redispatchBatch(batch.batchId);
+                        }}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

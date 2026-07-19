@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { LogOut, Settings, X } from 'lucide-react';
 import { logout } from '@/lib/actions';
 import { AvatarInitials } from '@/components/avatar-initials';
-import { NavItem, NAV_ICONS, DASHBOARD_ICON } from '@/lib/nav-items';
+import { NavItem, DASHBOARD_ICON } from '@/lib/nav-items';
 import { StaffProfile } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 
@@ -75,7 +75,7 @@ export function Sidebar({
             key={item.href}
             href={item.href}
             label={item.label}
-            icon={NAV_ICONS[item.module]}
+            icon={item.icon}
             active={item.href === activeHref}
           />
         ))}
