@@ -147,6 +147,13 @@ export const NAV_ITEMS: NavItem[] = [
     category: 'Marketing & System',
   },
   {
+    label: 'Campaigns',
+    href: '/campaigns',
+    module: PermissionModule.CAMPAIGNS,
+    icon: 'M3 11l18-5v12L3 14v-3z M11.6 16.8a3 3 0 1 1-5.8-1.6',
+    category: 'Marketing & System',
+  },
+  {
     label: 'Activity Logs',
     href: '/activity-logs',
     module: PermissionModule.ACTIVITY_LOGS,
