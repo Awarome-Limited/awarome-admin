@@ -46,8 +46,12 @@ interface CampaignStats {
 // raw id so new backend campaigns still render.
 const CAMPAIGN_COPY: Record<string, { title: string; sub: string }> = {
   activation: {
-    title: 'Activation drip',
-    sub: 'Welcome new customers and nudge them toward a first purchase. Exits once they place a paid order.',
+    title: 'Marketplace activation',
+    sub: 'Welcome new customers and nudge them toward a first shop order. Exits once they place a paid marketplace order.',
+  },
+  'delivery-activation': {
+    title: 'Package delivery activation',
+    sub: 'Introduce new customers to package delivery. Runs independently of the marketplace drip and exits once they pay for a first delivery.',
   },
   'abandoned-cart': {
     title: 'Abandoned cart',
@@ -56,6 +60,10 @@ const CAMPAIGN_COPY: Record<string, { title: string; sub: string }> = {
   'abandoned-checkout': {
     title: 'Abandoned checkout',
     sub: 'Started checkout but never paid. Exits automatically when payment lands.',
+  },
+  'package-delivery': {
+    title: 'Abandoned delivery booking',
+    sub: 'Set up a package delivery but never paid. Exits automatically when the booking is paid.',
   },
   winback: {
     title: 'Win-back',
@@ -67,9 +75,12 @@ const STEP_LABELS: Record<string, string> = {
   welcome: 'Welcome message',
   'browse-nudge': 'Browse nudge',
   'first-purchase-nudge': 'First-purchase nudge',
+  'delivery-intro': 'Delivery intro',
+  'delivery-nudge': 'First-delivery nudge',
   'cart-push': 'Cart reminder (push)',
   'cart-email': 'Cart reminder (email)',
   'checkout-nudge': 'Checkout nudge',
+  'booking-nudge': 'Booking nudge',
   'winback-7d': 'First win-back',
   'winback-21d': 'Second win-back',
 };

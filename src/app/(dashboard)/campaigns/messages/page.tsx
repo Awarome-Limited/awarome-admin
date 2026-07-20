@@ -28,9 +28,11 @@ interface CampaignMessageRow {
 
 const CAMPAIGN_FILTERS = [
   { key: '', label: 'All campaigns' },
-  { key: 'activation', label: 'Activation' },
+  { key: 'activation', label: 'Marketplace activation' },
+  { key: 'delivery-activation', label: 'Delivery activation' },
   { key: 'abandoned-cart', label: 'Abandoned cart' },
   { key: 'abandoned-checkout', label: 'Abandoned checkout' },
+  { key: 'package-delivery', label: 'Abandoned delivery' },
   { key: 'winback', label: 'Win-back' },
 ];
 
