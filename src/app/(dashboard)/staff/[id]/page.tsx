@@ -66,10 +66,12 @@ export default async function StaffDetailPage({
       }
     }
 
+    // Blank fields are omitted, never sent as "" — the API validates with
+    // Joi, which rejects empty strings and fails the whole update.
     await updateStaff(id, {
-      firstName: formData.get('firstName')?.toString(),
-      lastName: formData.get('lastName')?.toString(),
-      role: formData.get('role')?.toString() as StaffRole,
+      firstName: formData.get('firstName')?.toString().trim() || undefined,
+      lastName: formData.get('lastName')?.toString().trim() || undefined,
+      role: (formData.get('role')?.toString().trim() || undefined) as StaffRole,
       permissions,
     });
   }

@@ -60,7 +60,7 @@ export default async function PromoCodeDetailPage({
     const usageLimit = formData.get('usageLimit')?.toString();
 
     await updatePromoCode(id, {
-      code: formData.get('code')?.toString(),
+      code: formData.get('code')?.toString().trim() || undefined,
       discountType: formData.get('discountType')?.toString() as 'fixed' | 'percentage',
       discountValue: Number(formData.get('discountValue')),
       applicability: formData.get('applicability')?.toString() as

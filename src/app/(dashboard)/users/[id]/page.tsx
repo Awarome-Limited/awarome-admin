@@ -79,11 +79,13 @@ export default async function UserDetailPage({
 
   async function handleEdit(formData: FormData) {
     'use server';
+    // Blank fields are omitted, never sent as "" — the API validates with
+    // Joi, which rejects empty strings and fails the whole update.
     await updateUser(id, {
-      firstName: formData.get('firstName')?.toString(),
-      lastName: formData.get('lastName')?.toString(),
-      phone: formData.get('phone')?.toString(),
-      source: formData.get('source')?.toString(),
+      firstName: formData.get('firstName')?.toString().trim() || undefined,
+      lastName: formData.get('lastName')?.toString().trim() || undefined,
+      phone: formData.get('phone')?.toString().trim() || undefined,
+      source: formData.get('source')?.toString().trim() || undefined,
     });
   }
 

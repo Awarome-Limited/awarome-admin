@@ -4,9 +4,7 @@ import { authedFetch, ApiError, SingleResponse, PaginatedResponse } from '@/lib/
 import { AdminVendor, VendorStatistics, AdminProduct } from '@/lib/types';
 import { ApiErrorCard } from '@/components/api-error-card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { SubmitButton } from '@/components/submit-button';
+import { VendorEditForm } from './_components/vendor-edit-form';
 import {
   Table,
   TableHeader,
@@ -16,33 +14,9 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { formatDate } from '@/lib/format';
-import { setVendorSuspended, updateVendor } from '../actions';
+import { setVendorSuspended } from '../actions';
 import { SuspendToggle } from '@/components/suspend-toggle';
 import { PaginationControls } from '@/components/pagination-controls';
-
-/**
- * Coerce a stored vendor time into the 'HH:MM' an <input type="time"> needs.
- * Vendor hours are free-text on the API, so older records hold things like
- * '8:00', '8am' or '8:30 PM'. Returns '' when it can't be read, which leaves
- * the picker empty rather than showing a wrong time.
- */
-function toTimeInputValue(value?: string): string {
-  const raw = value?.trim();
-  if (!raw) return '';
-
-  const match = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i.exec(raw);
-  if (!match) return '';
-
-  let hours = Number(match[1]);
-  const minutes = Number(match[2] ?? 0);
-  const meridiem = match[3]?.toLowerCase();
-
-  if (meridiem === 'pm' && hours < 12) hours += 12;
-  if (meridiem === 'am' && hours === 12) hours = 0;
-  if (hours > 23 || minutes > 59) return '';
-
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-}
 
 function formatHours(vendor: AdminVendor): string {
   if (!vendor.opensAt && !vendor.closesAt) return '—';
@@ -126,25 +100,6 @@ export default async function VendorDetailPage({
     ? [owner.firstName, owner.lastName].filter(Boolean).join(' ') || owner.email || '—'
     : '—';
   const categoryList = vendor.type?.map((t) => t.replace(/_/g, ' ')).join(', ') || '—';
-
-  async function handleEdit(formData: FormData) {
-    'use server';
-    // A <input type="time"> renders blank for a legacy value it can't parse.
-    // Only send the hours when something was actually picked, so submitting an
-    // untouched form never wipes an existing (oddly formatted) time.
-    const opensAt = formData.get('opensAt')?.toString().trim();
-    const closesAt = formData.get('closesAt')?.toString().trim();
-    await updateVendor(id, {
-      name: formData.get('name')?.toString(),
-      businessName: formData.get('businessName')?.toString(),
-      email: formData.get('email')?.toString(),
-      phone: formData.get('phone')?.toString(),
-      address: formData.get('address')?.toString(),
-      status: formData.get('status')?.toString(),
-      ...(opensAt ? { opensAt } : {}),
-      ...(closesAt ? { closesAt } : {}),
-    });
-  }
 
   const infoFields = [
     { label: 'Owner / contact', value: ownerName },
@@ -357,94 +312,9 @@ export default async function VendorDetailPage({
         )}
       </div>
 
-      {/* Edit vendor */}
-      <div
-        id="edit-vendor"
-        className="rounded-[14px] border border-border bg-card p-[20px_22px] shadow-[var(--shadow-card)]"
-      >
-        <div className="mb-4 text-[15px] font-semibold text-foreground">Edit vendor</div>
-        <form action={handleEdit} className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Name" name="name" defaultValue={vendor.name} />
-            <Field label="Business name" name="businessName" defaultValue={vendor.businessName} />
-            <Field label="Email" name="email" defaultValue={vendor.email} />
-            <Field label="Phone" name="phone" defaultValue={vendor.phone} />
-            <Field label="Address" name="address" defaultValue={vendor.address} className="sm:col-span-2" />
-            <TimeField
-              label="Opens at"
-              name="opensAt"
-              stored={vendor.opensAt}
-            />
-            <TimeField
-              label="Closes at"
-              name="closesAt"
-              stored={vendor.closesAt}
-            />
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="status">Approval Status</Label>
-              <select
-                id="status"
-                name="status"
-                defaultValue={vendor.status ?? 'pending'}
-                className="flex h-[36px] w-full rounded-[9px] border border-input bg-card px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus:border-primary/50"
-              >
-                <option value="pending">Pending Review</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <SubmitButton />
-          </div>
-        </form>
-      </div>
+      <VendorEditForm vendor={vendor} />
     </div>
   );
 }
 
-function Field({
-  label,
-  name,
-  defaultValue,
-  className,
-}: {
-  label: string;
-  name: string;
-  defaultValue?: string;
-  className?: string;
-}) {
-  return (
-    <div className={`flex flex-col gap-2 ${className ?? ''}`}>
-      <Label htmlFor={name}>{label}</Label>
-      <Input id={name} name={name} defaultValue={defaultValue} />
-    </div>
-  );
-}
 
-function TimeField({
-  label,
-  name,
-  stored,
-}: {
-  label: string;
-  name: string;
-  stored?: string;
-}) {
-  const value = toTimeInputValue(stored);
-  // Legacy free-text the picker can't render — show what's on record so the
-  // admin knows it isn't blank, and can replace it deliberately.
-  const unreadable = !value && !!stored?.trim();
-
-  return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor={name}>{label}</Label>
-      <Input id={name} name={name} type="time" defaultValue={value} />
-      {unreadable && (
-        <span className="text-[12px] text-muted-foreground">
-          Currently stored as “{stored}” — pick a time to replace it.
-        </span>
-      )}
-    </div>
-  );
-}

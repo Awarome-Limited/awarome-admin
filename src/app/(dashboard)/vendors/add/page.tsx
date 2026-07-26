@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { VENDOR_TYPES } from '@/lib/types';
+import { toDisplayTime } from '@/lib/format';
 import { createVendor } from '../actions';
 
 const TYPE_LABELS: Record<(typeof VENDOR_TYPES)[number], string> = {
@@ -44,8 +45,10 @@ export default function AddVendorPage() {
     const email = formData.get('email')?.toString().trim();
     const phone = formData.get('phone')?.toString().trim();
     const address = formData.get('address')?.toString().trim();
-    const opensAt = formData.get('opensAt')?.toString().trim();
-    const closesAt = formData.get('closesAt')?.toString().trim();
+    // Stored in the house format ('4pm'), matching every existing vendor and
+    // what the customer apps render.
+    const opensAt = toDisplayTime(formData.get('opensAt')?.toString().trim());
+    const closesAt = toDisplayTime(formData.get('closesAt')?.toString().trim());
     const lat = Number(formData.get('lat'));
     const long = Number(formData.get('long'));
 
@@ -159,8 +162,8 @@ export default function AddVendorPage() {
             <CardTitle>Operating hours</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
-            <Field label="Opens at" name="opensAt" placeholder="08:00" required />
-            <Field label="Closes at" name="closesAt" placeholder="20:00" required />
+            <Field label="Opens at" name="opensAt" type="time" required />
+            <Field label="Closes at" name="closesAt" type="time" required />
           </CardContent>
         </Card>
 
