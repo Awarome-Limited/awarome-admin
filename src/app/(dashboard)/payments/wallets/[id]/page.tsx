@@ -4,7 +4,7 @@ import { authedFetch, ApiError, SingleResponse } from '@/lib/api-client';
 import { AdminWallet, AdminWalletTransaction } from '@/lib/types';
 import { ApiErrorCard } from '@/components/api-error-card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { SubmitButton } from '@/components/submit-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -200,7 +200,7 @@ export default async function WalletDetailPage({
             <Input id="description" name="description" required minLength={3} />
           </div>
           <div>
-            <Button type="submit">Apply adjustment</Button>
+            <SubmitButton pendingLabel="Applying…">Apply adjustment</SubmitButton>
           </div>
         </form>
       </div>

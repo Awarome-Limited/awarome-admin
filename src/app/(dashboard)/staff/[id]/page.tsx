@@ -18,7 +18,7 @@ import { AvatarInitials } from '@/components/avatar-initials';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import { SubmitButton } from '@/components/submit-button';
 import { formatDate } from '@/lib/format';
 import { updateStaff, setStaffActive, deleteStaff } from '../actions';
 
@@ -188,9 +188,7 @@ export default async function StaffDetailPage({
               </table>
             </div>
 
-            <Button type="submit" className="self-start">
-              Save changes
-            </Button>
+            <SubmitButton className="self-start" />
           </form>
         </CardContent>
       </Card>

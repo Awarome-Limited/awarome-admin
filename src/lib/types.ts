@@ -47,6 +47,10 @@ export interface AdminVendor {
   deleted?: boolean;
   isTestVendor?: boolean;
   status?: 'pending' | 'approved' | 'rejected';
+  // Daily trading hours, conventionally 'HH:MM' — older records may hold other
+  // free-text formats, so treat these as untrusted strings.
+  opensAt?: string;
+  closesAt?: string;
   createdAt?: string;
   users?: Array<{ _id: string; firstName?: string; lastName?: string; email?: string; phone?: string }>;
 }

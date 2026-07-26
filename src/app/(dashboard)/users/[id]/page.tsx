@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import { SubmitButton } from '@/components/submit-button';
 import { formatDate, formatNaira, statusBadgeVariant } from '@/lib/format';
 import { setUserSuspended, deleteUser, updateUser } from '../actions';
 
@@ -218,7 +218,7 @@ export default async function UserDetailPage({
                 <Field label="Source" name="source" defaultValue={user.source} />
               </div>
               <div>
-                <Button type="submit">Save changes</Button>
+                <SubmitButton />
               </div>
             </form>
           </div>

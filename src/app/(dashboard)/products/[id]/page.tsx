@@ -6,7 +6,7 @@ import { ApiErrorCard } from '@/components/api-error-card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import { SubmitButton } from '@/components/submit-button';
 import { formatDate } from '@/lib/format';
 import { updateProduct } from '../actions';
 
@@ -281,7 +281,7 @@ export default async function ProductDetailPage({
             </div>
           </div>
           <div>
-            <Button type="submit">Save changes</Button>
+            <SubmitButton />
           </div>
         </form>
       </div>

@@ -1,7 +1,7 @@
 import { authedFetch, ApiError, SingleResponse } from '@/lib/api-client';
 import { PricingConfig } from '@/lib/types';
 import { ApiErrorCard } from '@/components/api-error-card';
-import { Button } from '@/components/ui/button';
+import { SubmitButton } from '@/components/submit-button';
 import {
   Table,
   TableHeader,
@@ -92,7 +92,7 @@ export default async function PricingPage() {
             Changes apply immediately to new fee quotes — no redeploy needed.
           </p>
         </div>
-        <Button type="submit">Save changes</Button>
+        <SubmitButton />
       </div>
 
       <div className="flex flex-col gap-4" style={{ maxWidth: 900 }}>

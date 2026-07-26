@@ -1,7 +1,8 @@
 import Link from 'next/link';
+import { SubmitButton } from '@/components/submit-button';
 import { authedFetch, ApiError, SingleResponse } from '@/lib/api-client';
 import { ApiErrorCard } from '@/components/api-error-card';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { updateCampaignConfig } from './actions';
 
@@ -232,7 +233,7 @@ export default async function CampaignsPage() {
             >
               Send log
             </Link>
-            <Button type="submit">Save changes</Button>
+            <SubmitButton />
           </div>
         </div>
 

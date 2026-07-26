@@ -12,6 +12,7 @@ import {
 import { AvatarInitials } from '@/components/avatar-initials';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { SubmitButton } from '@/components/submit-button';
 import { Label } from '@/components/ui/label';
 import { formatDate, statusBadgeVariant } from '@/lib/format';
 import { DELIVERY_STATUSES } from '@/lib/order-enums';
@@ -344,9 +345,7 @@ export default async function DeliveryDetailPage({
                     ))}
                   </select>
                 </div>
-                <Button type="submit" className="self-start">
-                  Save changes
-                </Button>
+                <SubmitButton className="self-start" />
               </form>
             </CardContent>
           </Card>

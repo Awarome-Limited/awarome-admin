@@ -12,6 +12,7 @@ import {
 import { AvatarInitials } from '@/components/avatar-initials';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { SubmitButton } from '@/components/submit-button';
 import { Label } from '@/components/ui/label';
 import {
   Table,
@@ -398,9 +399,7 @@ export default async function OrderDetailPage({
                   options={ORDER_VENDOR_STATUSES}
                   defaultValue={order.orderVendorStatus}
                 />
-                <Button type="submit" className="w-full">
-                  Save changes
-                </Button>
+                <SubmitButton className="w-full" />
               </form>
             </CardContent>
           </Card>

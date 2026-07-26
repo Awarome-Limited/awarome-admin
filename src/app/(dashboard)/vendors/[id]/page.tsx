@@ -6,7 +6,7 @@ import { ApiErrorCard } from '@/components/api-error-card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import { SubmitButton } from '@/components/submit-button';
 import {
   Table,
   TableHeader,
@@ -19,6 +19,35 @@ import { formatDate } from '@/lib/format';
 import { setVendorSuspended, updateVendor } from '../actions';
 import { SuspendToggle } from '@/components/suspend-toggle';
 import { PaginationControls } from '@/components/pagination-controls';
+
+/**
+ * Coerce a stored vendor time into the 'HH:MM' an <input type="time"> needs.
+ * Vendor hours are free-text on the API, so older records hold things like
+ * '8:00', '8am' or '8:30 PM'. Returns '' when it can't be read, which leaves
+ * the picker empty rather than showing a wrong time.
+ */
+function toTimeInputValue(value?: string): string {
+  const raw = value?.trim();
+  if (!raw) return '';
+
+  const match = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i.exec(raw);
+  if (!match) return '';
+
+  let hours = Number(match[1]);
+  const minutes = Number(match[2] ?? 0);
+  const meridiem = match[3]?.toLowerCase();
+
+  if (meridiem === 'pm' && hours < 12) hours += 12;
+  if (meridiem === 'am' && hours === 12) hours = 0;
+  if (hours > 23 || minutes > 59) return '';
+
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
+function formatHours(vendor: AdminVendor): string {
+  if (!vendor.opensAt && !vendor.closesAt) return '—';
+  return `${vendor.opensAt || '—'} – ${vendor.closesAt || '—'}`;
+}
 
 function initials(name?: string) {
   return (name || '')
@@ -100,6 +129,11 @@ export default async function VendorDetailPage({
 
   async function handleEdit(formData: FormData) {
     'use server';
+    // A <input type="time"> renders blank for a legacy value it can't parse.
+    // Only send the hours when something was actually picked, so submitting an
+    // untouched form never wipes an existing (oddly formatted) time.
+    const opensAt = formData.get('opensAt')?.toString().trim();
+    const closesAt = formData.get('closesAt')?.toString().trim();
     await updateVendor(id, {
       name: formData.get('name')?.toString(),
       businessName: formData.get('businessName')?.toString(),
@@ -107,6 +141,8 @@ export default async function VendorDetailPage({
       phone: formData.get('phone')?.toString(),
       address: formData.get('address')?.toString(),
       status: formData.get('status')?.toString(),
+      ...(opensAt ? { opensAt } : {}),
+      ...(closesAt ? { closesAt } : {}),
     });
   }
 
@@ -115,6 +151,7 @@ export default async function VendorDetailPage({
     { label: 'Email', value: vendor.email || '—' },
     { label: 'Phone', value: vendor.phone || '—' },
     { label: 'Address', value: vendor.address || vendor.city || '—' },
+    { label: 'Opening hours', value: formatHours(vendor) },
     { label: 'Categories', value: categoryList },
     { label: 'Joined', value: formatDate(vendor.createdAt) },
   ];
@@ -333,6 +370,16 @@ export default async function VendorDetailPage({
             <Field label="Email" name="email" defaultValue={vendor.email} />
             <Field label="Phone" name="phone" defaultValue={vendor.phone} />
             <Field label="Address" name="address" defaultValue={vendor.address} className="sm:col-span-2" />
+            <TimeField
+              label="Opens at"
+              name="opensAt"
+              stored={vendor.opensAt}
+            />
+            <TimeField
+              label="Closes at"
+              name="closesAt"
+              stored={vendor.closesAt}
+            />
             <div className="flex flex-col gap-2">
               <Label htmlFor="status">Approval Status</Label>
               <select
@@ -348,7 +395,7 @@ export default async function VendorDetailPage({
             </div>
           </div>
           <div>
-            <Button type="submit">Save changes</Button>
+            <SubmitButton />
           </div>
         </form>
       </div>
@@ -371,6 +418,33 @@ function Field({
     <div className={`flex flex-col gap-2 ${className ?? ''}`}>
       <Label htmlFor={name}>{label}</Label>
       <Input id={name} name={name} defaultValue={defaultValue} />
+    </div>
+  );
+}
+
+function TimeField({
+  label,
+  name,
+  stored,
+}: {
+  label: string;
+  name: string;
+  stored?: string;
+}) {
+  const value = toTimeInputValue(stored);
+  // Legacy free-text the picker can't render — show what's on record so the
+  // admin knows it isn't blank, and can replace it deliberately.
+  const unreadable = !value && !!stored?.trim();
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={name}>{label}</Label>
+      <Input id={name} name={name} type="time" defaultValue={value} />
+      {unreadable && (
+        <span className="text-[12px] text-muted-foreground">
+          Currently stored as “{stored}” — pick a time to replace it.
+        </span>
+      )}
     </div>
   );
 }

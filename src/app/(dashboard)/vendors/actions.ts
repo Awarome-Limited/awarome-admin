@@ -19,6 +19,8 @@ export interface VendorEditPayload {
   phone?: string;
   address?: string;
   status?: string;
+  opensAt?: string;
+  closesAt?: string;
 }
 
 export async function updateVendor(id: string, payload: VendorEditPayload) {

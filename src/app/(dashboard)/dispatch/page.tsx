@@ -1,6 +1,6 @@
 import { authedFetch, ApiError, SingleResponse } from '@/lib/api-client';
 import { ApiErrorCard } from '@/components/api-error-card';
-import { Button } from '@/components/ui/button';
+import { SubmitButton } from '@/components/submit-button';
 import { updateDispatchConfig } from './actions';
 
 interface DispatchConfig {
@@ -123,7 +123,7 @@ export default async function DispatchPage() {
             Fleet and commission tunables. Changes apply within 30 seconds — no redeploy needed.
           </p>
         </div>
-        <Button type="submit">Save changes</Button>
+        <SubmitButton />
       </div>
 
       <div className="flex flex-col gap-4" style={{ maxWidth: 900 }}>

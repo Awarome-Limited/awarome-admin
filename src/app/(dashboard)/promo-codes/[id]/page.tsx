@@ -13,7 +13,7 @@ import { PromoCodeActiveToggle } from '@/components/promo-code-active-toggle';
 import { ConfirmActionButton } from '@/components/confirm-action-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import { SubmitButton } from '@/components/submit-button';
 import { formatDate } from '@/lib/format';
 import {
   updatePromoCode,
@@ -178,9 +178,7 @@ export default async function PromoCodeDetailPage({
                 defaultValue={promo.description}
               />
             </div>
-            <Button type="submit" className="self-start">
-              Save changes
-            </Button>
+            <SubmitButton className="self-start" />
           </form>
         </CardContent>
       </Card>
