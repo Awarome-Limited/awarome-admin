@@ -8,6 +8,7 @@ export interface DispatchConfigPayload {
   batchMaxSize?: { bike?: number; car?: number; truck?: number };
   dropoffRadiusKm?: number;
   pickupRadiusKm?: number;
+  selectionCutoffMinutes?: number;
   dispatchRadiusKm?: number;
   maxRidersPerDispatch?: number;
   redispatchIntervalMs?: number;

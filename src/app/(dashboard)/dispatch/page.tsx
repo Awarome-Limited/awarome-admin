@@ -8,6 +8,7 @@ interface DispatchConfig {
   batchMaxSize: { bike: number; car: number; truck: number };
   dropoffRadiusKm: number;
   pickupRadiusKm: number;
+  selectionCutoffMinutes: number;
   dispatchRadiusKm: number;
   maxRidersPerDispatch: number;
   redispatchIntervalMs: number;
@@ -44,6 +45,7 @@ export default async function DispatchPage() {
       batchTargetSize: num('batchTargetSize'),
       dropoffRadiusKm: num('dropoffRadiusKm'),
       pickupRadiusKm: num('pickupRadiusKm'),
+      selectionCutoffMinutes: num('selectionCutoffMinutes'),
       batchMaxSize: {
         bike: num('batchMaxSizeBike'),
         car: num('batchMaxSizeCar'),
@@ -99,8 +101,9 @@ export default async function DispatchPage() {
     },
     {
       title: 'Batch formation',
-      sub: 'Multi-drop clustering. A cluster at or above the target size goes to the gig pool; smaller ones go in-house.',
+      sub: 'When a delivery window closes to customers (batches form and dispatch at that same moment), and how multi-drop clustering works. A cluster at or above the target size goes to the gig pool; smaller ones go in-house.',
       fields: [
+        { label: 'Window closes before start', name: 'selectionCutoffMinutes', unit: 'min', value: config.selectionCutoffMinutes },
         { label: 'Gig-pool target size', name: 'batchTargetSize', unit: '#', value: config.batchTargetSize },
         { label: 'Dropoff radius', name: 'dropoffRadiusKm', unit: 'km', value: config.dropoffRadiusKm },
         { label: 'Pickup radius', name: 'pickupRadiusKm', unit: 'km', value: config.pickupRadiusKm },

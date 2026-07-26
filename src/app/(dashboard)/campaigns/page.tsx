@@ -37,9 +37,18 @@ interface StepStat {
   count: number;
 }
 
+interface StepConversion {
+  campaign: string;
+  step: string;
+  count: number;
+  revenue?: number;
+}
+
 interface CampaignStats {
   byStep: StepStat[];
   sentPerDay: { day: string; count: number }[];
+  conversions: StepConversion[];
+  clicks: StepConversion[];
 }
 
 // Display copy for the code-defined campaigns; unknown ids fall back to the
@@ -99,7 +108,12 @@ function statusVariant(
 
 export default async function CampaignsPage() {
   let config: CampaignConfig;
-  let stats: CampaignStats = { byStep: [], sentPerDay: [] };
+  let stats: CampaignStats = {
+    byStep: [],
+    sentPerDay: [],
+    conversions: [],
+    clicks: [],
+  };
   try {
     const result = await authedFetch<SingleResponse<CampaignConfig>>(
       '/admins/campaigns/config'
@@ -112,6 +126,8 @@ export default async function CampaignsPage() {
       stats = {
         byStep: statsResult.data.byStep ?? [],
         sentPerDay: statsResult.data.sentPerDay ?? [],
+        conversions: statsResult.data.conversions ?? [],
+        clicks: statsResult.data.clicks ?? [],
       };
     } catch {
       // Stats are additive — the config form still works without them.
@@ -157,14 +173,43 @@ export default async function CampaignsPage() {
     });
   }
 
-  // Pivot byStep rows into one row per campaign step with a column per status.
-  const statRows = new Map<string, { campaign: string; step: string; counts: Record<string, number> }>();
-  for (const row of stats.byStep) {
-    const key = `${row.campaign}:${row.step}`;
-    if (!statRows.has(key)) {
-      statRows.set(key, { campaign: row.campaign, step: row.step, counts: {} });
+  // Pivot byStep rows into one row per campaign step with a column per status,
+  // then fold in clicks and conversions.
+  const statRows = new Map<
+    string,
+    {
+      campaign: string;
+      step: string;
+      counts: Record<string, number>;
+      clicks: number;
+      conversions: number;
+      revenue: number;
     }
-    statRows.get(key)!.counts[row.status] = row.count;
+  >();
+  const rowFor = (campaign: string, step: string) => {
+    const key = `${campaign}:${step}`;
+    if (!statRows.has(key)) {
+      statRows.set(key, {
+        campaign,
+        step,
+        counts: {},
+        clicks: 0,
+        conversions: 0,
+        revenue: 0,
+      });
+    }
+    return statRows.get(key)!;
+  };
+  for (const row of stats.byStep) {
+    rowFor(row.campaign, row.step).counts[row.status] = row.count;
+  }
+  for (const row of stats.clicks) {
+    rowFor(row.campaign, row.step).clicks = row.count;
+  }
+  for (const row of stats.conversions) {
+    const target = rowFor(row.campaign, row.step);
+    target.conversions = row.count;
+    target.revenue = row.revenue ?? 0;
   }
 
   const maxDaily = Math.max(1, ...stats.sentPerDay.map((d) => d.count));
@@ -331,7 +376,8 @@ export default async function CampaignsPage() {
           <div className="text-[15px] font-semibold text-foreground">Outcomes by step</div>
           <div className="mb-[18px] mt-1 text-[13px] text-muted-foreground">
             Every claim ends in exactly one of these states. Skips are healthy — they mean the
-            user exited the journey (purchased, emptied their cart) before the nudge fired.
+            user exited the journey before the nudge fired. Conversions are last-touch: a
+            payment within 24h of a nudge credits that nudge.
           </div>
           {statRows.size === 0 ? (
             <p className="text-[13px] text-muted-foreground">No campaign activity yet.</p>
@@ -352,6 +398,14 @@ export default async function CampaignsPage() {
                         {s} {row.counts[s]}
                       </Badge>
                     ))}
+                    {row.clicks > 0 && (
+                      <Badge variant="info">clicks {row.clicks}</Badge>
+                    )}
+                    {row.conversions > 0 && (
+                      <Badge variant="default">
+                        conv {row.conversions} · ₦{row.revenue.toLocaleString()}
+                      </Badge>
+                    )}
                   </span>
                 </div>
               ))}
