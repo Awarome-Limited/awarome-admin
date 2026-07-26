@@ -206,6 +206,33 @@ export interface DeliveryZoneConfig {
   zones: DeliveryZone[];
 }
 
+// 0 = Sunday … 6 = Saturday. `opensAt`/`closesAt` are 'HH:MM' West Africa Time;
+// '23:59' means end-of-day, and a close at or before the open is an overnight
+// range that runs into the next day.
+export interface OperatingDay {
+  day: number;
+  enabled: boolean;
+  opensAt: string;
+  closesAt: string;
+}
+
+export interface ServiceStatus {
+  open: boolean;
+  reason: 'open' | 'paused' | 'closed-day' | 'outside-hours';
+  message: string;
+  day: number;
+  dayLabel: string;
+  opensAt?: string;
+  closesAt?: string;
+}
+
+export interface OperatingHoursConfig {
+  days: OperatingDay[];
+  paused: boolean;
+  closedMessage: string;
+  status?: ServiceStatus;
+}
+
 export interface AdminTransaction {
   _id: string;
   user?: { _id: string; firstName?: string; lastName?: string; email?: string } | string;
