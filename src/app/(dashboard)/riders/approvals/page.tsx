@@ -16,6 +16,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { formatDate } from '@/lib/format';
+import { RiderDocumentsStrip } from '@/components/rider-documents';
 import { cn } from '@/lib/utils';
 import { updateRiderProfileStatus } from '../actions';
 
@@ -159,6 +160,7 @@ export default async function RiderApprovalsPage({
                 <TableHead>Rider</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Vehicle & Plate</TableHead>
+                <TableHead>Documents</TableHead>
                 <TableHead>Verification</TableHead>
                 <TableHead>Registered</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -195,6 +197,9 @@ export default async function RiderApprovalsPage({
                           </span>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <RiderDocumentsStrip documents={rider.documents} />
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -242,7 +247,7 @@ export default async function RiderApprovalsPage({
               })}
               {ridersList.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                     No riders found for approval review.
                   </TableCell>
                 </TableRow>

@@ -22,6 +22,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { formatDate, statusBadgeVariant } from '@/lib/format';
+import { RiderDocuments } from '@/components/rider-documents';
 import { setRiderSuspended } from '../actions';
 
 const LIMIT = 10;
@@ -58,6 +59,19 @@ export default async function RiderDetailPage({
     );
   }
 
+  const verificationStatus =
+    rider.verificationStatus || (rider.suspended ? 'rejected' : 'unsubmitted');
+  // Matched to the approvals table rather than statusBadgeVariant, which has no
+  // hint for 'approved' and would render it neutral grey here but green there.
+  const verificationVariant =
+    verificationStatus === 'approved'
+      ? 'positive'
+      : verificationStatus === 'rejected'
+        ? 'destructive'
+        : verificationStatus === 'pending'
+          ? 'warning'
+          : 'secondary';
+
   return (
     <div className="flex max-w-3xl flex-col gap-4">
       <div className="flex items-center gap-3.5">
@@ -77,6 +91,8 @@ export default async function RiderDetailPage({
             label="Online status"
             value={<Badge variant={statusBadgeVariant(rider.status)} dot>{rider.status}</Badge>}
           />
+          <DetailRow label="Vehicle" value={rider.vehicleType} />
+          <DetailRow label="Plate number" value={rider.plateNumber} />
           <DetailRow label="Orders completed" value={rider.ordersCompleted} />
           <DetailRow
             label="Account status"
@@ -87,6 +103,28 @@ export default async function RiderDetailPage({
               />
             }
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Verification documents</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 text-sm">
+            <DetailRow
+              label="Verification"
+              value={
+                <Badge variant={verificationVariant} dot className="capitalize">
+                  {verificationStatus}
+                </Badge>
+              }
+            />
+            {rider.verificationNote && (
+              <DetailRow label="Note" value={rider.verificationNote} />
+            )}
+          </div>
+          <RiderDocuments documents={rider.documents} />
         </CardContent>
       </Card>
 
