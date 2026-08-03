@@ -1,5 +1,7 @@
+import { Fragment } from 'react';
 import { authedFetch, ApiError, SingleResponse } from '@/lib/api-client';
 import { PricingConfig } from '@/lib/types';
+import { BatchPricingModelSection } from './_components/batch-pricing-model';
 import { ApiErrorCard } from '@/components/api-error-card';
 import { SubmitButton } from '@/components/submit-button';
 import {
@@ -42,6 +44,11 @@ export default async function PricingPage() {
       batchDeliveryShortCharge: num('batchDeliveryShortCharge'),
       batchDeliveryMediumCharge: num('batchDeliveryMediumCharge'),
       batchDeliveryLongCharge: num('batchDeliveryLongCharge'),
+      batchPricingModel:
+        formData.get('batchPricingModel') === 'flat-discount'
+          ? 'flat-discount'
+          : 'window',
+      batchFlatDiscountPercent: num('batchFlatDiscountPercent'),
       batchFlatFeeBike: num('batchFlatFeeBike'),
       batchFlatFeeCar: num('batchFlatFeeCar'),
       batchFlatFeeTruck: num('batchFlatFeeTruck'),
@@ -62,23 +69,14 @@ export default async function PricingPage() {
       ],
     },
     {
-      title: 'Batch / eco pricing',
-      sub: 'Distance bands for batched and eco product deliveries',
+      title: 'Batch / eco pricing (not in use)',
+      sub: 'Legacy distance bands. Nothing reads these — batch is priced by the model selected above. Left here only so the stored values are visible; editing them has no effect.',
       fields: [
         { label: 'Short-distance threshold', name: 'batchDeliveryShortDistanceKm', unit: 'km', value: config.batchDeliveryShortDistanceKm },
         { label: 'Medium-distance threshold', name: 'batchDeliveryMediumDistanceKm', unit: 'km', value: config.batchDeliveryMediumDistanceKm },
         { label: 'Short-band charge', name: 'batchDeliveryShortCharge', unit: '₦', value: config.batchDeliveryShortCharge },
         { label: 'Medium-band charge', name: 'batchDeliveryMediumCharge', unit: '₦', value: config.batchDeliveryMediumCharge },
         { label: 'Long-band charge', name: 'batchDeliveryLongCharge', unit: '₦', value: config.batchDeliveryLongCharge },
-      ],
-    },
-    {
-      title: 'Package batch window floors',
-      sub: 'The 4PM–8PM window price per vehicle. Earlier windows are scaled up toward the instant fee. Keep below the minimum delivery charge.',
-      fields: [
-        { label: 'Flat floor — bike', name: 'batchFlatFeeBike', unit: '₦', value: config.batchFlatFeeBike },
-        { label: 'Flat floor — car', name: 'batchFlatFeeCar', unit: '₦', value: config.batchFlatFeeCar },
-        { label: 'Flat floor — truck', name: 'batchFlatFeeTruck', unit: '₦', value: config.batchFlatFeeTruck },
       ],
     },
   ];
@@ -96,36 +94,38 @@ export default async function PricingPage() {
       </div>
 
       <div className="flex flex-col gap-4" style={{ maxWidth: 900 }}>
-        {groups.map((group) => (
-          <div
-            key={group.title}
-            className="rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]"
-          >
-            <div className="text-[15px] font-semibold text-foreground">{group.title}</div>
-            <div className="mb-[18px] mt-1 text-[13px] text-muted-foreground">{group.sub}</div>
-            <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
-              {group.fields.map((field) => (
-                <div key={field.name} className="flex flex-col gap-[7px]">
-                  <span className="text-[13px] font-medium text-foreground-secondary">
-                    {field.label}
-                  </span>
-                  <div className="flex items-center gap-2 rounded-[10px] border border-input bg-muted px-[13px] py-[10px]">
-                    <span className="text-[13px] font-semibold text-muted-foreground">
-                      {field.unit}
+        {groups.map((group, index) => (
+          <Fragment key={group.title}>
+            {/* The live batch model sits directly under the base rates it
+                discounts, and above the legacy bands it replaced. */}
+            {index === 1 && <BatchPricingModelSection config={config} />}
+            <div className="rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]">
+              <div className="text-[15px] font-semibold text-foreground">{group.title}</div>
+              <div className="mb-[18px] mt-1 text-[13px] text-muted-foreground">{group.sub}</div>
+              <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+                {group.fields.map((field) => (
+                  <div key={field.name} className="flex flex-col gap-[7px]">
+                    <span className="text-[13px] font-medium text-foreground-secondary">
+                      {field.label}
                     </span>
-                    <input
-                      id={field.name}
-                      name={field.name}
-                      type="number"
-                      step="any"
-                      defaultValue={field.value}
-                      className="w-full border-none bg-transparent text-[14px] font-semibold tabular-nums text-foreground outline-none"
-                    />
+                    <div className="flex items-center gap-2 rounded-[10px] border border-input bg-muted px-[13px] py-[10px]">
+                      <span className="text-[13px] font-semibold text-muted-foreground">
+                        {field.unit}
+                      </span>
+                      <input
+                        id={field.name}
+                        name={field.name}
+                        type="number"
+                        step="any"
+                        defaultValue={field.value}
+                        className="w-full border-none bg-transparent text-[14px] font-semibold tabular-nums text-foreground outline-none"
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          </Fragment>
         ))}
 
         <div className="rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]">

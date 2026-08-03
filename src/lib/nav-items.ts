@@ -101,6 +101,13 @@ export const NAV_ITEMS: NavItem[] = [
     category: 'Fleet & Logistics',
   },
   {
+    label: 'Delivery Options',
+    href: '/delivery-options',
+    module: PermissionModule.PRICING,
+    icon: 'M14 17V5a1 1 0 0 0-1-1H2v13h4 M14 9h4l3 3v5h-3 M6.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4 M17.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4',
+    category: 'Fleet & Logistics',
+  },
+  {
     label: 'Delivery Zones',
     href: '/zones',
     module: PermissionModule.PRICING,

@@ -6,6 +6,8 @@ import { updateDispatchConfig } from './actions';
 interface DispatchConfig {
   batchTargetSize: number;
   batchMaxSize: { bike: number; car: number; truck: number };
+  batchMinSize: { bike: number; car: number; truck: number };
+  batchMaxWaitMs: number;
   dropoffRadiusKm: number;
   pickupRadiusKm: number;
   selectionCutoffMinutes: number;
@@ -46,10 +48,16 @@ export default async function DispatchPage() {
       dropoffRadiusKm: num('dropoffRadiusKm'),
       pickupRadiusKm: num('pickupRadiusKm'),
       selectionCutoffMinutes: num('selectionCutoffMinutes'),
+      batchMaxWaitMs: num('batchMaxWaitMinutes') * 60 * 1000,
       batchMaxSize: {
         bike: num('batchMaxSizeBike'),
         car: num('batchMaxSizeCar'),
         truck: num('batchMaxSizeTruck'),
+      },
+      batchMinSize: {
+        bike: num('batchMinSizeBike'),
+        car: num('batchMinSizeCar'),
+        truck: num('batchMinSizeTruck'),
       },
     });
   }
@@ -100,16 +108,37 @@ export default async function DispatchPage() {
       ],
     },
     {
-      title: 'Batch formation',
-      sub: 'When a delivery window closes to customers (batches form and dispatch at that same moment), and how multi-drop clustering works. A cluster at or above the target size goes to the gig pool; smaller ones go in-house.',
+      title: 'Batch clustering',
+      sub: 'How nearby drops are grouped into one multi-drop route, whichever pricing model is live. A cluster at or above the gig-pool target is broadcast to gig riders; smaller ones are handed to the in-house fleet.',
       fields: [
-        { label: 'Window closes before start', name: 'selectionCutoffMinutes', unit: 'min', value: config.selectionCutoffMinutes },
         { label: 'Gig-pool target size', name: 'batchTargetSize', unit: '#', value: config.batchTargetSize },
         { label: 'Dropoff radius', name: 'dropoffRadiusKm', unit: 'km', value: config.dropoffRadiusKm },
         { label: 'Pickup radius', name: 'pickupRadiusKm', unit: 'km', value: config.pickupRadiusKm },
         { label: 'Max stops — bike', name: 'batchMaxSizeBike', unit: '#', value: config.batchMaxSize.bike },
         { label: 'Max stops — car', name: 'batchMaxSizeCar', unit: '#', value: config.batchMaxSize.car },
         { label: 'Max stops — truck', name: 'batchMaxSizeTruck', unit: '#', value: config.batchMaxSize.truck },
+      ],
+    },
+    {
+      title: 'Batch sizing — flat-discount model only',
+      sub: 'With no delivery windows there is no cutoff to trigger formation, so a cluster waits until it reaches the minimum number of drops. If it never fills, it is dispatched to the in-house fleet once the oldest paid drop hits the wait cap — nothing sits in the pool indefinitely.',
+      fields: [
+        { label: 'Min drops — bike', name: 'batchMinSizeBike', unit: '#', value: config.batchMinSize?.bike ?? 3 },
+        { label: 'Min drops — car', name: 'batchMinSizeCar', unit: '#', value: config.batchMinSize?.car ?? 3 },
+        { label: 'Min drops — truck', name: 'batchMinSizeTruck', unit: '#', value: config.batchMinSize?.truck ?? 3 },
+        {
+          label: 'Dispatch anyway after',
+          name: 'batchMaxWaitMinutes',
+          unit: 'min',
+          value: Math.round((config.batchMaxWaitMs ?? 45 * 60 * 1000) / 60000),
+        },
+      ],
+    },
+    {
+      title: 'Delivery windows — window model only',
+      sub: 'When a delivery window closes to customers. Batches for that window form and dispatch at the same moment.',
+      fields: [
+        { label: 'Window closes before start', name: 'selectionCutoffMinutes', unit: 'min', value: config.selectionCutoffMinutes },
       ],
     },
   ];

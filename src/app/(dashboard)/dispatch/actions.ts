@@ -6,6 +6,8 @@ import { authedFetch } from '@/lib/api-client';
 export interface DispatchConfigPayload {
   batchTargetSize?: number;
   batchMaxSize?: { bike?: number; car?: number; truck?: number };
+  batchMinSize?: { bike?: number; car?: number; truck?: number };
+  batchMaxWaitMs?: number;
   dropoffRadiusKm?: number;
   pickupRadiusKm?: number;
   selectionCutoffMinutes?: number;

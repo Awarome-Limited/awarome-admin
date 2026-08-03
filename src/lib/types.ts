@@ -181,6 +181,15 @@ export interface DistanceTier {
   factor: number;
 }
 
+/**
+ * Which batch pricing model is live. Switching this changes both the price and
+ * whether the customer picks a delivery window at all.
+ *
+ *  - `window`         four bookable slots, priced down to a per-vehicle floor.
+ *  - `flat-discount`  no slots: one price, a flat percentage off instant.
+ */
+export type BatchPricingModel = 'window' | 'flat-discount';
+
 export interface PricingConfig {
   baseFare: number;
   pricePerKmBike: number;
@@ -194,10 +203,36 @@ export interface PricingConfig {
   batchDeliveryShortCharge: number;
   batchDeliveryMediumCharge: number;
   batchDeliveryLongCharge: number;
+  batchPricingModel: BatchPricingModel;
+  // Percent off the instant fee under the `flat-discount` model.
+  batchFlatDiscountPercent: number;
   // Package-delivery batch window floor (4PM-8PM price) per vehicle.
+  // Only consulted under the `window` model.
   batchFlatFeeBike: number;
   batchFlatFeeCar: number;
   batchFlatFeeTruck: number;
+}
+
+export type VehicleType = 'bike' | 'car' | 'truck';
+
+/**
+ * One vehicle's availability. It is offered only when the master switch, the
+ * delivery-option flag and the surface flag are all on.
+ */
+export interface VehicleAvailability {
+  vehicleType: VehicleType;
+  enabled: boolean;
+  instant: boolean;
+  batch: boolean;
+  marketplace: boolean;
+  package: boolean;
+  disabledMessage?: string;
+}
+
+export interface DeliveryOptionsConfig {
+  vehicles: VehicleAvailability[];
+  // Master switch for batch delivery itself, independent of any vehicle.
+  batchEnabled: boolean;
 }
 
 export interface DeliveryZone {
