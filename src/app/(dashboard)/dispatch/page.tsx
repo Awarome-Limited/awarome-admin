@@ -2,6 +2,7 @@ import { authedFetch, ApiError, SingleResponse } from '@/lib/api-client';
 import { ApiErrorCard } from '@/components/api-error-card';
 import { SubmitButton } from '@/components/submit-button';
 import { updateDispatchConfig } from './actions';
+import { BatchSizeGrid } from './_components/batch-size-grid';
 
 interface DispatchConfig {
   batchTargetSize: number;
@@ -114,24 +115,6 @@ export default async function DispatchPage() {
         { label: 'Gig-pool target size', name: 'batchTargetSize', unit: '#', value: config.batchTargetSize },
         { label: 'Dropoff radius', name: 'dropoffRadiusKm', unit: 'km', value: config.dropoffRadiusKm },
         { label: 'Pickup radius', name: 'pickupRadiusKm', unit: 'km', value: config.pickupRadiusKm },
-        { label: 'Max stops — bike', name: 'batchMaxSizeBike', unit: '#', value: config.batchMaxSize.bike },
-        { label: 'Max stops — car', name: 'batchMaxSizeCar', unit: '#', value: config.batchMaxSize.car },
-        { label: 'Max stops — truck', name: 'batchMaxSizeTruck', unit: '#', value: config.batchMaxSize.truck },
-      ],
-    },
-    {
-      title: 'Batch sizing — flat-discount model only',
-      sub: 'With no delivery windows there is no cutoff to trigger formation, so a cluster waits until it reaches the minimum number of drops. If it never fills, it is dispatched to the in-house fleet once the oldest paid drop hits the wait cap — nothing sits in the pool indefinitely.',
-      fields: [
-        { label: 'Min drops — bike', name: 'batchMinSizeBike', unit: '#', value: config.batchMinSize?.bike ?? 3 },
-        { label: 'Min drops — car', name: 'batchMinSizeCar', unit: '#', value: config.batchMinSize?.car ?? 3 },
-        { label: 'Min drops — truck', name: 'batchMinSizeTruck', unit: '#', value: config.batchMinSize?.truck ?? 3 },
-        {
-          label: 'Dispatch anyway after',
-          name: 'batchMaxWaitMinutes',
-          unit: 'min',
-          value: Math.round((config.batchMaxWaitMs ?? 45 * 60 * 1000) / 60000),
-        },
       ],
     },
     {
@@ -187,6 +170,14 @@ export default async function DispatchPage() {
             </div>
           </div>
         ))}
+
+        <BatchSizeGrid
+          minSize={config.batchMinSize ?? { bike: 3, car: 3, truck: 3 }}
+          maxSize={config.batchMaxSize}
+          maxWaitMinutes={Math.round(
+            (config.batchMaxWaitMs ?? 45 * 60 * 1000) / 60000
+          )}
+        />
       </div>
     </form>
   );
