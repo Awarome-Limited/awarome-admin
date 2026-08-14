@@ -84,3 +84,44 @@ export async function authedFetch<T>(
 
   return apiFetch<T>(path, { ...options, token: session.token });
 }
+
+// Multipart sibling of authedFetch. apiFetch always sets a JSON content type
+// and stringifies the body, so it cannot post files — here fetch sets the
+// multipart boundary itself.
+export async function authedUpload<T>(
+  path: string,
+  formData: FormData
+): Promise<T> {
+  if (!API_BASE_URL || !API_KEY) {
+    throw new Error(
+      'AWAROME_API_BASE_URL and AWAROME_API_KEY must be set in the environment'
+    );
+  }
+
+  const session = await getSession();
+  if (!session) {
+    throw new ApiError('Not authenticated', 401);
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      'x-awrm-api-key': API_KEY,
+      Authorization: `Bearer ${session.token}`,
+    },
+    body: formData,
+    cache: 'no-store',
+  });
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new ApiError(
+      payload?.message || 'Upload failed',
+      response.status,
+      payload
+    );
+  }
+
+  return payload as T;
+}

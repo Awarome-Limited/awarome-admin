@@ -161,6 +161,13 @@ export const NAV_ITEMS: NavItem[] = [
     category: 'Marketing & System',
   },
   {
+    label: 'Banners',
+    href: '/banners',
+    module: PermissionModule.ADS,
+    icon: 'M2 5.5h20v13H2z M2 10h20 M6 14.5h6',
+    category: 'Marketing & System',
+  },
+  {
     label: 'Campaigns',
     href: '/campaigns',
     module: PermissionModule.CAMPAIGNS,

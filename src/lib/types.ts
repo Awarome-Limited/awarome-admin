@@ -381,3 +381,39 @@ export interface AdminActivityLog {
   createdAt?: string;
 }
 
+
+export type WebBannerMode = 'structured' | 'image';
+export type WebBannerTheme = 'indigo' | 'yellow' | 'peach' | 'custom';
+export type WebBannerCtaVariant = 'primary' | 'accent' | 'outline';
+export type WebBannerLinkType = 'vendor' | 'category' | 'product' | 'url' | 'none';
+
+export interface AdminWebBanner {
+  _id: string;
+  mode: WebBannerMode;
+  eyebrow?: string;
+  headline?: string;
+  subheadline?: string;
+  ctaLabel?: string;
+  ctaVariant: WebBannerCtaVariant;
+  theme: WebBannerTheme;
+  backgroundColor?: string;
+  textColor?: string;
+  imageUrl?: string;
+  imageAlt?: string;
+  linkType: WebBannerLinkType;
+  linkValue?: string;
+  sortOrder: number;
+  isActive: boolean;
+  startsAt?: string;
+  endsAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AdminMobileAd {
+  _id: string;
+  bannerImage: string;
+  vendor?: { _id: string; name?: string; businessName?: string } | string;
+  createdAt?: string;
+  updatedAt?: string;
+}
