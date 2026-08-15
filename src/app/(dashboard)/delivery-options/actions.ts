@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { refresh, revalidatePath } from 'next/cache';
 import { authedFetch } from '@/lib/api-client';
 import { DeliveryOptionsConfig } from '@/lib/types';
 
@@ -12,4 +12,5 @@ export async function updateDeliveryOptions(
     body: payload,
   });
   revalidatePath('/delivery-options');
+  refresh();
 }

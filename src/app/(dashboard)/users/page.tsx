@@ -133,8 +133,13 @@ export default async function UsersPage({
             {FILTERS.map((f) => {
               const active = activeFilter === f.key;
               const href = (() => {
+                // Carries the search box and the date range across, so
+                // switching tabs narrows the current query instead of
+                // silently resetting it.
                 const p = new URLSearchParams();
                 if (search) p.set('search', search);
+                if (dateFrom) p.set('dateFrom', dateFrom);
+                if (dateTo) p.set('dateTo', dateTo);
                 if (f.key !== 'all') p.set('filter', f.key);
                 const s = p.toString();
                 return `/users${s ? `?${s}` : ''}`;

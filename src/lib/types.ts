@@ -308,15 +308,36 @@ export interface AdminWalletTransaction {
   createdAt?: string;
 }
 
+/**
+ * One paid job in the dashboard's recent feed — either a marketplace order or
+ * a standalone package delivery. `amount` is the order total or the delivery
+ * fee respectively.
+ */
+export interface RecentActivityRow {
+  kind: 'order' | 'delivery';
+  id: string;
+  reference: string;
+  amount: number;
+  status?: string;
+  deliveryStatus?: string;
+  customerName?: string;
+  customerEmail?: string;
+  createdAt?: string;
+}
+
 export interface AnalyticsOverview {
   summary: {
+    /** Confirmed order revenue plus confirmed standalone delivery fees. */
     totalRevenue: number;
+    orderRevenue: number;
+    deliveryRevenue: number;
     totalOrders: number;
     activeVendors: number;
     activeRiders: number;
     totalDeliveries: number;
   };
   revenueOverTime: { date: string; revenue: number; orderCount: number }[];
+  recentActivity: RecentActivityRow[];
   ordersByStatus: { status: string; count: number }[];
   topVendors: { vendorId: string; name?: string; totalSales: number; orderCount: number }[];
   topRiders: { riderId: string; name?: string; deliveriesCompleted: number }[];

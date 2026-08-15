@@ -11,18 +11,9 @@ import {
 import { DetailRow } from '@/components/detail-row';
 import { PromoCodeActiveToggle } from '@/components/promo-code-active-toggle';
 import { ConfirmActionButton } from '@/components/confirm-action-button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { SubmitButton } from '@/components/submit-button';
 import { formatDate } from '@/lib/format';
-import {
-  updatePromoCode,
-  togglePromoCodeActive,
-  deletePromoCode,
-} from '../actions';
-
-const selectClass =
-  'h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50';
+import { togglePromoCodeActive, deletePromoCode } from '../actions';
+import { PromoCodeEditForm } from './_components/promo-code-edit-form';
 
 function creatorName(creator: AdminPromoCode['createdBy']) {
   if (!creator || typeof creator === 'string') return creator || '—';
@@ -51,27 +42,6 @@ export default async function PromoCodeDetailPage({
         message={error instanceof ApiError ? error.message : 'Something went wrong.'}
       />
     );
-  }
-
-  async function handleEdit(formData: FormData) {
-    'use server';
-    const maxDiscountAmount = formData.get('maxDiscountAmount')?.toString();
-    const expiryDate = formData.get('expiryDate')?.toString();
-    const usageLimit = formData.get('usageLimit')?.toString();
-
-    await updatePromoCode(id, {
-      code: formData.get('code')?.toString().trim() || undefined,
-      discountType: formData.get('discountType')?.toString() as 'fixed' | 'percentage',
-      discountValue: Number(formData.get('discountValue')),
-      applicability: formData.get('applicability')?.toString() as
-        | 'product'
-        | 'delivery'
-        | 'both',
-      maxDiscountAmount: maxDiscountAmount ? Number(maxDiscountAmount) : undefined,
-      expiryDate: expiryDate || undefined,
-      usageLimit: usageLimit ? Number(usageLimit) : undefined,
-      description: formData.get('description')?.toString() || undefined,
-    });
   }
 
   async function handleDelete() {
@@ -114,72 +84,7 @@ export default async function PromoCodeDetailPage({
           <CardTitle>Edit promo code</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={handleEdit} className="flex flex-col gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Code" name="code" defaultValue={promo.code} required />
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="discountType">Discount type</Label>
-                <select
-                  id="discountType"
-                  name="discountType"
-                  defaultValue={promo.discountType}
-                  className={selectClass}
-                >
-                  <option value="percentage">Percentage</option>
-                  <option value="fixed">Fixed amount</option>
-                </select>
-              </div>
-              <Field
-                label="Discount value"
-                name="discountValue"
-                type="number"
-                step="any"
-                min="0"
-                defaultValue={promo.discountValue}
-                required
-              />
-              <Field
-                label="Max discount amount (₦, optional)"
-                name="maxDiscountAmount"
-                type="number"
-                step="any"
-                min="0"
-                defaultValue={promo.maxDiscountAmount}
-              />
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="applicability">Applies to</Label>
-                <select
-                  id="applicability"
-                  name="applicability"
-                  defaultValue={promo.applicability}
-                  className={selectClass}
-                >
-                  <option value="both">Product + delivery</option>
-                  <option value="product">Product only</option>
-                  <option value="delivery">Delivery only</option>
-                </select>
-              </div>
-              <Field
-                label="Usage limit (optional)"
-                name="usageLimit"
-                type="number"
-                min="0"
-                defaultValue={promo.usageLimit}
-              />
-              <Field
-                label="Expiry date (optional)"
-                name="expiryDate"
-                type="date"
-                defaultValue={promo.expiryDate ? promo.expiryDate.slice(0, 10) : undefined}
-              />
-              <Field
-                label="Description (optional)"
-                name="description"
-                defaultValue={promo.description}
-              />
-            </div>
-            <SubmitButton className="self-start" />
-          </form>
+          <PromoCodeEditForm promo={promo} />
         </CardContent>
       </Card>
 
@@ -191,39 +96,6 @@ export default async function PromoCodeDetailPage({
           action={handleDelete}
         />
       </div>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  name,
-  type = 'text',
-  step,
-  min,
-  required,
-  defaultValue,
-}: {
-  label: string;
-  name: string;
-  type?: string;
-  step?: string;
-  min?: string;
-  required?: boolean;
-  defaultValue?: string | number;
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor={name}>{label}</Label>
-      <Input
-        id={name}
-        name={name}
-        type={type}
-        step={step}
-        min={min}
-        required={required}
-        defaultValue={defaultValue}
-      />
     </div>
   );
 }

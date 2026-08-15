@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { refresh, revalidatePath } from 'next/cache';
 import { authedFetch } from '@/lib/api-client';
 
 export async function setRiderSuspended(id: string, suspended: boolean) {
@@ -11,6 +11,7 @@ export async function setRiderSuspended(id: string, suspended: boolean) {
   revalidatePath('/riders');
   revalidatePath('/riders/approvals');
   revalidatePath(`/riders/${id}`);
+  refresh();
 }
 
 export async function updateRiderProfileStatus(id: string, status: 'approved' | 'rejected') {
@@ -35,4 +36,5 @@ export async function updateRiderProfileStatus(id: string, status: 'approved' | 
   revalidatePath('/riders');
   revalidatePath('/riders/approvals');
   revalidatePath(`/riders/${id}`);
+  refresh();
 }

@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { refresh, revalidatePath } from 'next/cache';
 import { authedFetch } from '@/lib/api-client';
 import { AdminAudienceList, AdminAudienceListDetail } from '@/lib/types';
 
@@ -68,6 +68,7 @@ export async function updateAudienceListName(id: string, name: string): Promise<
   });
   revalidatePath('/push-notifications');
   revalidatePath(`/push-notifications/audience-lists/${id}`);
+  refresh();
 }
 
 export async function replaceAudienceListPhones(id: string, formData: FormData): Promise<AdminAudienceList> {
@@ -94,11 +95,13 @@ export async function replaceAudienceListPhones(id: string, formData: FormData):
   revalidatePath('/push-notifications');
   revalidatePath(`/push-notifications/audience-lists/${id}`);
   return res.data;
+  refresh();
 }
 
 export async function deleteAudienceList(id: string): Promise<void> {
   await authedFetch(`/notifications/audience-lists/${id}`, { method: 'DELETE' });
   revalidatePath('/push-notifications');
+  refresh();
 }
 
 export async function createAudienceList(formData: FormData): Promise<CreateAudienceListResult> {
@@ -127,4 +130,5 @@ export async function createAudienceList(formData: FormData): Promise<CreateAudi
   );
   revalidatePath('/push-notifications');
   return res.data;
+  refresh();
 }

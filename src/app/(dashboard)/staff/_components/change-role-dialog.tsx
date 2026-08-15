@@ -34,8 +34,12 @@ export function ChangeRoleDialog({
     setError(null);
     startTransition(async () => {
       try {
-        await updateStaff(staffId, { role: nextRole });
-        setOpen(false);
+        const result = await updateStaff(staffId, { role: nextRole });
+        if (result.ok) {
+          setOpen(false);
+        } else {
+          setError(result.error);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to update role.');
       }

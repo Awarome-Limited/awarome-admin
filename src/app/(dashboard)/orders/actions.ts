@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { refresh, revalidatePath } from 'next/cache';
 import { authedFetch } from '@/lib/api-client';
 
 export interface OrderStatusUpdate {
@@ -21,4 +21,5 @@ export async function updateOrderStatus(id: string, payload: OrderStatusUpdate) 
   });
   revalidatePath('/orders');
   revalidatePath(`/orders/${id}`);
+  refresh();
 }

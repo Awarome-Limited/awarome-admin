@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { refresh, revalidatePath } from 'next/cache';
 import { authedFetch } from '@/lib/api-client';
 
 export interface DispatchConfigPayload {
@@ -25,4 +25,5 @@ export async function updateDispatchConfig(payload: DispatchConfigPayload) {
     body: payload,
   });
   revalidatePath('/dispatch');
+  refresh();
 }

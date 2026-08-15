@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { refresh, revalidatePath } from 'next/cache';
 import { authedFetch } from '@/lib/api-client';
 
 export interface AdjustWalletPayload {
@@ -16,4 +16,5 @@ export async function adjustWallet(id: string, payload: AdjustWalletPayload) {
   });
   revalidatePath('/payments/wallets');
   revalidatePath(`/payments/wallets/${id}`);
+  refresh();
 }

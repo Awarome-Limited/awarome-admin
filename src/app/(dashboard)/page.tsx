@@ -1,15 +1,14 @@
 import Link from 'next/link';
 import { getSession } from '@/lib/session';
-import { authedFetch, ApiError, SingleResponse, PaginatedResponse } from '@/lib/api-client';
-import { AnalyticsOverview, AdminOrder } from '@/lib/types';
+import { authedFetch, ApiError, SingleResponse } from '@/lib/api-client';
+import { AnalyticsOverview } from '@/lib/types';
 import { hasPermission, PermissionAction, PermissionModule } from '@/lib/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ApiErrorCard } from '@/components/api-error-card';
-import { AvatarInitials } from '@/components/avatar-initials';
 import { Badge } from '@/components/ui/badge';
 import { RevenueChart } from '@/components/charts/revenue-chart';
 import { OrdersByStatusChart } from '@/components/charts/orders-by-status-chart';
-import { formatDate, statusBadgeVariant } from '@/lib/format';
+import { statusBadgeVariant } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 const RANGES = [
@@ -63,15 +62,13 @@ export default async function DashboardHomePage({
 async function AnalyticsSection({ rangeKey }: { rangeKey?: string }) {
   const range = RANGES.find((r) => r.key === rangeKey) ?? RANGES[1];
 
-  const [overviewResult, ordersResult] = await Promise.allSettled([
-    authedFetch<SingleResponse<AnalyticsOverview>>(
+  let overview: AnalyticsOverview;
+  try {
+    const result = await authedFetch<SingleResponse<AnalyticsOverview>>(
       `/admins/analytics/overview?days=${range.days}`
-    ),
-    authedFetch<PaginatedResponse<AdminOrder>>('/admins/orders?limit=4&skip=0'),
-  ]);
-
-  if (overviewResult.status === 'rejected') {
-    const error = overviewResult.reason;
+    );
+    overview = result.data;
+  } catch (error) {
     return (
       <ApiErrorCard
         message={error instanceof ApiError ? error.message : 'Failed to load analytics.'}
@@ -79,21 +76,25 @@ async function AnalyticsSection({ rangeKey }: { rangeKey?: string }) {
     );
   }
 
-  const overview = overviewResult.value.data;
-  const recentOrders =
-    ordersResult.status === 'fulfilled' ? ordersResult.value.data : [];
-
   const {
     summary,
     revenueOverTime = [],
     ordersByStatus = [],
     topVendors = [],
+    // Paid orders and paid deliveries, merged and newest-first by the API.
+    recentActivity = [],
   } = overview;
 
   const statCards = [
     {
       label: 'Total revenue',
       value: `₦${summary.totalRevenue.toLocaleString()}`,
+      // Delivery fees on standalone package jobs are revenue too — the split
+      // makes it obvious which side of the business the money came from.
+      hint:
+        summary.deliveryRevenue > 0
+          ? `₦${summary.orderRevenue.toLocaleString()} orders · ₦${summary.deliveryRevenue.toLocaleString()} deliveries`
+          : undefined,
       icon: 'M12 2v20 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
     },
     {
@@ -156,6 +157,9 @@ async function AnalyticsSection({ rangeKey }: { rangeKey?: string }) {
             <div className="text-[26px] font-bold tracking-tight text-primary tabular-nums">
               {card.value}
             </div>
+            {card.hint && (
+              <span className="text-[11.5px] text-muted-foreground">{card.hint}</span>
+            )}
           </div>
         ))}
       </div>
@@ -168,7 +172,7 @@ async function AnalyticsSection({ rangeKey }: { rangeKey?: string }) {
             <span className="text-[15px] font-semibold text-foreground">Revenue</span>
             <span className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground">
               <span className="size-[9px] rounded-[3px] bg-primary" />
-              Confirmed
+              Orders + deliveries
             </span>
           </div>
           <RevenueChart data={revenueOverTime} />
@@ -223,45 +227,59 @@ async function AnalyticsSection({ rangeKey }: { rangeKey?: string }) {
           </div>
         </div>
 
-        {/* Top orders */}
+        {/* Recent paid activity — orders and standalone package deliveries */}
         <div className="rounded-[14px] border border-border bg-card p-5 shadow-[var(--shadow-card)]">
-          <div className="mb-3.5 text-[15px] font-semibold text-foreground">Recent orders</div>
+          <div className="mb-3.5 text-[15px] font-semibold text-foreground">
+            Recent orders &amp; deliveries
+          </div>
           <div className="flex flex-col">
-            {recentOrders.length === 0 ? (
-              <p className="py-4 text-center text-sm text-muted-foreground">No orders yet.</p>
+            {recentActivity.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                No paid orders or deliveries yet.
+              </p>
             ) : (
-              recentOrders.map((order) => {
-                const custName = orderCustomerName(order.user);
-                return (
-                  <Link
-                    key={order._id}
-                    href={`/orders/${order._id}`}
-                    className="flex items-center gap-2.5 border-t border-border py-2.5 transition-colors hover:bg-muted/50"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-mono text-[12.5px] font-medium text-foreground">
-                        {order.orderId || order._id}
-                      </div>
-                      <div className="text-[11.5px] text-muted-foreground">{custName}</div>
+              recentActivity.map((row) => (
+                <Link
+                  key={`${row.kind}-${row.id}`}
+                  href={row.kind === 'order' ? `/orders/${row.id}` : `/deliveries/${row.id}`}
+                  className="flex items-center gap-2.5 border-t border-border py-2.5 transition-colors hover:bg-muted/50"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate font-mono text-[12.5px] font-medium text-foreground">
+                        {row.reference}
+                      </span>
+                      <span className="shrink-0 rounded-[5px] bg-chip px-1.5 py-px text-[10px] font-semibold uppercase tracking-[.03em] text-foreground-secondary">
+                        {row.kind === 'order' ? 'Order' : 'Delivery'}
+                      </span>
                     </div>
-                    <span className="shrink-0 text-[13px] font-semibold tabular-nums text-foreground">
-                      ₦{(order.totalPrice ?? 0).toLocaleString()}
-                    </span>
-                    <Badge variant={statusBadgeVariant(order.status)} dot className="shrink-0 text-[11.5px]">
-                      {order.status}
-                    </Badge>
-                  </Link>
-                );
-              })
+                    <div className="truncate text-[11.5px] text-muted-foreground">
+                      {row.customerName?.trim() || row.customerEmail || '—'}
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-[13px] font-semibold tabular-nums text-foreground">
+                    ₦{(row.amount ?? 0).toLocaleString()}
+                  </span>
+                  <Badge
+                    variant={statusBadgeVariant(row.deliveryStatus || row.status)}
+                    dot
+                    className="shrink-0 text-[11.5px]"
+                  >
+                    {row.deliveryStatus || row.status}
+                  </Badge>
+                </Link>
+              ))
             )}
           </div>
-          {recentOrders.length > 0 && (
-            <Link
-              href="/orders"
-              className="mt-3 block text-center text-[12.5px] font-semibold text-primary hover:underline"
-            >
-              View all orders →
-            </Link>
+          {recentActivity.length > 0 && (
+            <div className="mt-3 flex items-center justify-center gap-3 text-[12.5px] font-semibold">
+              <Link href="/orders" className="text-primary hover:underline">
+                All orders →
+              </Link>
+              <Link href="/deliveries" className="text-primary hover:underline">
+                All deliveries →
+              </Link>
+            </div>
           )}
         </div>
       </div>
@@ -276,13 +294,4 @@ function initials(name: string) {
     .map((p) => p[0].toUpperCase())
     .slice(0, 2)
     .join('');
-}
-
-function orderCustomerName(user: AdminOrder['user']) {
-  if (!user || typeof user === 'string') return user || '—';
-  return (
-    [user.firstName, user.lastName].filter(Boolean).join(' ') ||
-    user.email ||
-    '—'
-  );
 }

@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { refresh, revalidatePath } from 'next/cache';
 import { authedFetch, authedUpload } from '@/lib/api-client';
 import type {
   WebBannerCtaVariant,
@@ -32,11 +32,13 @@ export interface WebBannerPayload {
 export async function createWebBanner(payload: WebBannerPayload) {
   await authedFetch('/web-banners', { method: 'POST', body: payload });
   revalidatePath('/banners');
+  refresh();
 }
 
 export async function updateWebBanner(id: string, payload: WebBannerPayload) {
   await authedFetch(`/web-banners/${id}`, { method: 'PATCH', body: payload });
   revalidatePath('/banners');
+  refresh();
 }
 
 export async function toggleWebBannerActive(id: string, isActive: boolean) {
@@ -45,11 +47,13 @@ export async function toggleWebBannerActive(id: string, isActive: boolean) {
     body: { isActive },
   });
   revalidatePath('/banners');
+  refresh();
 }
 
 export async function deleteWebBanner(id: string) {
   await authedFetch(`/web-banners/${id}`, { method: 'DELETE' });
   revalidatePath('/banners');
+  refresh();
 }
 
 export async function reorderWebBanners(ids: string[]) {
@@ -58,6 +62,7 @@ export async function reorderWebBanners(ids: string[]) {
     body: { ids },
   });
   revalidatePath('/banners');
+  refresh();
 }
 
 export async function createMobileAd(payload: {
@@ -66,11 +71,13 @@ export async function createMobileAd(payload: {
 }) {
   await authedFetch('/ads', { method: 'POST', body: payload });
   revalidatePath('/banners');
+  refresh();
 }
 
 export async function deleteMobileAd(id: string) {
   await authedFetch(`/ads/${id}`, { method: 'DELETE' });
   revalidatePath('/banners');
+  refresh();
 }
 
 /**

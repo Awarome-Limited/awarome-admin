@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { refresh, revalidatePath } from 'next/cache';
 import { authedFetch } from '@/lib/api-client';
 
 export async function updateDeliveryStatus(id: string, status: string) {
@@ -10,4 +10,5 @@ export async function updateDeliveryStatus(id: string, status: string) {
   });
   revalidatePath('/deliveries');
   revalidatePath(`/deliveries/${id}`);
+  refresh();
 }

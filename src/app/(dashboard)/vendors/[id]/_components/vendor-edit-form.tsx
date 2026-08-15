@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/submit-button';
@@ -8,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AdminVendor } from '@/lib/types';
 import { toDisplayTime, toTimeInputValue } from '@/lib/format';
+import { useEditForm } from '@/lib/use-edit-form';
 import { updateVendor, VendorEditPayload } from '../../actions';
 
 interface FormState {
@@ -19,57 +19,55 @@ interface FormState {
   status: string;
   opensAt: string;
   closesAt: string;
+  [key: string]: string;
 }
 
 export function VendorEditForm({ vendor }: { vendor: AdminVendor }) {
-  const [form, setForm] = useState<FormState>({
-    name: vendor.name ?? '',
-    businessName: vendor.businessName ?? '',
-    email: vendor.email ?? '',
-    phone: vendor.phone ?? '',
-    address: vendor.address ?? '',
-    status: vendor.status ?? 'pending',
-    opensAt: toTimeInputValue(vendor.opensAt),
-    closesAt: toTimeInputValue(vendor.closesAt),
-  });
-  const [isPending, startTransition] = useTransition();
-
-  const set = (patch: Partial<FormState>) =>
-    setForm((prev) => ({ ...prev, ...patch }));
+  const {
+    values: form,
+    set,
+    submit,
+    isPending,
+  } = useEditForm<FormState>(
+    {
+      name: vendor.name ?? '',
+      businessName: vendor.businessName ?? '',
+      email: vendor.email ?? '',
+      phone: vendor.phone ?? '',
+      address: vendor.address ?? '',
+      status: vendor.status ?? 'pending',
+      opensAt: toTimeInputValue(vendor.opensAt),
+      closesAt: toTimeInputValue(vendor.closesAt),
+    },
+    (values) => {
+      // Blank optional fields are omitted, never sent as "". The API validates
+      // with Joi, which rejects empty strings outright — posting one fails the
+      // whole update with a 400.
+      const trimmed = (value: string) => value.trim() || undefined;
+      const payload: VendorEditPayload = {
+        name: trimmed(values.name),
+        businessName: trimmed(values.businessName),
+        email: trimmed(values.email),
+        phone: trimmed(values.phone),
+        address: trimmed(values.address),
+        status: trimmed(values.status),
+        // Written back in the stored house format ('4pm'), not the picker's
+        // 24-hour value, so the customer apps keep rendering hours as before.
+        opensAt: toDisplayTime(values.opensAt) || undefined,
+        closesAt: toDisplayTime(values.closesAt) || undefined,
+      };
+      return updateVendor(vendor._id, payload);
+    },
+    { successMessage: 'Vendor updated.', errorMessage: 'Failed to update vendor.' }
+  );
 
   function handleSave() {
-    // Blank optional fields are omitted, never sent as "". The API validates
-    // with Joi, which rejects empty strings outright — posting one fails the
-    // whole update with a 400.
-    const trimmed = (value: string) => value.trim() || undefined;
-    const payload: VendorEditPayload = {
-      name: trimmed(form.name),
-      businessName: trimmed(form.businessName),
-      email: trimmed(form.email),
-      phone: trimmed(form.phone),
-      address: trimmed(form.address),
-      status: trimmed(form.status),
-      // Written back in the stored house format ('4pm'), not the picker's
-      // 24-hour value, so the customer apps keep rendering hours as before.
-      opensAt: toDisplayTime(form.opensAt) || undefined,
-      closesAt: toDisplayTime(form.closesAt) || undefined,
-    };
-
-    if (payload.phone && (payload.phone.length < 11 || payload.phone.length > 14)) {
+    const phone = form.phone.trim();
+    if (phone && (phone.length < 11 || phone.length > 14)) {
       toast.error('Phone must be between 11 and 14 characters.');
       return;
     }
-
-    startTransition(async () => {
-      try {
-        await updateVendor(vendor._id, payload);
-        toast.success('Vendor updated.');
-      } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : 'Failed to update vendor.'
-        );
-      }
-    });
+    submit();
   }
 
   return (

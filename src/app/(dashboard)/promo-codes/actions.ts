@@ -1,7 +1,8 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { refresh, revalidatePath } from 'next/cache';
 import { authedFetch } from '@/lib/api-client';
+import { runAction, type ActionResult } from '@/lib/action-result';
 
 export interface PromoCodePayload {
   code?: string;
@@ -19,16 +20,23 @@ export async function createPromoCode(payload: PromoCodePayload) {
   revalidatePath('/promo-codes');
 }
 
-export async function updatePromoCode(id: string, payload: PromoCodePayload) {
-  await authedFetch(`/promo-codes/${id}`, { method: 'PUT', body: payload });
-  revalidatePath('/promo-codes');
-  revalidatePath(`/promo-codes/${id}`);
+export async function updatePromoCode(
+  id: string,
+  payload: PromoCodePayload
+): Promise<ActionResult> {
+  return runAction(async () => {
+    await authedFetch(`/promo-codes/${id}`, { method: 'PUT', body: payload });
+    revalidatePath('/promo-codes');
+    revalidatePath(`/promo-codes/${id}`);
+    refresh();
+  });
 }
 
 export async function togglePromoCodeActive(id: string) {
   await authedFetch(`/promo-codes/${id}/toggle-active`, { method: 'PATCH' });
   revalidatePath('/promo-codes');
   revalidatePath(`/promo-codes/${id}`);
+  refresh();
 }
 
 export async function deletePromoCode(id: string) {

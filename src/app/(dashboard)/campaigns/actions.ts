@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { refresh, revalidatePath } from 'next/cache';
 import { authedFetch } from '@/lib/api-client';
 
 export interface CampaignConfigPayload {
@@ -21,4 +21,5 @@ export async function updateCampaignConfig(payload: CampaignConfigPayload) {
     body: payload,
   });
   revalidatePath('/campaigns');
+  refresh();
 }

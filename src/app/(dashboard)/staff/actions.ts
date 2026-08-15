@@ -1,7 +1,8 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { refresh, revalidatePath } from 'next/cache';
 import { authedFetch } from '@/lib/api-client';
+import { runAction, type ActionResult } from '@/lib/action-result';
 import { StaffRole } from '@/lib/permissions';
 
 export interface CreateStaffPayload {
@@ -25,10 +26,16 @@ export async function createStaff(payload: CreateStaffPayload) {
   revalidatePath('/staff');
 }
 
-export async function updateStaff(id: string, payload: UpdateStaffPayload) {
-  await authedFetch(`/admins/staff/${id}`, { method: 'PATCH', body: payload });
-  revalidatePath('/staff');
-  revalidatePath(`/staff/${id}`);
+export async function updateStaff(
+  id: string,
+  payload: UpdateStaffPayload
+): Promise<ActionResult> {
+  return runAction(async () => {
+    await authedFetch(`/admins/staff/${id}`, { method: 'PATCH', body: payload });
+    revalidatePath('/staff');
+    revalidatePath(`/staff/${id}`);
+    refresh();
+  });
 }
 
 export async function setStaffActive(id: string, isActive: boolean) {
@@ -38,6 +45,7 @@ export async function setStaffActive(id: string, isActive: boolean) {
   });
   revalidatePath('/staff');
   revalidatePath(`/staff/${id}`);
+  refresh();
 }
 
 export async function setStaffSuspended(id: string, suspended: boolean) {

@@ -1,7 +1,8 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { refresh, revalidatePath } from 'next/cache';
 import { authedFetch } from '@/lib/api-client';
+import { runAction, type ActionResult } from '@/lib/action-result';
 
 export async function setVendorSuspended(id: string, suspended: boolean) {
   await authedFetch(`/vendors/admin/${id}/suspend`, {
@@ -10,6 +11,7 @@ export async function setVendorSuspended(id: string, suspended: boolean) {
   });
   revalidatePath('/vendors');
   revalidatePath(`/vendors/${id}`);
+  refresh();
 }
 
 export interface VendorEditPayload {
@@ -23,13 +25,19 @@ export interface VendorEditPayload {
   closesAt?: string;
 }
 
-export async function updateVendor(id: string, payload: VendorEditPayload) {
-  await authedFetch(`/vendors/admin/${id}`, {
-    method: 'PATCH',
-    body: payload,
+export async function updateVendor(
+  id: string,
+  payload: VendorEditPayload
+): Promise<ActionResult> {
+  return runAction(async () => {
+    await authedFetch(`/vendors/admin/${id}`, {
+      method: 'PATCH',
+      body: payload,
+    });
+    revalidatePath('/vendors');
+    revalidatePath(`/vendors/${id}`);
+    refresh();
   });
-  revalidatePath('/vendors');
-  revalidatePath(`/vendors/${id}`);
 }
 
 export interface CreateVendorPayload {

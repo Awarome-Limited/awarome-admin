@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { refresh, revalidatePath } from 'next/cache';
 import { authedFetch } from '@/lib/api-client';
 import { OperatingDay } from '@/lib/types';
 
@@ -16,4 +16,5 @@ export async function updateOperatingHours(payload: OperatingHoursPayload) {
     body: payload,
   });
   revalidatePath('/operating-hours');
+  refresh();
 }

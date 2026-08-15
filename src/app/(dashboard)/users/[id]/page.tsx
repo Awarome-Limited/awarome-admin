@@ -16,11 +16,9 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { SubmitButton } from '@/components/submit-button';
 import { formatDate, formatNaira, statusBadgeVariant } from '@/lib/format';
-import { setUserSuspended, deleteUser, updateUser } from '../actions';
+import { setUserSuspended, deleteUser } from '../actions';
+import { UserEditForm } from './_components/user-edit-form';
 
 const ORDERS_LIMIT = 10;
 
@@ -75,18 +73,6 @@ export default async function UserDetailPage({
     'use server';
     await deleteUser(id);
     redirect('/users');
-  }
-
-  async function handleEdit(formData: FormData) {
-    'use server';
-    // Blank fields are omitted, never sent as "" — the API validates with
-    // Joi, which rejects empty strings and fails the whole update.
-    await updateUser(id, {
-      firstName: formData.get('firstName')?.toString().trim() || undefined,
-      lastName: formData.get('lastName')?.toString().trim() || undefined,
-      phone: formData.get('phone')?.toString().trim() || undefined,
-      source: formData.get('source')?.toString().trim() || undefined,
-    });
   }
 
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || '—';
@@ -206,24 +192,7 @@ export default async function UserDetailPage({
             </div>
           </div>
 
-          {/* Edit user */}
-          <div
-            id="edit-user"
-            className="rounded-[14px] border border-border bg-card p-[20px_22px] shadow-[var(--shadow-card)]"
-          >
-            <div className="mb-4 text-[15px] font-semibold text-foreground">Edit user</div>
-            <form action={handleEdit} className="flex flex-col gap-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="First name" name="firstName" defaultValue={user.firstName} />
-                <Field label="Last name" name="lastName" defaultValue={user.lastName} />
-                <Field label="Phone" name="phone" defaultValue={user.phone} />
-                <Field label="Source" name="source" defaultValue={user.source} />
-              </div>
-              <div>
-                <SubmitButton />
-              </div>
-            </form>
-          </div>
+          <UserEditForm user={user} />
 
           {/* Order history */}
           <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
@@ -379,25 +348,6 @@ export default async function UserDetailPage({
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  name,
-  defaultValue,
-  className,
-}: {
-  label: string;
-  name: string;
-  defaultValue?: string;
-  className?: string;
-}) {
-  return (
-    <div className={`flex flex-col gap-2 ${className ?? ''}`}>
-      <Label htmlFor={name}>{label}</Label>
-      <Input id={name} name={name} defaultValue={defaultValue} />
     </div>
   );
 }

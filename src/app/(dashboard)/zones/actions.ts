@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { refresh, revalidatePath } from 'next/cache';
 import { authedFetch } from '@/lib/api-client';
 import { DeliveryZoneConfig } from '@/lib/types';
 
@@ -10,4 +10,5 @@ export async function updateDeliveryZones(payload: DeliveryZoneConfig) {
     body: payload,
   });
   revalidatePath('/zones');
+  refresh();
 }

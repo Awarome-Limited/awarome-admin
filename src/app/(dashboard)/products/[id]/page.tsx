@@ -4,11 +4,8 @@ import { authedFetch, ApiError, SingleResponse } from '@/lib/api-client';
 import { AdminProduct } from '@/lib/types';
 import { ApiErrorCard } from '@/components/api-error-card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { SubmitButton } from '@/components/submit-button';
 import { formatDate } from '@/lib/format';
-import { updateProduct } from '../actions';
+import { ProductEditForm } from './_components/product-edit-form';
 
 interface Category {
   _id: string;
@@ -43,14 +40,6 @@ function categoryName(product: AdminProduct) {
   if (typeof product.category === 'string') return product.category;
   return product.category.name || '—';
 }
-
-function categoryId(product: AdminProduct): string {
-  if (!product.category) return '';
-  if (typeof product.category === 'string') return product.category;
-  return product.category._id;
-}
-
-const DELIVERY_METHODS = ['bike', 'car', 'truck'] as const;
 
 export default async function ProductDetailPage({
   params,
@@ -88,23 +77,6 @@ export default async function ProductDetailPage({
   const vName = vendorName(product);
   const vId = vendorId(product);
   const cName = categoryName(product);
-  const currentCategoryId = categoryId(product);
-
-  async function handleEdit(formData: FormData) {
-    'use server';
-    const isAvailableVal = formData.get('isAvailable')?.toString();
-    await updateProduct(id, {
-      name: formData.get('name')?.toString() || undefined,
-      price: formData.get('price') ? Number(formData.get('price')) : undefined,
-      quantityAvailable: formData.get('quantityAvailable')
-        ? Number(formData.get('quantityAvailable'))
-        : undefined,
-      description: formData.get('description')?.toString() || undefined,
-      category: formData.get('category')?.toString() || undefined,
-      isAvailable: isAvailableVal === 'true' ? true : isAvailableVal === 'false' ? false : undefined,
-      deliveryMethod: formData.get('deliveryMethod')?.toString() || undefined,
-    });
-  }
 
   const infoFields = [
     { label: 'Vendor', value: vId ? <Link href={`/vendors/${vId}`} className="text-primary hover:underline">{vName}</Link> : vName },
@@ -195,115 +167,8 @@ export default async function ProductDetailPage({
         )}
       </div>
 
-      {/* Edit form */}
-      <div
-        id="edit-product"
-        className="rounded-[14px] border border-border bg-card p-[20px_22px] shadow-[var(--shadow-card)]"
-      >
-        <div className="mb-4 text-[15px] font-semibold text-foreground">Edit product</div>
-        <form action={handleEdit} className="flex flex-col gap-5">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Name" name="name" defaultValue={product.name} className="sm:col-span-2" />
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="price">Price (₦)</Label>
-              <Input
-                id="price"
-                name="price"
-                type="number"
-                min="0"
-                step="0.01"
-                defaultValue={product.price}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="quantityAvailable">Stock quantity</Label>
-              <Input
-                id="quantityAvailable"
-                name="quantityAvailable"
-                type="number"
-                min="0"
-                defaultValue={product.quantityAvailable}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="category">Category</Label>
-              <select
-                id="category"
-                name="category"
-                defaultValue={currentCategoryId}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="">— Select category —</option>
-                {categories.map((cat) => (
-                  <option key={cat._id} value={cat._id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="deliveryMethod">Delivery method</Label>
-              <select
-                id="deliveryMethod"
-                name="deliveryMethod"
-                defaultValue={product.deliveryMethod ?? ''}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="">— Select method —</option>
-                {DELIVERY_METHODS.map((m) => (
-                  <option key={m} value={m}>
-                    {m.charAt(0).toUpperCase() + m.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="isAvailable">Availability</Label>
-              <select
-                id="isAvailable"
-                name="isAvailable"
-                defaultValue={product.isAvailable ? 'true' : 'false'}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="true">In stock</option>
-                <option value="false">Unavailable</option>
-              </select>
-            </div>
-            <div className="flex flex-col gap-2 sm:col-span-2">
-              <Label htmlFor="description">Description</Label>
-              <textarea
-                id="description"
-                name="description"
-                rows={4}
-                defaultValue={product.description}
-                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
-            </div>
-          </div>
-          <div>
-            <SubmitButton />
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
+      <ProductEditForm product={product} categories={categories} />
 
-function Field({
-  label,
-  name,
-  defaultValue,
-  className,
-}: {
-  label: string;
-  name: string;
-  defaultValue?: string;
-  className?: string;
-}) {
-  return (
-    <div className={`flex flex-col gap-2 ${className ?? ''}`}>
-      <Label htmlFor={name}>{label}</Label>
-      <Input id={name} name={name} defaultValue={defaultValue} />
     </div>
   );
 }

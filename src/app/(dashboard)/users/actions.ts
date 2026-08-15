@@ -1,7 +1,8 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { refresh, revalidatePath } from 'next/cache';
 import { authedFetch, PaginatedResponse } from '@/lib/api-client';
+import { runAction, type ActionResult } from '@/lib/action-result';
 import { AdminUser } from '@/lib/types';
 
 export interface UserExportRow {
@@ -50,15 +51,27 @@ export async function setUserSuspended(id: string, suspended: boolean) {
   });
   revalidatePath('/users');
   revalidatePath(`/users/${id}`);
+  refresh();
+}
+
+export interface UserEditPayload {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  state?: string;
+  source?: string;
 }
 
 export async function updateUser(
   id: string,
-  body: { firstName?: string; lastName?: string; phone?: string; state?: string; source?: string }
-) {
-  await authedFetch(`/users/admin/${id}`, { method: 'PATCH', body });
-  revalidatePath('/users');
-  revalidatePath(`/users/${id}`);
+  body: UserEditPayload
+): Promise<ActionResult> {
+  return runAction(async () => {
+    await authedFetch(`/users/admin/${id}`, { method: 'PATCH', body });
+    revalidatePath('/users');
+    revalidatePath(`/users/${id}`);
+    refresh();
+  });
 }
 
 export async function deleteUser(id: string) {
