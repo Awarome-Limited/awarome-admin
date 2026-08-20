@@ -161,6 +161,13 @@ export const NAV_ITEMS: NavItem[] = [
     category: 'Marketing & System',
   },
   {
+    label: 'Customer Emails',
+    href: '/customer-emails',
+    module: PermissionModule.NOTIFICATIONS,
+    icon: 'M4 4h16v16H4z M4 7l8 6 8-6',
+    category: 'Marketing & System',
+  },
+  {
     label: 'Banners',
     href: '/banners',
     module: PermissionModule.ADS,

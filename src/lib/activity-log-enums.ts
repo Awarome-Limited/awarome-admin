@@ -17,4 +17,6 @@ export const LOG_CATEGORIES = [
   'pricing',
   'delivery',
   'rider',
+  'campaign',
+  'email',
 ] as const;
