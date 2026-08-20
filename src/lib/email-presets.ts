@@ -40,6 +40,17 @@ export const EMAIL_PRESET_CATEGORIES: EmailPresetCategory[] = [
 
 const APP_URL = 'https://awarome.com';
 
+/**
+ * Saved templates and code-defined presets share one picker and one
+ * selection key, so saved ids carry a prefix to tell the two apart.
+ */
+export const TEMPLATE_KEY_PREFIX = 'template:';
+
+export const templateKey = (id: string) => `${TEMPLATE_KEY_PREFIX}${id}`;
+
+export const templateIdFromKey = (key: string) =>
+  key.startsWith(TEMPLATE_KEY_PREFIX) ? key.slice(TEMPLATE_KEY_PREFIX.length) : null;
+
 export const EMAIL_PRESETS: EmailPreset[] = [
   // ---------------------------------------------------------------- Delivery
   {

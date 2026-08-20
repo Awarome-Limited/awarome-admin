@@ -1,25 +1,43 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { BookmarkPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   applyPlaceholders,
   extractPlaceholders,
   placeholderLabel,
+  templateIdFromKey,
+  templateKey,
   type EmailPreset,
+  type EmailPresetCategory,
 } from '@/lib/email-presets';
-import { sendCustomerEmail, type EmailRecipient, type SendCustomerEmailData } from '../actions';
+import {
+  sendCustomerEmail,
+  type EmailRecipient,
+  type SavedEmailTemplate,
+  type SendCustomerEmailData,
+} from '../actions';
 import { PresetPicker } from './preset-picker';
 import { RecipientPicker } from './recipient-picker';
 import { EmailPreview } from './email-preview';
+import { SaveTemplateDialog } from './save-template-dialog';
 
 const MAX_BODY = 5000;
 
 const inputClass =
   'w-full rounded-[10px] border border-input bg-background px-[14px] py-[11px] text-[14px] text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50';
 
-export function CustomerEmailComposer() {
-  const [presetId, setPresetId] = useState<string | null>(null);
+export function CustomerEmailComposer({
+  initialTemplates,
+}: {
+  initialTemplates: SavedEmailTemplate[];
+}) {
+  const [templates, setTemplates] = useState<SavedEmailTemplate[]>(initialTemplates);
+  // Null means "custom email". Otherwise a built-in preset id, or a saved
+  // template's prefixed key — one selection for one picker.
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [lastCategory, setLastCategory] = useState<EmailPresetCategory>('Delivery');
   const [recipients, setRecipients] = useState<EmailRecipient[]>([]);
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
@@ -28,7 +46,12 @@ export function CustomerEmailComposer() {
   const [showCta, setShowCta] = useState(false);
   const [fills, setFills] = useState<Record<string, string>>({});
   const [result, setResult] = useState<SendCustomerEmailData | null>(null);
+  const [saveOpen, setSaveOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  const openTemplateId = selectedKey ? templateIdFromKey(selectedKey) : null;
+  const openTemplate =
+    templates.find((template) => template._id === openTemplateId) ?? null;
 
   // Read straight out of the current text, so hand-edited presets and custom
   // emails get the same fill-in panel as an untouched preset.
@@ -38,26 +61,60 @@ export function CustomerEmailComposer() {
   const resolvedSubject = applyPlaceholders(subject, fills);
   const resolvedBody = applyPlaceholders(body, fills);
 
-  function applyPreset(preset: EmailPreset) {
-    setPresetId(preset.id);
-    setSubject(preset.subject);
-    setBody(preset.body);
+  function load(source: {
+    subject: string;
+    body: string;
+    ctaLabel?: string;
+    ctaUrl?: string;
+  }) {
+    setSubject(source.subject);
+    setBody(source.body);
     setFills({});
     setResult(null);
-    setShowCta(!!preset.cta);
-    setCtaLabel(preset.cta?.label ?? '');
-    setCtaUrl(preset.cta?.url ?? '');
+    const hasCta = !!(source.ctaLabel && source.ctaUrl);
+    setShowCta(hasCta);
+    setCtaLabel(source.ctaLabel ?? '');
+    setCtaUrl(source.ctaUrl ?? '');
+  }
+
+  function applyPreset(preset: EmailPreset) {
+    setSelectedKey(preset.id);
+    setLastCategory(preset.category);
+    load({
+      subject: preset.subject,
+      body: preset.body,
+      ctaLabel: preset.cta?.label,
+      ctaUrl: preset.cta?.url,
+    });
+  }
+
+  function applyTemplate(template: SavedEmailTemplate) {
+    setSelectedKey(templateKey(template._id));
+    setLastCategory(template.category);
+    load(template);
   }
 
   function clearPreset() {
-    setPresetId(null);
-    setSubject('');
-    setBody('');
-    setFills({});
-    setResult(null);
-    setShowCta(false);
-    setCtaLabel('');
-    setCtaUrl('');
+    setSelectedKey(null);
+    load({ subject: '', body: '' });
+  }
+
+  function handleTemplateSaved(template: SavedEmailTemplate) {
+    setTemplates((prev) => {
+      const without = prev.filter((existing) => existing._id !== template._id);
+      return [...without, template];
+    });
+    // Selecting what was just saved makes the next edit an update rather than
+    // an accidental second copy.
+    setSelectedKey(templateKey(template._id));
+    setLastCategory(template.category);
+  }
+
+  function handleTemplateDeleted(id: string) {
+    setTemplates((prev) => prev.filter((template) => template._id !== id));
+    // The copy stays in the composer — deleting the template shouldn't wipe an
+    // email that is halfway to being sent.
+    if (selectedKey === templateKey(id)) setSelectedKey(null);
   }
 
   function handleSend() {
@@ -77,7 +134,7 @@ export function CustomerEmailComposer() {
       );
       return;
     }
-    if (showCta && (!!ctaLabel.trim() !== !!ctaUrl.trim())) {
+    if (showCta && !!ctaLabel.trim() !== !!ctaUrl.trim()) {
       toast.error('A button needs both a label and a link.');
       return;
     }
@@ -90,7 +147,7 @@ export function CustomerEmailComposer() {
         body: resolvedBody.trim(),
         ctaLabel: showCta ? ctaLabel.trim() : undefined,
         ctaUrl: showCta ? ctaUrl.trim() : undefined,
-        presetId: presetId ?? 'custom',
+        presetId: selectedKey ?? 'custom',
       });
 
       if (!response.ok) {
@@ -108,16 +165,37 @@ export function CustomerEmailComposer() {
     });
   }
 
+  const canSave = !!subject.trim() && !!body.trim();
+
   return (
     <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_350px]">
       <PresetPicker
-        selectedId={presetId}
-        onSelect={applyPreset}
+        selectedKey={selectedKey}
+        savedTemplates={templates}
+        onSelectPreset={applyPreset}
+        onSelectTemplate={applyTemplate}
         onClear={clearPreset}
+        onDeleted={handleTemplateDeleted}
       />
 
       <div className="flex flex-col gap-[18px] rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]">
-        <div className="text-[15px] font-semibold text-foreground">Compose</div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[15px] font-semibold text-foreground">Compose</span>
+          <button
+            type="button"
+            onClick={() => setSaveOpen(true)}
+            disabled={!canSave}
+            title={
+              canSave
+                ? 'Save this copy as a reusable template'
+                : 'Write a subject and message first'
+            }
+            className="inline-flex items-center gap-1.5 rounded-[9px] border border-border-strong bg-card px-3 py-[7px] text-[12.5px] font-semibold text-foreground-secondary transition-colors hover:bg-muted disabled:opacity-40 disabled:hover:bg-card"
+          >
+            <BookmarkPlus size={14} />
+            {openTemplate ? 'Save template' : 'Save as template'}
+          </button>
+        </div>
 
         <RecipientPicker recipients={recipients} onChange={setRecipients} />
 
@@ -156,7 +234,8 @@ export function CustomerEmailComposer() {
           />
           <span className="text-[11.5px] text-muted-foreground">
             {'{{firstName}}'} is replaced with each recipient’s own name — or
-            “there” when we don’t have one on file.
+            “there” when we don’t have one on file. Wrap any other detail in{' '}
+            {'{{ }}'} to turn it into a fill-in field.
           </span>
         </label>
 
@@ -278,6 +357,16 @@ export function CustomerEmailComposer() {
           sampleFirstName={recipients[0]?.firstName?.trim() || 'there'}
         />
       </div>
+
+      <SaveTemplateDialog
+        open={saveOpen}
+        onOpenChange={setSaveOpen}
+        draft={{ subject, body, ctaLabel: showCta ? ctaLabel : '', ctaUrl: showCta ? ctaUrl : '' }}
+        openTemplate={openTemplate}
+        suggestedName={subject.trim().slice(0, 80)}
+        suggestedCategory={lastCategory}
+        onSaved={handleTemplateSaved}
+      />
     </div>
   );
 }

@@ -10,7 +10,8 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { formatDate } from '@/lib/format';
-import { getEmailPreset } from '@/lib/email-presets';
+import { getEmailPreset, templateIdFromKey } from '@/lib/email-presets';
+import { getEmailTemplates } from './actions';
 import { CustomerEmailComposer } from './_components/customer-email-composer';
 
 const RECENT_LIMIT = 8;
@@ -35,9 +36,12 @@ export default async function CustomerEmailsPage() {
   // they stay searchable alongside every other admin action. A failure here
   // must not take the composer down with it — that's the part of the page
   // people came for.
-  const recent = await authedFetch<PaginatedResponse<AdminActivityLog>>(
-    `/admins/activity-logs?action=customer-email-sent&limit=${RECENT_LIMIT}&skip=0`
-  ).catch(() => null);
+  const [templates, recent] = await Promise.all([
+    getEmailTemplates(),
+    authedFetch<PaginatedResponse<AdminActivityLog>>(
+      `/admins/activity-logs?action=customer-email-sent&limit=${RECENT_LIMIT}&skip=0`
+    ).catch(() => null),
+  ]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -51,7 +55,7 @@ export default async function CustomerEmailsPage() {
         </p>
       </div>
 
-      <CustomerEmailComposer />
+      <CustomerEmailComposer initialTemplates={templates} />
 
       <div className="pt-1">
         <h2 className="text-[17px] font-bold tracking-tight text-foreground">
@@ -78,7 +82,14 @@ export default async function CustomerEmailsPage() {
               {recent?.data.map((log) => {
                 const recipients = recipientList(log);
                 const presetId = metaString(log, 'presetId');
-                const preset = getEmailPreset(presetId);
+                const savedId = templateIdFromKey(presetId);
+                const label = savedId
+                  ? (templates.find((template) => template._id === savedId)?.name ??
+                    'Saved template')
+                  : (getEmailPreset(presetId)?.label ?? (presetId || 'custom'));
+                const known = savedId
+                  ? templates.some((template) => template._id === savedId)
+                  : !!getEmailPreset(presetId);
 
                 return (
                   <TableRow key={log._id}>
@@ -88,9 +99,7 @@ export default async function CustomerEmailsPage() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={preset ? 'info' : 'outline'}>
-                        {preset?.label ?? (presetId || 'custom')}
-                      </Badge>
+                      <Badge variant={known ? 'info' : 'outline'}>{label}</Badge>
                     </TableCell>
                     <TableCell className="max-w-[280px]">
                       <span className="block truncate text-muted-foreground">
