@@ -22,6 +22,7 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
+import { CancelJobDialog } from '@/components/cancel-job-dialog';
 import { formatDate, statusBadgeVariant } from '@/lib/format';
 import {
   ORDER_STATUSES,
@@ -65,6 +66,18 @@ function buildTimeline(order: AdminOrder) {
     { title: 'Delivered', done: !!order.isDelivered },
   ];
   return events;
+}
+
+/** The agent who cancelled it — the answer to "who did this?". */
+function cancellingStaff(
+  staff: NonNullable<AdminOrder['cancellation']>['staff']
+) {
+  if (!staff || typeof staff === 'string') return 'Awarome support';
+  return (
+    [staff.firstName, staff.lastName].filter(Boolean).join(' ') ||
+    staff.email ||
+    'Awarome support'
+  );
 }
 
 export default async function OrderDetailPage({
@@ -137,6 +150,16 @@ export default async function OrderDetailPage({
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M9 15l2 2 4-4"/></svg>
             Print invoice
           </Button>
+          {order.status !== 'cancelled' && !order.isDelivered && (
+            <CancelJobDialog
+              jobType="order"
+              id={order._id}
+              reference={order.orderId || order._id}
+              amount={order.totalPrice ?? 0}
+              isPaid={order.isPaid === true}
+              hasRider={Boolean(order.rider)}
+            />
+          )}
         </div>
       </div>
 
@@ -252,6 +275,45 @@ export default async function OrderDetailPage({
         </div>
 
         <div className="flex flex-col gap-4">
+          {/* Why this was cancelled, and by whom */}
+          {order.cancellation && (
+            <Card className="border-destructive/30">
+              <CardHeader>
+                <CardTitle className="text-xs font-semibold uppercase tracking-wide text-destructive">
+                  Cancelled
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-2.5">
+                <div className="text-[14px] font-semibold text-foreground">
+                  {order.cancellation.reason || '—'}
+                </div>
+                {order.cancellation.note && (
+                  <div className="text-[12.5px] text-muted-foreground">
+                    “{order.cancellation.note}”
+                  </div>
+                )}
+                <div className="flex flex-col gap-1 text-[12.5px] text-muted-foreground">
+                  <span>
+                    By {cancellingStaff(order.cancellation.staff)}
+                    {order.cancellation.source === 'rider-request'
+                      ? ' — approving the rider’s request'
+                      : ''}
+                  </span>
+                  {order.cancellation.cancelledAt && (
+                    <span>{formatDate(order.cancellation.cancelledAt)}</span>
+                  )}
+                </div>
+                {order.cancellation.refundQueued && (
+                  <Link href="/refunds" className="w-fit">
+                    <Badge variant="warning" dot>
+                      refund queued
+                    </Badge>
+                  </Link>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Customer */}
           <Card>
             <CardHeader>

@@ -13,6 +13,11 @@ import {
 import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { ResolveDialog } from './_components/resolve-dialog';
+import {
+  TripDetails,
+  TripDetailsDialog,
+  TripParty,
+} from './_components/trip-details-dialog';
 
 interface Party {
   firstName?: string;
@@ -20,6 +25,7 @@ interface Party {
   email?: string;
   phone?: string;
   plateNumber?: string;
+  vehicleType?: string;
 }
 
 interface CancellationRequest {
@@ -42,11 +48,20 @@ interface CancellableJob {
   deliveryFee?: number;
   isPaid?: boolean;
   batchId?: string;
+  vehicleType?: string;
+  deliveryOption?: string;
+  deliveryWindow?: string;
+  paymentMethod?: string;
+  createdAt?: string;
   user?: Party | string;
-  pickupAddress?: { address?: string };
-  dropoffAddress?: { address?: string };
+  sender?: { name?: string; phone?: string };
+  receiver?: { name?: string; phone?: string };
+  pickupAddress?: { address?: string; note?: string };
+  dropoffAddress?: { address?: string; note?: string };
   deliveryLocation?: { address?: string };
-  vendor?: { businessName?: string; name?: string; address?: string } | string;
+  vendor?:
+    | { businessName?: string; name?: string; address?: string; phone?: string }
+    | string;
   cancellationRequest?: CancellationRequest;
 }
 
@@ -91,6 +106,114 @@ function partyName(user?: Party | string) {
 function partyContact(user?: Party | string) {
   if (!user || typeof user === 'string') return '—';
   return user.phone || user.email || '—';
+}
+
+function contactOf(user?: Party | string) {
+  if (!user || typeof user === 'string') return {};
+  return { phone: user.phone, email: user.email };
+}
+
+function vendorOf(vendor?: CancellableJob['vendor']) {
+  if (!vendor || typeof vendor === 'string') return null;
+  return vendor;
+}
+
+/**
+ * Everything ops needs to work one case, assembled once per row.
+ *
+ * A package delivery names its own sender and receiver; a marketplace order
+ * collects from a vendor and drops at the customer, so the same three roles
+ * are filled from different fields.
+ */
+function tripDetailsFor(
+  job: CancellableJob,
+  jobType: 'order' | 'delivery'
+): TripDetails {
+  const request = job.cancellationRequest || {};
+  const rider = request.rider;
+  const vendor = vendorOf(job.vendor);
+  const customer = contactOf(job.user);
+  const isOrder = jobType === 'order';
+
+  const parties: TripParty[] = [
+    {
+      role: 'Customer',
+      name: partyName(job.user),
+      phone: customer.phone,
+      email: customer.email,
+    },
+    isOrder
+      ? {
+          role: 'Vendor (pickup)',
+          name: vendor?.businessName || vendor?.name || '—',
+          phone: vendor?.phone,
+        }
+      : {
+          role: 'Sender',
+          name: job.sender?.name || '—',
+          phone: job.sender?.phone,
+        },
+    isOrder
+      ? {
+          role: 'Receiver',
+          name: partyName(job.user),
+          phone: customer.phone,
+        }
+      : {
+          role: 'Receiver',
+          name: job.receiver?.name || '—',
+          phone: job.receiver?.phone,
+        },
+    {
+      role: 'Rider',
+      name: partyName(rider),
+      phone: typeof rider === 'object' ? rider?.phone : undefined,
+    },
+  ];
+
+  const amount = isOrder ? job.totalPrice ?? 0 : job.deliveryFee ?? 0;
+
+  return {
+    reference: job.deliveryId || job.orderId || job._id,
+    jobType,
+    parties,
+    pickup: {
+      address: (isOrder ? vendor?.address : job.pickupAddress?.address) || '',
+      note: job.pickupAddress?.note,
+    },
+    dropoff: {
+      address:
+        (isOrder ? job.deliveryLocation?.address : job.dropoffAddress?.address) ||
+        '',
+      note: job.dropoffAddress?.note,
+    },
+    facts: [
+      { label: 'Value', value: `₦${amount.toLocaleString()}` },
+      {
+        label: 'Paid',
+        value: job.isPaid ? 'Yes' : 'No',
+      },
+      { label: 'Payment', value: job.paymentMethod || 'prepaid' },
+      { label: 'Vehicle', value: job.vehicleType || '—' },
+      {
+        label: 'Trip',
+        value: job.batchId
+          ? `Batch ${job.batchId}`
+          : job.deliveryOption || 'instant',
+      },
+      { label: 'Booked', value: formatDate(job.createdAt) },
+      ...(typeof rider === 'object' && rider?.plateNumber
+        ? [{ label: 'Plate', value: rider.plateNumber }]
+        : []),
+      ...(job.deliveryWindow
+        ? [{ label: 'Window', value: job.deliveryWindow }]
+        : []),
+    ],
+    reason: REASONS[request.reason || ''] || request.reason || '—',
+    reasonNote: request.note,
+    stage: STAGES[request.atStatus || ''] || request.atStatus || '—',
+    requestedAt: request.requestedAt ? formatDate(request.requestedAt) : undefined,
+  };
 }
 
 export default async function CancellationsPage({
@@ -267,6 +390,9 @@ export default async function CancellationsPage({
                     {isPending && (
                       <TableCell>
                         <div className="flex justify-end gap-2">
+                          <TripDetailsDialog
+                            details={tripDetailsFor(job, jobType)}
+                          />
                           <ResolveDialog
                             jobType={jobType}
                             id={job._id}
@@ -292,6 +418,11 @@ export default async function CancellationsPage({
                     )}
                     {!isPending && (
                       <TableCell>
+                        <div className="mb-2">
+                          <TripDetailsDialog
+                            details={tripDetailsFor(job, jobType)}
+                          />
+                        </div>
                         {request.refundQueued ? (
                           <Link href="/refunds" className="hover:underline">
                             <Badge variant="warning" dot>

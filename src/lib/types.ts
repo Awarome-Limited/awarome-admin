@@ -133,6 +133,25 @@ export interface AdminCart {
   updatedAt?: string;
 }
 
+/**
+ * How a job came to be cancelled — set on every cancelled order and delivery,
+ * whether a rider asked for it or ops called it off. Names the reason and the
+ * staff member accountable for it.
+ */
+export interface JobCancellation {
+  source?: 'rider-request' | 'admin';
+  reason?: string;
+  note?: string;
+  staff?:
+    | { _id: string; firstName?: string; lastName?: string; email?: string }
+    | string;
+  rider?:
+    | { _id: string; firstName?: string; lastName?: string; phone?: string }
+    | string;
+  cancelledAt?: string;
+  refundQueued?: boolean;
+}
+
 export interface AdminOrder {
   _id: string;
   orderId?: string;
@@ -153,25 +172,30 @@ export interface AdminOrder {
   orderAcceptanceTime?: string;
   isPaid?: boolean;
   isDelivered?: boolean;
+  refundStatus?: string;
   paymentMethod?: string;
+  cancellation?: JobCancellation;
   createdAt?: string;
 }
 
 export interface AdminDelivery {
   _id: string;
   deliveryId?: string;
-  user?: { _id: string; firstName?: string; lastName?: string; email?: string } | string;
+  user?: { _id: string; firstName?: string; lastName?: string; email?: string; phone?: string } | string;
   rider?: { _id: string; firstName?: string; lastName?: string; phone?: string } | string;
   requestType?: string;
   deliveryOption?: string;
   status?: string;
+  riderStatus?: string;
   deliveryFee?: number;
   isPaid?: boolean;
+  refundStatus?: string;
   estimatedDistance?: number;
   sender?: { name?: string; phone?: string };
   receiver?: { name?: string; phone?: string };
   pickupAddress?: { address?: string; note?: string };
   dropoffAddress?: { address?: string; note?: string };
+  cancellation?: JobCancellation;
   createdAt?: string;
 }
 

@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SubmitButton } from '@/components/submit-button';
 import { Label } from '@/components/ui/label';
+import { CancelJobDialog } from '@/components/cancel-job-dialog';
 import { formatDate, statusBadgeVariant } from '@/lib/format';
 import { DELIVERY_STATUSES } from '@/lib/order-enums';
 import { updateDeliveryStatus } from '../actions';
@@ -31,6 +32,17 @@ function initials(name?: string) {
 function riderName(rider: AdminDelivery['rider']) {
   if (!rider || typeof rider === 'string') return null;
   return [rider.firstName, rider.lastName].filter(Boolean).join(' ') || null;
+}
+
+/** The agent who cancelled it — the answer to "who did this?". */
+function staffName(staff: NonNullable<AdminDelivery['cancellation']>['staff']) {
+  if (!staff) return 'Awarome support';
+  if (typeof staff === 'string') return 'Awarome support';
+  return (
+    [staff.firstName, staff.lastName].filter(Boolean).join(' ') ||
+    staff.email ||
+    'Awarome support'
+  );
 }
 
 function buildDeliveryTimeline(delivery: AdminDelivery) {
@@ -82,6 +94,12 @@ export default async function DeliveryDetailPage({
   const rider = delivery.rider && typeof delivery.rider !== 'string' ? delivery.rider : null;
   const riderDisplayName = rider ? riderName(delivery.rider) : null;
   const timeline = buildDeliveryTimeline(delivery);
+  const cancellation = delivery.cancellation;
+  // Nothing to cancel once it has been cancelled or handed over.
+  const canCancel =
+    delivery.status !== 'cancelled' &&
+    delivery.status !== 'failed' &&
+    delivery.riderStatus !== 'delivered';
 
   const packageFields = [
     { label: 'Fee', value: `₦${(delivery.deliveryFee ?? 0).toLocaleString()}` },
@@ -118,10 +136,22 @@ export default async function DeliveryDetailPage({
             {[delivery.requestType, formatDate(delivery.createdAt)].filter(Boolean).join(' · ')}
           </p>
         </div>
-        <Button size="sm" variant={riderDisplayName ? 'outline' : 'default'}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5.5 17.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5 M18.5 17.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5 M5.5 12.5L9 6h4l2.5 4"/></svg>
-          {riderDisplayName ? 'View rider' : 'Assign rider'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant={riderDisplayName ? 'outline' : 'default'}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5.5 17.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5 M18.5 17.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5 M5.5 12.5L9 6h4l2.5 4"/></svg>
+            {riderDisplayName ? 'View rider' : 'Assign rider'}
+          </Button>
+          {canCancel && (
+            <CancelJobDialog
+              jobType="delivery"
+              id={delivery._id}
+              reference={delivery.deliveryId || delivery._id}
+              amount={delivery.deliveryFee ?? 0}
+              isPaid={delivery.isPaid === true}
+              hasRider={Boolean(riderDisplayName)}
+            />
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_1fr] lg:items-start">
@@ -240,6 +270,45 @@ export default async function DeliveryDetailPage({
 
         {/* RIGHT COLUMN */}
         <div className="flex flex-col gap-4">
+          {/* Why this was cancelled, and by whom */}
+          {cancellation && (
+            <Card className="border-destructive/30">
+              <CardHeader>
+                <CardTitle className="text-xs font-semibold uppercase tracking-wide text-destructive">
+                  Cancelled
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-2.5">
+                <div className="text-[14px] font-semibold text-foreground">
+                  {cancellation.reason || '—'}
+                </div>
+                {cancellation.note && (
+                  <div className="text-[12.5px] text-muted-foreground">
+                    “{cancellation.note}”
+                  </div>
+                )}
+                <div className="flex flex-col gap-1 text-[12.5px] text-muted-foreground">
+                  <span>
+                    By {staffName(cancellation.staff)}
+                    {cancellation.source === 'rider-request'
+                      ? ' — approving the rider’s request'
+                      : ''}
+                  </span>
+                  {cancellation.cancelledAt && (
+                    <span>{formatDate(cancellation.cancelledAt)}</span>
+                  )}
+                </div>
+                {cancellation.refundQueued && (
+                  <Link href="/refunds" className="w-fit">
+                    <Badge variant="warning" dot>
+                      refund queued
+                    </Badge>
+                  </Link>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Sender */}
           <Card>
             <CardHeader>
