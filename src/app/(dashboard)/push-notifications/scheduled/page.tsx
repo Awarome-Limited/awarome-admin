@@ -12,7 +12,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { formatLagosDateTime } from '@/lib/format';
-import { AUDIENCE_LABELS } from '@/lib/scheduled-push';
+import { AUDIENCE_LABELS, repeatLabel } from '@/lib/scheduled-push';
 import type { AdminScheduledPush, ScheduledPushStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { getAudienceLists } from '../actions';
@@ -170,6 +170,14 @@ export default async function ScheduledPushesPage({
                   <TableRow key={push._id}>
                     <TableCell className="whitespace-nowrap font-semibold tabular-nums text-foreground">
                       {formatLagosDateTime(push.sendAt)}
+                      {push.seriesId && (
+                        <span className="block text-[11.5px] font-normal text-muted-foreground">
+                          {repeatLabel(push.repeatEveryDays)}
+                          {push.occurrence && push.occurrenceCount
+                            ? ` · ${push.occurrence} of ${push.occurrenceCount}`
+                            : ''}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="max-w-[340px]">
                       <span className="block truncate font-semibold text-foreground">{push.title}</span>

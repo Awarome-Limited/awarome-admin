@@ -7,6 +7,9 @@ import { runAction, type ActionResult } from '@/lib/action-result';
 import type { AdminScheduledPush, ScheduledPushReach } from '@/lib/types';
 import type { ScheduledPushPayload } from '@/lib/scheduled-push';
 
+/** Whether an edit or cancel touches one send or every later one in its series. */
+export type ScheduledPushScope = 'one' | 'series';
+
 const SCHEDULED_PATH = '/push-notifications/scheduled';
 
 export async function getScheduledPushes(params: {
@@ -65,19 +68,26 @@ export async function createScheduledPushes(
 
 export async function updateScheduledPush(
   id: string,
-  payload: ScheduledPushPayload
+  payload: ScheduledPushPayload,
+  scope: ScheduledPushScope = 'one'
 ): Promise<ActionResult> {
   const result = await runAction(() =>
-    authedFetch(`/admins/scheduled-push/${id}`, { method: 'PATCH', body: payload })
+    authedFetch(`/admins/scheduled-push/${id}`, {
+      method: 'PATCH',
+      body: { ...payload, scope },
+    })
   );
   revalidatePath(SCHEDULED_PATH);
   refresh();
   return result;
 }
 
-export async function cancelScheduledPush(id: string): Promise<ActionResult> {
+export async function cancelScheduledPush(
+  id: string,
+  scope: ScheduledPushScope = 'one'
+): Promise<ActionResult> {
   const result = await runAction(() =>
-    authedFetch(`/admins/scheduled-push/${id}/cancel`, { method: 'POST' })
+    authedFetch(`/admins/scheduled-push/${id}/cancel`, { method: 'POST', body: { scope } })
   );
   revalidatePath(SCHEDULED_PATH);
   refresh();

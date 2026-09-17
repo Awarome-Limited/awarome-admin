@@ -24,10 +24,15 @@ import {
   buildTemplateCsv,
   draftKey,
   draftToPayload,
+  MAX_TOTAL_OCCURRENCES,
   hasErrors,
   lagosDate,
   lagosToUtcIso,
+  lastSendIso,
+  occurrenceCount,
   parseScheduleCsv,
+  repeatLabel,
+  totalSends,
   validateDraft,
   type AudienceListOption,
   type DraftField,
@@ -40,6 +45,7 @@ import { createScheduledPushes } from '../actions';
 import { ScheduleRowEditor } from './schedule-row-editor';
 
 const pushes = (n: number) => `${n.toLocaleString()} push${n === 1 ? '' : 'es'}`;
+const sends = (n: number) => `${n.toLocaleString()} send${n === 1 ? '' : 's'}`;
 const needFixing = (n: number) => `${pushes(n)} need${n === 1 ? 's' : ''} fixing`;
 
 const isBlank = (row: PushDraft) => !row.title.trim() && !row.message.trim();
@@ -61,8 +67,10 @@ const CSV_HELP: [string, string][] = [
   ['message', `Up to 178 characters`],
   ['audience', 'customers, vendors, riders, everyone, or list'],
   ['audience_list', 'The saved list’s name, when audience is list'],
-  ['date', '2026-09-18 or 18/09/2026'],
+  ['date', '2026-09-18 or 18/09/2026 — the first send'],
   ['time', '09:00 or 9:00 AM, Lagos time'],
+  ['repeat_every_days', 'Leave blank to send once. 1 for daily, 7 for weekly'],
+  ['repeat_until', 'The last day a repeating push sends, included'],
 ];
 
 export function ScheduleBuilder({
@@ -84,11 +92,16 @@ export function ScheduleBuilder({
 
   const errorsByKey = new Map(rows.map((row) => [row.key, validateDraft(row, lists)]));
   const invalidRows = rows.filter((row) => hasErrors(errorsByKey.get(row.key)!));
+  // Both ends of each row, so a daily series reaches its last occurrence
+  // rather than looking like a single day.
   const sendTimes = rows
-    .map((row) => lagosToUtcIso(row.date, row.time))
+    .flatMap((row) => [lagosToUtcIso(row.date, row.time), lastSendIso(row)])
     .filter((iso): iso is string => !!iso)
     .sort();
   const dirty = rows.some((row) => !isBlank(row));
+  // Repeating rows stand for many sends, which is what the API inserts.
+  const sendCount = totalSends(rows);
+  const overSendLimit = sendCount > MAX_TOTAL_OCCURRENCES;
 
   // A month of pushes typed by hand is too much to lose to a stray refresh.
   useEffect(() => {
@@ -206,7 +219,7 @@ export function ScheduleBuilder({
       toast.error(`No room: up to ${MAX_ROWS} pushes can be scheduled at once.`);
     } else {
       toast.success(
-        `Added ${pushes(added.length)} from ${file.name}` +
+        `Added ${pushes(added.length)} (${sends(totalSends(added))}) from ${file.name}` +
           (badCount ? ` — ${badCount} need${badCount === 1 ? 's' : ''} fixing` : '') +
           (added.length < imported.length ? `. Only the first ${added.length} fit the ${MAX_ROWS}-push limit.` : '')
       );
@@ -215,6 +228,12 @@ export function ScheduleBuilder({
 
   function requestSchedule() {
     setSubmitAttempted(true);
+    if (overSendLimit) {
+      toast.error(
+        `That comes to ${sends(sendCount)}; ${MAX_TOTAL_OCCURRENCES} is the most in one batch. Shorten a repeat range or remove a push.`
+      );
+      return;
+    }
     if (invalidRows.length) {
       toast.error(`${needFixing(invalidRows.length)} before scheduling.`);
       document
@@ -263,7 +282,7 @@ export function ScheduleBuilder({
         row.audience === 'list'
           ? (lists.find((l) => l._id === row.audienceListId)?.name ?? 'a saved list')
           : AUDIENCE_LABELS[row.audience];
-      mix[label] = (mix[label] ?? 0) + 1;
+      mix[label] = (mix[label] ?? 0) + occurrenceCount(row);
       return mix;
     }, {})
   );
@@ -350,6 +369,8 @@ export function ScheduleBuilder({
         const showEmptyErrors = submitAttempted || !!row.hints;
         const invalid = hasErrors(errors) && showEmptyErrors;
         const sendAt = lagosToUtcIso(row.date, row.time);
+        const repeats = row.repeatEveryDays.trim() !== '';
+        const rowSends = occurrenceCount(row);
         return (
           <section
             key={row.key}
@@ -368,6 +389,12 @@ export function ScheduleBuilder({
                 <span className="text-[13px] font-semibold text-foreground">
                   {sendAt ? `${formatLagosDateTime(sendAt)} WAT` : 'No send time yet'}
                 </span>
+                {repeats && (
+                  <span className="rounded-full bg-brand-tint2 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                    {repeatLabel(Number(row.repeatEveryDays)) || 'Repeats'}
+                    {rowSends > 0 && ` · ${sends(rowSends)}`}
+                  </span>
+                )}
                 {row.hints && (
                   <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
                     From CSV
@@ -443,6 +470,12 @@ export function ScheduleBuilder({
         <div className="min-w-0 text-[13px]">
           <div className="font-semibold text-foreground">
             {pushes(rows.length)}
+            {sendCount !== rows.length && (
+              <span className={cn('font-normal', overSendLimit ? 'text-destructive' : 'text-muted-foreground')}>
+                {' '}
+                · {sends(sendCount)}
+              </span>
+            )}
             {submitAttempted && invalidRows.length > 0 && (
               <span className="text-destructive">
                 {' '}
@@ -470,7 +503,7 @@ export function ScheduleBuilder({
             disabled={isPending}
             className="inline-flex items-center gap-2 whitespace-nowrap rounded-[10px] bg-primary px-5 py-[10px] text-[13.5px] font-semibold text-primary-foreground shadow-[var(--shadow-card)] transition-all hover:brightness-110 disabled:opacity-50"
           >
-            {isPending ? 'Scheduling…' : `Schedule ${pushes(rows.length)}`}
+            {isPending ? 'Scheduling…' : `Schedule ${sends(sendCount)}`}
           </button>
         </div>
       </div>
@@ -478,11 +511,13 @@ export function ScheduleBuilder({
       <AlertDialog open={confirmOpen} onOpenChange={(open) => !isPending && setConfirmOpen(open)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Schedule {pushes(rows.length)}?</AlertDialogTitle>
+            <AlertDialogTitle>Schedule {sends(sendCount)}?</AlertDialogTitle>
             <AlertDialogDescription>
-              {sendTimes.length === 1
+              {sendCount === 1
                 ? `It goes out ${formatLagosDateTime(sendTimes[0])} WAT.`
-                : `The first goes out ${formatLagosDateTime(sendTimes[0])} and the last ${formatLagosDateTime(sendTimes[sendTimes.length - 1])} WAT.`}{' '}
+                : `The first goes out ${formatLagosDateTime(sendTimes[0])} WAT.`}{' '}
+              {rows.some((row) => row.repeatEveryDays.trim() !== '') &&
+                'Repeating pushes are saved as one row per send. '}
               You can edit or cancel each one until it sends.
             </AlertDialogDescription>
           </AlertDialogHeader>

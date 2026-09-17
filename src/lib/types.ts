@@ -426,6 +426,12 @@ export interface AdminScheduledPush {
   audienceList?: string;
   audienceListName?: string;
   sendAt: string;
+  /** Present on every send of a repeating push. */
+  seriesId?: string;
+  repeatEveryDays?: number;
+  repeatUntil?: string;
+  occurrence?: number;
+  occurrenceCount?: number;
   status: ScheduledPushStatus;
   result?: { sent: number; failed: number; total: number };
   error?: string;

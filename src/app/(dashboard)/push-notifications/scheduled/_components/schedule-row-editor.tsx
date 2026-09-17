@@ -5,7 +5,11 @@ import {
   AUDIENCE_LABELS,
   MESSAGE_MAX,
   PUSH_AUDIENCES,
+  REPEAT_MAX_EVERY_DAYS,
   TITLE_MAX,
+  addDays,
+  lagosDate,
+  occurrenceCount,
   type AudienceListOption,
   type DraftErrors,
   type DraftField,
@@ -48,6 +52,7 @@ export function ScheduleRowEditor({
   reach,
   onChange,
   disabled,
+  showRepeat = true,
 }: {
   draft: PushDraft;
   lists: AudienceListOption[];
@@ -58,6 +63,8 @@ export function ScheduleRowEditor({
   reach?: number | null;
   onChange: (patch: Partial<PushDraft>) => void;
   disabled?: boolean;
+  /** Hidden when editing a push that is already scheduled: repeats are fixed. */
+  showRepeat?: boolean;
 }) {
   const id = useId();
 
@@ -68,6 +75,8 @@ export function ScheduleRowEditor({
     audienceListId: draft.audienceListId,
     date: draft.date,
     time: draft.time,
+    repeatEveryDays: draft.repeatEveryDays,
+    repeatUntil: draft.repeatUntil,
   };
   // Empty-field errors wait for a submit attempt; anything the CSV could not
   // read, or a value that is wrong rather than missing, shows straight away.
@@ -226,6 +235,94 @@ export function ScheduleRowEditor({
           {fieldError('time')}
         </label>
       </div>
+
+      {showRepeat && <RepeatFields draft={draft} errors={errors} onChange={onChange} disabled={disabled} fieldError={fieldError} />}
+    </div>
+  );
+}
+
+function RepeatFields({
+  draft,
+  errors,
+  onChange,
+  disabled,
+  fieldError,
+}: {
+  draft: PushDraft;
+  errors: DraftErrors;
+  onChange: (patch: Partial<PushDraft>) => void;
+  disabled?: boolean;
+  fieldError: (field: DraftField) => React.ReactNode;
+}) {
+  const repeating = draft.repeatEveryDays.trim() !== '';
+  const sends = occurrenceCount(draft);
+
+  return (
+    <div className="rounded-[10px] border border-border bg-muted/30 p-3">
+      <label className="flex w-fit cursor-pointer items-center gap-2">
+        <input
+          type="checkbox"
+          checked={repeating}
+          disabled={disabled}
+          onChange={(e) =>
+            onChange(
+              e.target.checked
+                ? {
+                    repeatEveryDays: '1',
+                    // A week of daily sends is a sensible starting point.
+                    repeatUntil: draft.repeatUntil || addDays(draft.date || lagosDate(1), 6),
+                  }
+                : { repeatEveryDays: '', repeatUntil: '' }
+            )
+          }
+          className="size-[15px] accent-[var(--primary)]"
+        />
+        <span className="text-[12.5px] font-medium text-foreground">Repeat this push</span>
+      </label>
+
+      {repeating && (
+        <div className="mt-3 flex flex-col gap-2.5">
+          <div className="grid grid-cols-2 gap-3.5">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[12.5px] font-medium text-foreground-secondary">
+                Every … days
+              </span>
+              <input
+                type="number"
+                min={1}
+                max={REPEAT_MAX_EVERY_DAYS}
+                step={1}
+                value={draft.repeatEveryDays}
+                onChange={(e) => onChange({ repeatEveryDays: e.target.value })}
+                disabled={disabled}
+                aria-invalid={!!errors.repeatEveryDays}
+                className={fieldClass(!!errors.repeatEveryDays)}
+              />
+              {fieldError('repeatEveryDays')}
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[12.5px] font-medium text-foreground-secondary">
+                Until (last day)
+              </span>
+              <input
+                type="date"
+                value={draft.repeatUntil}
+                min={draft.date || undefined}
+                onChange={(e) => onChange({ repeatUntil: e.target.value })}
+                disabled={disabled}
+                aria-invalid={!!errors.repeatUntil}
+                className={fieldClass(!!errors.repeatUntil)}
+              />
+              {fieldError('repeatUntil')}
+            </label>
+          </div>
+          <p className="text-[11.5px] text-muted-foreground">
+            {sends > 0
+              ? `${sends.toLocaleString()} send${sends === 1 ? '' : 's'}, the same time each day it runs. The last day is included.`
+              : 'Choose how often it repeats and the last day it should send.'}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
