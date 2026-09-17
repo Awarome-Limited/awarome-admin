@@ -1,6 +1,8 @@
 // Mirrors the subset of awarome-BE response shapes the admin UI renders.
 // Keep in sync manually with the BE models until the two repos share types.
 
+import type { PushAudience } from '@/lib/scheduled-push';
+
 export interface UserAddressEntry {
   address?: string;
   description?: string;
@@ -399,6 +401,7 @@ export interface AdminAudienceList {
   _id: string;
   name: string;
   totalPhones: number;
+  totalEmails?: number;
   matchedCount: number;
   createdAt?: string;
 }
@@ -411,6 +414,34 @@ export interface AdminAudienceListDetail extends AdminAudienceList {
     email?: string;
     phone?: string;
   }>;
+}
+
+export type ScheduledPushStatus = 'scheduled' | 'sending' | 'sent' | 'failed' | 'cancelled';
+
+export interface AdminScheduledPush {
+  _id: string;
+  title: string;
+  message: string;
+  audience: PushAudience;
+  audienceList?: string;
+  audienceListName?: string;
+  sendAt: string;
+  status: ScheduledPushStatus;
+  result?: { sent: number; failed: number; total: number };
+  error?: string;
+  startedAt?: string;
+  completedAt?: string;
+  createdBy?: { firstName?: string; lastName?: string; email?: string } | string | null;
+  createdAt?: string;
+}
+
+/** Devices each audience reaches right now, for the scheduler's review. */
+export interface ScheduledPushReach {
+  customers: number;
+  vendors: number;
+  riders: number;
+  everyone: number;
+  lists: Record<string, number>;
 }
 
 export interface AdminActivityLog {

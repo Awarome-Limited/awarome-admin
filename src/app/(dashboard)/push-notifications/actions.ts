@@ -1,8 +1,11 @@
 'use server';
 
 import { refresh, revalidatePath } from 'next/cache';
-import { authedFetch } from '@/lib/api-client';
+import { unstable_rethrow } from 'next/navigation';
+import { authedFetch, ApiError } from '@/lib/api-client';
+import { runAction, type ActionResult } from '@/lib/action-result';
 import { AdminAudienceList, AdminAudienceListDetail } from '@/lib/types';
+import type { PushAudience } from '@/lib/scheduled-push';
 
 export interface SendPushPayload {
   title: string;
@@ -13,7 +16,7 @@ export interface SendPushPayload {
 export interface BroadcastPushPayload {
   title: string;
   body: string;
-  audience: 'all' | 'customers' | 'riders' | 'custom';
+  audience: PushAudience;
   audienceListId?: string;
 }
 
@@ -23,11 +26,22 @@ export interface BroadcastResult {
   total: number;
 }
 
-export interface CreateAudienceListResult {
-  _id: string;
-  name: string;
-  totalPhones: number;
-  matchedCount: number;
+export interface ContactsPayload {
+  phones: string[];
+  emails: string[];
+}
+
+export type AudienceListResult =
+  | { ok: true; list: AdminAudienceList }
+  | { ok: false; error: string };
+
+// A thrown Server Action error is redacted in production; the API's message
+// ("At least one phone number or email is required") is what people need.
+function failure(error: unknown, label: string): { ok: false; error: string } {
+  unstable_rethrow(error);
+  if (error instanceof ApiError) return { ok: false, error: error.message };
+  console.error(label, error);
+  return { ok: false, error: 'Something went wrong. Please try again.' };
 }
 
 export async function sendPushNotification(payload: SendPushPayload) {
@@ -39,12 +53,16 @@ export async function sendPushNotification(payload: SendPushPayload) {
 
 export async function broadcastPushNotification(
   payload: BroadcastPushPayload
-): Promise<BroadcastResult> {
-  const res = await authedFetch<{ data: BroadcastResult; message: string }>(
-    '/notifications/broadcast',
-    { method: 'POST', body: payload }
-  );
-  return res.data;
+): Promise<({ ok: true } & BroadcastResult) | { ok: false; error: string }> {
+  try {
+    const res = await authedFetch<{ data: BroadcastResult; message: string }>(
+      '/notifications/broadcast',
+      { method: 'POST', body: payload }
+    );
+    return { ok: true, ...res.data };
+  } catch (error) {
+    return failure(error, 'Push broadcast failed');
+  }
 }
 
 export async function getAudienceLists(): Promise<AdminAudienceList[]> {
@@ -61,41 +79,33 @@ export async function getAudienceList(id: string): Promise<AdminAudienceListDeta
   return res.data;
 }
 
-export async function updateAudienceListName(id: string, name: string): Promise<void> {
-  await authedFetch(`/notifications/audience-lists/${id}`, {
-    method: 'PATCH',
-    body: { name },
-  });
-  revalidatePath('/push-notifications');
-  revalidatePath(`/push-notifications/audience-lists/${id}`);
-  refresh();
-}
-
-export async function replaceAudienceListPhones(id: string, formData: FormData): Promise<AdminAudienceList> {
-  const file = formData.get('file') as File | null;
-  if (!file) throw new Error('CSV file is required');
-
-  const text = await file.text();
-  const phones = text
-    .split(/\r?\n/)
-    .map((line) => {
-      let p = line.replace(/["'\s]/g, '');
-      if (p.startsWith('+')) p = p.slice(1);
-      if (p.startsWith('0')) p = '234' + p.slice(1);
-      return p;
+export async function updateAudienceListName(id: string, name: string): Promise<ActionResult> {
+  const result = await runAction(() =>
+    authedFetch(`/notifications/audience-lists/${id}`, {
+      method: 'PATCH',
+      body: { name },
     })
-    .filter((line) => line.length > 0 && !/^phone/i.test(line));
-
-  if (phones.length === 0) throw new Error('No phone numbers found in the CSV file');
-
-  const res = await authedFetch<{ data: AdminAudienceList }>(
-    `/notifications/audience-lists/${id}`,
-    { method: 'PATCH', body: { phones } }
   );
   revalidatePath('/push-notifications');
   revalidatePath(`/push-notifications/audience-lists/${id}`);
-  return res.data;
   refresh();
+  return result;
+}
+
+export async function replaceAudienceListContacts(
+  id: string,
+  contacts: ContactsPayload
+): Promise<ActionResult> {
+  const result = await runAction(() =>
+    authedFetch(`/notifications/audience-lists/${id}`, {
+      method: 'PATCH',
+      body: contacts,
+    })
+  );
+  revalidatePath('/push-notifications');
+  revalidatePath(`/push-notifications/audience-lists/${id}`);
+  refresh();
+  return result;
 }
 
 export async function deleteAudienceList(id: string): Promise<void> {
@@ -104,31 +114,18 @@ export async function deleteAudienceList(id: string): Promise<void> {
   refresh();
 }
 
-export async function createAudienceList(formData: FormData): Promise<CreateAudienceListResult> {
-  const name = formData.get('name')?.toString().trim() ?? '';
-  const file = formData.get('file') as File | null;
-
-  if (!name) throw new Error('List name is required');
-  if (!file) throw new Error('CSV file is required');
-
-  const text = await file.text();
-  const phones = text
-    .split(/\r?\n/)
-    .map((line) => {
-      let p = line.replace(/["'\s]/g, '');
-      if (p.startsWith('+')) p = p.slice(1);   // +234... → 234...
-      if (p.startsWith('0')) p = '234' + p.slice(1); // 0xxx → 234xxx
-      return p;
-    })
-    .filter((line) => line.length > 0 && !/^phone/i.test(line));
-
-  if (phones.length === 0) throw new Error('No phone numbers found in the CSV file');
-
-  const res = await authedFetch<{ data: CreateAudienceListResult }>(
-    '/notifications/audience-lists',
-    { method: 'POST', body: { name, phones } }
-  );
-  revalidatePath('/push-notifications');
-  return res.data;
-  refresh();
+export async function createAudienceList(
+  name: string,
+  contacts: ContactsPayload
+): Promise<AudienceListResult> {
+  try {
+    const res = await authedFetch<{ data: AdminAudienceList }>(
+      '/notifications/audience-lists',
+      { method: 'POST', body: { name, ...contacts } }
+    );
+    revalidatePath('/push-notifications');
+    return { ok: true, list: res.data };
+  } catch (error) {
+    return failure(error, 'Audience list create failed');
+  }
 }

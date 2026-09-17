@@ -6,6 +6,19 @@ export function formatDate(value?: string | Date | null) {
   });
 }
 
+/**
+ * For times staff chose in Lagos time (scheduled pushes). formatDate renders
+ * in whatever zone the server runs in, which is not Lagos in production.
+ */
+export function formatLagosDateTime(value?: string | Date | null) {
+  if (!value) return '—';
+  return new Date(value).toLocaleString('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Africa/Lagos',
+  });
+}
+
 const POSITIVE_STATUS_HINTS = [
   'confirmed',
   'delivered',

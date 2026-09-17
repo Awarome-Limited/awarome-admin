@@ -3,23 +3,24 @@
 import { useTransition, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { AdminAudienceList } from '@/lib/types';
+import { AUDIENCE_LABELS, MESSAGE_MAX as MAX_BODY } from '@/lib/scheduled-push';
 import type { BroadcastPushPayload, BroadcastResult } from '../actions';
 
-const AUDIENCE_OPTIONS: { value: BroadcastPushPayload['audience']; label: string }[] = [
-  { value: 'all', label: 'Everyone' },
-  { value: 'customers', label: 'Customers only' },
-  { value: 'riders', label: 'Riders only' },
-  { value: 'custom', label: 'Custom list' },
+const AUDIENCE_OPTIONS: BroadcastPushPayload['audience'][] = [
+  'everyone',
+  'customers',
+  'vendors',
+  'riders',
+  'list',
 ];
 
 const REACH_LABELS: Record<BroadcastPushPayload['audience'], string> = {
-  all: 'All registered users',
-  customers: 'Customers with push enabled',
-  riders: 'Riders with push enabled',
-  custom: 'Selected audience list',
+  everyone: 'Customers, vendors and riders',
+  customers: 'Customers who allow marketing push',
+  vendors: 'Agents of approved vendors',
+  riders: 'Active riders',
+  list: 'Selected audience list',
 };
-
-const MAX_BODY = 178;
 
 const inputClass =
   'w-full rounded-[10px] border border-input bg-background px-[14px] py-[11px] text-[14px] text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50';
@@ -30,14 +31,16 @@ export function ComposeForm({
   onTitleChange,
   onBodyChange,
 }: {
-  action: (payload: BroadcastPushPayload) => Promise<BroadcastResult>;
+  action: (
+    payload: BroadcastPushPayload
+  ) => Promise<({ ok: true } & BroadcastResult) | { ok: false; error: string }>;
   audienceLists: AdminAudienceList[];
   onTitleChange?: (v: string) => void;
   onBodyChange?: (v: string) => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<BroadcastResult | null>(null);
-  const [audience, setAudience] = useState<BroadcastPushPayload['audience']>('all');
+  const [audience, setAudience] = useState<BroadcastPushPayload['audience']>('everyone');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const formRef = useRef<HTMLFormElement>(null);
@@ -61,7 +64,7 @@ export function ComposeForm({
       body: body.trim(),
       audience,
       audienceListId:
-        audience === 'custom'
+        audience === 'list'
           ? (formData.get('audienceListId')?.toString() ?? '')
           : undefined,
     };
@@ -70,25 +73,25 @@ export function ComposeForm({
       toast.error('Title and message are required.');
       return;
     }
-    if (audience === 'custom' && !payload.audienceListId) {
+    if (audience === 'list' && !payload.audienceListId) {
       toast.error('Please select an audience list.');
       return;
     }
 
     startTransition(async () => {
-      try {
-        const res = await action(payload);
-        setResult(res);
-        toast.success(`Sent to ${res.sent} device${res.sent !== 1 ? 's' : ''}.`);
-        formRef.current?.reset();
-        setTitle('');
-        setBody('');
-        onTitleChange?.('');
-        onBodyChange?.('');
-        setAudience('all');
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Failed to send notification.');
+      const res = await action(payload);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
       }
+      setResult(res);
+      toast.success(`Sent to ${res.sent} device${res.sent !== 1 ? 's' : ''}.`);
+      formRef.current?.reset();
+      setTitle('');
+      setBody('');
+      onTitleChange?.('');
+      onBodyChange?.('');
+      setAudience('everyone');
     });
   }
 
@@ -142,9 +145,9 @@ export function ComposeForm({
             }
             className="w-full cursor-pointer appearance-none rounded-[10px] border border-input bg-background py-[11px] pl-[14px] pr-10 text-[14px] text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
           >
-            {AUDIENCE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
+            {AUDIENCE_OPTIONS.map((value) => (
+              <option key={value} value={value}>
+                {AUDIENCE_LABELS[value]}
               </option>
             ))}
           </select>
@@ -164,7 +167,7 @@ export function ComposeForm({
         </div>
       </div>
 
-      {audience === 'custom' && (
+      {audience === 'list' && (
         <div className="flex flex-col gap-[7px]">
           <span className="text-[13px] font-medium text-foreground-secondary">List</span>
           {audienceLists.length === 0 ? (

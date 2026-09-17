@@ -8,11 +8,12 @@ import { formatDate } from '@/lib/format';
 import {
   getAudienceList,
   updateAudienceListName,
-  replaceAudienceListPhones,
+  replaceAudienceListContacts,
   deleteAudienceList,
+  type ContactsPayload,
 } from '../../actions';
 import { RenameForm } from './_components/rename-form';
-import { ReplaceCSVForm } from './_components/replace-csv-form';
+import { ReplaceContactsForm } from './_components/replace-contacts-form';
 
 export default async function AudienceListDetailPage({
   params,
@@ -35,12 +36,12 @@ export default async function AudienceListDetailPage({
 
   async function handleRename(name: string) {
     'use server';
-    await updateAudienceListName(id, name);
+    return updateAudienceListName(id, name);
   }
 
-  async function handleReplacePhones(formData: FormData) {
+  async function handleReplaceContacts(contacts: ContactsPayload) {
     'use server';
-    await replaceAudienceListPhones(id, formData);
+    return replaceAudienceListContacts(id, contacts);
   }
 
   async function handleDelete() {
@@ -49,15 +50,25 @@ export default async function AudienceListDetailPage({
     redirect('/push-notifications');
   }
 
+  const totalEmails = list.totalEmails ?? 0;
+  const contactCount = list.totalPhones + totalEmails;
+  // One contact can match both a customer and a vendor-agent account.
   const matchRate =
-    list.totalPhones > 0
-      ? Math.round((list.matchedCount / list.totalPhones) * 100)
+    contactCount > 0
+      ? Math.min(Math.round((list.matchedCount / contactCount) * 100), 100)
       : 0;
 
-  const stats = [
+  const stats: {
+    label: string;
+    value: string;
+    sub?: string;
+    bar?: number;
+    icon: React.ReactNode;
+  }[] = [
     {
-      label: 'Numbers uploaded',
-      value: list.totalPhones.toLocaleString(),
+      label: 'Contacts uploaded',
+      value: contactCount.toLocaleString(),
+      sub: `${list.totalPhones.toLocaleString()} phones · ${totalEmails.toLocaleString()} emails`,
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
           <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.24h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.56a16 16 0 0 0 6 6l.94-.94a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16z" />
@@ -201,6 +212,9 @@ export default async function AudienceListDetailPage({
             <span className="tabular-nums text-[25px] font-bold tracking-tight text-primary">
               {s.value}
             </span>
+            {s.sub && (
+              <span className="-mt-1.5 text-[12px] tabular-nums text-muted-foreground">{s.sub}</span>
+            )}
             {s.bar !== undefined && (
               <div className="mt-[1px] h-1.5 overflow-hidden rounded-full bg-muted">
                 <div
@@ -302,12 +316,12 @@ export default async function AudienceListDetailPage({
 
           {/* Replace phone list */}
           <div className="rounded-[14px] border border-border bg-card p-[18px_20px] shadow-[var(--shadow-card)]">
-            <div className="text-[15px] font-semibold text-foreground">Replace phone list</div>
+            <div className="text-[15px] font-semibold text-foreground">Replace contacts</div>
             <div className="mb-3.5 mt-1 text-[12.5px] leading-[1.5] text-muted-foreground">
-              Upload a new CSV to replace the current numbers. Matched users are recalculated
-              automatically.
+              Paste or upload a new set of phone numbers and emails. It replaces all current
+              contacts, and matched users are recalculated automatically.
             </div>
-            <ReplaceCSVForm action={handleReplacePhones} />
+            <ReplaceContactsForm action={handleReplaceContacts} />
           </div>
 
           {/* Danger zone */}
@@ -319,7 +333,7 @@ export default async function AudienceListDetailPage({
             <ConfirmActionButton
               label="Delete audience list"
               title="Delete this audience list?"
-              description="This permanently removes the list. Any scheduled notifications targeting it will no longer have a valid audience."
+              description="This permanently removes the list. Scheduled pushes that target it will fail when they are due."
               action={handleDelete}
             />
           </div>

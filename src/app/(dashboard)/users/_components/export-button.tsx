@@ -3,27 +3,8 @@
 import { useTransition } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
+import { downloadCsv, toCsv } from '@/lib/csv';
 import { exportUsers } from '../actions';
-
-function toCsv(rows: Record<string, string>[]): string {
-  if (!rows.length) return '';
-  const headers = Object.keys(rows[0]);
-  const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
-  return [
-    headers.map(escape).join(','),
-    ...rows.map((r) => headers.map((h) => escape(r[h] ?? '')).join(',')),
-  ].join('\r\n');
-}
-
-function download(csv: string, filename: string) {
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
 
 export function ExportButton() {
   const [isPending, startTransition] = useTransition();
@@ -55,7 +36,7 @@ export function ExportButton() {
         );
 
         const date = new Date().toISOString().slice(0, 10);
-        download(csv, `users-export-${date}.csv`);
+        downloadCsv(csv, `users-export-${date}.csv`);
         toast.success(`Exported ${rows.length} users.`);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Export failed.');

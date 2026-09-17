@@ -1,11 +1,12 @@
 'use client';
 
-import { useTransition, useRef, useState } from 'react';
+import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { AdminAudienceList } from '@/lib/types';
 import { createAudienceList } from '../actions';
 import { formatDate } from '@/lib/format';
+import { ContactsInput, useContactsInput } from './contacts-input';
 
 export function AudienceListsManager({
   lists: initialLists,
@@ -16,28 +17,40 @@ export function AudienceListsManager({
 }) {
   const [isPending, startTransition] = useTransition();
   const [lists, setLists] = useState<AdminAudienceList[]>(initialLists);
-  const [fileName, setFileName] = useState('');
-  const formRef = useRef<HTMLFormElement>(null);
+  const [name, setName] = useState('');
+  const contacts = useContactsInput();
   const router = useRouter();
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+    const trimmed = name.trim();
+    if (!trimmed) {
+      toast.error('Give the list a name.');
+      return;
+    }
+    if (contacts.count === 0) {
+      toast.error('Add at least one phone number or email.');
+      return;
+    }
 
+    const { phones, emails } = contacts.parsed;
     startTransition(async () => {
-      try {
-        const result = await createAudienceList(formData);
-        const newList: AdminAudienceList = { ...result, createdAt: new Date().toISOString() };
-        setLists((prev) => [newList, ...prev]);
-        onListCreated(newList);
-        toast.success(
-          `"${result.name}" created — ${result.matchedCount} of ${result.totalPhones} numbers matched`
-        );
-        formRef.current?.reset();
-        setFileName('');
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Failed to create audience list.');
+      const result = await createAudienceList(trimmed, { phones, emails });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
       }
+      const newList: AdminAudienceList = {
+        ...result.list,
+        createdAt: result.list.createdAt ?? new Date().toISOString(),
+      };
+      setLists((prev) => [newList, ...prev]);
+      onListCreated(newList);
+      toast.success(
+        `“${newList.name}” created — ${newList.matchedCount.toLocaleString()} users matched from ${contacts.count.toLocaleString()} contacts`
+      );
+      setName('');
+      contacts.reset();
     });
   }
 
@@ -46,13 +59,14 @@ export function AudienceListsManager({
       {/* Create a list */}
       <div className="rounded-[14px] border border-border bg-card p-[20px_22px] shadow-[var(--shadow-card)]">
         <div className="mb-4 text-[14.5px] font-semibold text-foreground">Create a list</div>
-        <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <label className="flex flex-col gap-[7px]">
             <span className="text-[13px] font-medium text-foreground-secondary">
               List name <span className="text-destructive">*</span>
             </span>
             <input
-              name="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Lagos customers, VIP users…"
               required
               maxLength={80}
@@ -62,52 +76,14 @@ export function AudienceListsManager({
 
           <div className="flex flex-col gap-[7px]">
             <span className="text-[13px] font-medium text-foreground-secondary">
-              CSV file <span className="text-destructive">*</span>
+              Contacts <span className="text-destructive">*</span>
             </span>
-            <label className="flex cursor-pointer flex-col items-center justify-center gap-[9px] rounded-[12px] border-[1.5px] border-dashed border-input bg-background p-[22px_16px] text-center transition-colors hover:border-primary hover:bg-brand-tint">
-              <span className="flex h-10 w-10 items-center justify-center rounded-[11px] border border-input bg-card text-primary">
-                <svg
-                  width="19"
-                  height="19"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <path d="M17 8l-5-5-5 5" />
-                  <path d="M12 3v12" />
-                </svg>
-              </span>
-              <span className="text-[13px] font-semibold text-foreground">
-                {fileName ? (
-                  fileName
-                ) : (
-                  <>
-                    Drop CSV here or{' '}
-                    <span className="text-primary">browse</span>
-                  </>
-                )}
-              </span>
-              <span className="text-[11.5px] text-muted-foreground">
-                One number per line · header row "phone" is skipped
-              </span>
-              <input
-                name="file"
-                type="file"
-                accept=".csv,text/csv"
-                required
-                className="sr-only"
-                onChange={(e) => setFileName(e.target.files?.[0]?.name ?? '')}
-              />
-            </label>
+            <ContactsInput state={contacts} disabled={isPending} />
           </div>
 
           <button
             type="submit"
-            disabled={isPending}
+            disabled={isPending || contacts.count === 0}
             className="inline-flex self-start items-center gap-[7px] rounded-[10px] bg-primary px-[18px] py-[10px] text-[13px] font-semibold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
           >
             <svg
@@ -144,7 +120,7 @@ export function AudienceListsManager({
                   List
                 </th>
                 <th className="px-3.5 py-[11px] text-right text-[11px] font-semibold uppercase tracking-[.04em] text-muted-foreground">
-                  Numbers
+                  Contacts
                 </th>
                 <th className="px-3.5 py-[11px] text-right text-[11px] font-semibold uppercase tracking-[.04em] text-muted-foreground">
                   Matched
@@ -157,9 +133,11 @@ export function AudienceListsManager({
             </thead>
             <tbody>
               {lists.map((list) => {
+                const contactCount = list.totalPhones + (list.totalEmails ?? 0);
+                // One contact can match both a customer and a vendor-agent account.
                 const rate =
-                  list.totalPhones > 0
-                    ? Math.round((list.matchedCount / list.totalPhones) * 100) + '%'
+                  contactCount > 0
+                    ? Math.min(Math.round((list.matchedCount / contactCount) * 100), 100) + '%'
                     : '—';
                 return (
                   <tr
@@ -199,7 +177,7 @@ export function AudienceListsManager({
                       </div>
                     </td>
                     <td className="border-t border-border px-3.5 py-[13px] text-right tabular-nums font-semibold text-foreground-secondary">
-                      {list.totalPhones.toLocaleString()}
+                      {contactCount.toLocaleString()}
                     </td>
                     <td className="border-t border-border px-3.5 py-[13px] text-right tabular-nums font-semibold text-foreground">
                       {list.matchedCount.toLocaleString()}

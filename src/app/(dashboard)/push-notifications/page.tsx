@@ -1,5 +1,6 @@
 import { getAudienceLists } from './actions';
 import { PushNotificationsClient } from './_components/push-notifications-client';
+import { PushTabs } from './_components/push-tabs';
 
 export default async function PushNotificationsPage() {
   const audienceLists = await getAudienceLists().catch(() => []);
@@ -14,6 +15,8 @@ export default async function PushNotificationsPage() {
           Broadcast a message to everyone, or target a saved audience list.
         </p>
       </div>
+
+      <PushTabs active="send" />
 
       <PushNotificationsClient initialLists={audienceLists} />
     </div>

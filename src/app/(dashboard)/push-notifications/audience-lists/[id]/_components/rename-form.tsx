@@ -2,13 +2,14 @@
 
 import { useTransition, useState } from 'react';
 import { toast } from 'sonner';
+import type { ActionResult } from '@/lib/action-result';
 
 export function RenameForm({
   currentName,
   action,
 }: {
   currentName: string;
-  action: (name: string) => Promise<void>;
+  action: (name: string) => Promise<ActionResult>;
 }) {
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState(currentName);
@@ -19,12 +20,9 @@ export function RenameForm({
     if (!trimmed) return;
 
     startTransition(async () => {
-      try {
-        await action(trimmed);
-        toast.success('List renamed successfully.');
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Failed to rename list.');
-      }
+      const result = await action(trimmed);
+      if (result.ok) toast.success('List renamed successfully.');
+      else toast.error(result.error);
     });
   }
 
