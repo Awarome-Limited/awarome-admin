@@ -154,6 +154,18 @@ export interface JobCancellation {
   refundQueued?: boolean;
 }
 
+/**
+ * Which surface produced a job. Mirrors Channels in awarome-BE. `mobile` is
+ * the default, so anything recorded before channels existed reads as mobile.
+ */
+export type Channel = 'mobile' | 'web' | 'api';
+
+export const CHANNEL_LABELS: Record<Channel, string> = {
+  mobile: 'Mobile',
+  web: 'Web',
+  api: 'API',
+};
+
 export interface AdminOrder {
   _id: string;
   orderId?: string;
@@ -176,6 +188,8 @@ export interface AdminOrder {
   isDelivered?: boolean;
   refundStatus?: string;
   paymentMethod?: string;
+  /** The surface this order came from: mobile | web | api. */
+  channel?: Channel;
   cancellation?: JobCancellation;
   createdAt?: string;
 }
@@ -189,6 +203,8 @@ export interface AdminDelivery {
   deliveryOption?: string;
   status?: string;
   riderStatus?: string;
+  /** The surface this delivery came from: mobile | web | api. */
+  channel?: Channel;
   deliveryFee?: number;
   isPaid?: boolean;
   refundStatus?: string;
@@ -320,6 +336,88 @@ export interface AdminWallet {
   prevBalance: number; // kobo
   lastFundedAt?: string;
   subscriptionStatus?: string;
+  createdAt?: string;
+}
+
+/**
+ * An API partner: a third party that books couriers over the delivery API
+ * rather than through the apps. Onboarding, funding and credentials are all
+ * ops actions — partners never self-serve.
+ */
+export interface AdminPartner {
+  _id: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  state?: string;
+  country?: string;
+  logoImage?: string;
+  wallet?: string;
+  subscriptionStatus?: string;
+  lastSubscribedAt?: string;
+  /** The delivery API channel switch. Off until ops turn it on. */
+  apiEnabled?: boolean;
+  apiSuspendedReason?: string;
+  /** Kobo. 0 disables the low-balance alert. */
+  lowBalanceThreshold?: number;
+  /** Whether this partner's deliveries require a handover PIN by default. */
+  defaultRequirePin?: boolean;
+  createdAt?: string;
+}
+
+/** A partner running low, from GET /admins/partners/low-balance. */
+export interface AdminPartnerLowBalance {
+  _id: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  lowBalanceThreshold: number;
+  balance: number;
+  lastFundedAt?: string;
+}
+
+/** Who at the partner owns the integration. A contact record, not a login. */
+export interface AdminPartnerUser {
+  _id: string;
+  partner: string;
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  phone?: string;
+  role: 'owner' | 'developer' | 'viewer';
+  status: 'active' | 'suspended';
+  notifyOnLowBalance?: boolean;
+  createdAt?: string;
+}
+
+/**
+ * API key metadata. The secret itself is never returned after issuance — it
+ * exists only in the response to the call that created it.
+ */
+export interface AdminPartnerApiKey {
+  _id: string;
+  partner: string;
+  label?: string;
+  mode: 'live' | 'test';
+  keyId: string;
+  secretLast4?: string;
+  status: 'active' | 'revoked';
+  scopes?: string[];
+  lastUsedAt?: string;
+  expiresAt?: string;
+  revokedAt?: string;
+  createdAt?: string;
+}
+
+/** The one-time response to issuing a key. */
+export interface IssuedPartnerApiKey {
+  id: string;
+  keyId: string;
+  secret: string;
+  mode: string;
+  label?: string;
+  scopes?: string[];
   createdAt?: string;
 }
 

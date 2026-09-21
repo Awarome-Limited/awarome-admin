@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { authedFetch, ApiError, PaginatedResponse } from '@/lib/api-client';
-import { AdminDelivery } from '@/lib/types';
+import { AdminDelivery, Channel } from '@/lib/types';
 import { ApiErrorCard } from '@/components/api-error-card';
 import { SearchBox } from '@/components/search-box';
+import { ChannelBadge } from '@/components/channel-badge';
+import { ChannelFilter } from '@/components/channel-filter';
 import { PaginationControls } from '@/components/pagination-controls';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -55,12 +57,14 @@ export default async function DeliveriesPage({
   const skip = Number(params.skip ?? 0);
   const search = params.search ?? '';
   const activeFilter = params.filter ?? 'all';
+  const channel = params.channel ?? '';
   const filterQ = filterToQuery(activeFilter);
 
   const query = new URLSearchParams();
   query.set('skip', String(skip));
   query.set('limit', String(LIMIT));
   if (search) query.set('search', search);
+  if (channel) query.set('channel', channel);
   Object.entries(filterQ).forEach(([k, v]) => query.set(k, v));
 
   let result: PaginatedResponse<AdminDelivery>;
@@ -148,6 +152,7 @@ export default async function DeliveriesPage({
             </svg>
             Export
           </button>
+          <ChannelFilter />
           <SearchBox placeholder="Search by delivery ID…" />
         </div>
       </div>
@@ -161,6 +166,7 @@ export default async function DeliveriesPage({
                 <TableHead>Customer</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Channel</TableHead>
                 <TableHead className="text-right">Fee</TableHead>
                 <TableHead>Date</TableHead>
               </TableRow>
@@ -185,6 +191,9 @@ export default async function DeliveriesPage({
                       {delivery.status}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    <ChannelBadge channel={delivery.channel as Channel | undefined} />
+                  </TableCell>
                   <TableCell className="text-right font-semibold tabular-nums">
                     ₦{(delivery.deliveryFee ?? 0).toLocaleString()}
                   </TableCell>
@@ -195,7 +204,7 @@ export default async function DeliveriesPage({
               ))}
               {result.data.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                     No deliveries found.
                   </TableCell>
                 </TableRow>

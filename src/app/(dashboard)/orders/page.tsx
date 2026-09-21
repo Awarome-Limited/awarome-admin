@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { authedFetch, ApiError, PaginatedResponse } from '@/lib/api-client';
-import { AdminOrder, AdminVendor } from '@/lib/types';
+import { AdminOrder, AdminVendor, Channel } from '@/lib/types';
 import { ApiErrorCard } from '@/components/api-error-card';
 import { SearchBox } from '@/components/search-box';
+import { ChannelBadge } from '@/components/channel-badge';
+import { ChannelFilter } from '@/components/channel-filter';
 import { PaginationControls } from '@/components/pagination-controls';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -61,6 +63,7 @@ export default async function OrdersPage({
   const search = params.search ?? '';
   const activeFilter = params.filter ?? 'all';
   const vendor = params.vendor ?? '';
+  const channel = params.channel ?? '';
   const filterQ = filterToQuery(activeFilter);
 
   const query = new URLSearchParams();
@@ -68,6 +71,7 @@ export default async function OrdersPage({
   query.set('limit', String(LIMIT));
   if (search) query.set('search', search);
   if (vendor) query.set('vendor', vendor);
+  if (channel) query.set('channel', channel);
   Object.entries(filterQ).forEach(([k, v]) => query.set(k, v));
 
   let result: PaginatedResponse<AdminOrder>;
@@ -152,7 +156,10 @@ export default async function OrdersPage({
             );
           })}
         </div>
-        <SearchBox placeholder="Search by order ID or customer…" />
+        <div className="flex items-center gap-2">
+          <ChannelFilter />
+          <SearchBox placeholder="Search by order ID or customer…" />
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
@@ -165,6 +172,7 @@ export default async function OrdersPage({
                 <TableHead>Vendor</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Delivery</TableHead>
+                <TableHead>Channel</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead>Date</TableHead>
               </TableRow>
@@ -192,6 +200,9 @@ export default async function OrdersPage({
                       {order.orderDeliveryStatus}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    <ChannelBadge channel={order.channel as Channel | undefined} />
+                  </TableCell>
                   <TableCell className="text-right font-semibold tabular-nums">
                     ₦{(order.totalPrice ?? 0).toLocaleString()}
                   </TableCell>
@@ -202,7 +213,7 @@ export default async function OrdersPage({
               ))}
               {result.data.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
                     No orders found.
                   </TableCell>
                 </TableRow>
