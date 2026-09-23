@@ -1,6 +1,12 @@
 import Link from 'next/link';
-import { authedFetch, ApiError, SingleResponse } from '@/lib/api-client';
+import {
+  authedFetch,
+  ApiError,
+  PaginatedResponse,
+  SingleResponse,
+} from '@/lib/api-client';
 import { ApiErrorCard } from '@/components/api-error-card';
+import { AssignBatchDialog } from '@/components/assign-batch-dialog';
 import { ConfirmActionButton } from '@/components/confirm-action-button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -12,7 +18,11 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { formatDate } from '@/lib/format';
+import type { AdminRider } from '@/lib/types';
 import { redispatchBatch, redispatchJob } from './actions';
+
+// Enough to cover the fleet in one read; the assign dialog narrows by vehicle.
+const RIDER_LIMIT = 250;
 
 interface UnassignedParty {
   firstName?: string;
@@ -66,11 +76,16 @@ function partyName(user?: UnassignedParty | string) {
 
 export default async function UnassignedPage() {
   let payload: UnassignedPayload;
+  let riders: AdminRider[] = [];
   try {
-    const res = await authedFetch<SingleResponse<UnassignedPayload>>(
-      '/admins/unassigned-jobs'
-    );
+    const [res, fleet] = await Promise.all([
+      authedFetch<SingleResponse<UnassignedPayload>>('/admins/unassigned-jobs'),
+      authedFetch<PaginatedResponse<AdminRider>>(
+        `/riders/admin?suspended=false&limit=${RIDER_LIMIT}`
+      ),
+    ]);
     payload = res.data;
+    riders = fleet.data;
   } catch (error) {
     if (error instanceof ApiError) return <ApiErrorCard message={error.message} />;
     throw error;
@@ -89,7 +104,9 @@ export default async function UnassignedPage() {
       <div>
         <h1 className="text-[23px] font-bold tracking-tight text-foreground">Unassigned jobs</h1>
         <p className="mt-1 text-[14px] text-muted-foreground">
-          Paid jobs no rider accepted within the dispatch window (30 minutes), and batches with no in-house rider for their vehicle.
+          Paid jobs no rider accepted within the dispatch window (30 minutes), and batches
+          with no in-house rider for their vehicle. Put them back on offer, or hand a batch
+          straight to a courier.
         </p>
       </div>
 
@@ -268,16 +285,26 @@ export default async function UnassignedPage() {
                     <TableCell className="text-muted-foreground">{batch.assignmentMode || '—'}</TableCell>
                     <TableCell className="text-muted-foreground">{formatDate(batch.updatedAt)}</TableCell>
                     <TableCell className="text-right">
-                      <ConfirmActionButton
-                        label="Re-dispatch"
-                        title="Re-dispatch this batch?"
-                        description="The batch goes back on offer with a fresh window and cleared declines."
-                        variant="default"
-                        action={async () => {
-                          'use server';
-                          await redispatchBatch(batch.batchId);
-                        }}
-                      />
+                      <div className="flex justify-end gap-2">
+                        <AssignBatchDialog
+                          riders={riders}
+                          vehicleType={batch.vehicleType || 'bike'}
+                          payload={{ batchId: batch.batchId }}
+                          summary={`${batch.stops?.length ?? 0} drops on a ${
+                            batch.vehicleType || 'bike'
+                          }. The courier gets it straight away — no broadcast, no waiting for an accept.`}
+                        />
+                        <ConfirmActionButton
+                          label="Re-dispatch"
+                          title="Re-dispatch this batch?"
+                          description="The batch goes back on offer with a fresh window and cleared declines."
+                          variant="outline"
+                          action={async () => {
+                            'use server';
+                            await redispatchBatch(batch.batchId);
+                          }}
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

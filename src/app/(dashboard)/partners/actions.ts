@@ -51,13 +51,19 @@ export async function updateApiAccess(
 export async function issueApiKey(
   id: string,
   payload: { label?: string; issuedTo?: string }
-): Promise<IssuedPartnerApiKey> {
-  const response = await authedFetch<SingleResponse<IssuedPartnerApiKey>>(
-    `/admins/partners/${id}/keys`,
-    { method: 'POST', body: payload }
-  );
-  revalidatePath(`/partners/${id}`);
-  return response.data;
+): Promise<
+  { ok: true; key: IssuedPartnerApiKey } | { ok: false; error: string }
+> {
+  let key: IssuedPartnerApiKey | undefined;
+  const result = await runAction(async () => {
+    const response = await authedFetch<SingleResponse<IssuedPartnerApiKey>>(
+      `/admins/partners/${id}/keys`,
+      { method: 'POST', body: payload }
+    );
+    key = response.data;
+    revalidatePath(`/partners/${id}`);
+  });
+  return result.ok ? { ok: true, key: key! } : result;
 }
 
 export async function revokeApiKey(

@@ -69,9 +69,11 @@ export function IssueKeyDialog({ partnerId }: { partnerId: string }) {
 
     startTransition(async () => {
       try {
-        setIssued(await issueApiKey(partnerId, { label: label || undefined }));
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to issue the key.');
+        const result = await issueApiKey(partnerId, { label: label || undefined });
+        if (result.ok) setIssued(result.key);
+        else setError(result.error);
+      } catch {
+        setError('Failed to issue the key.');
       }
     });
   }

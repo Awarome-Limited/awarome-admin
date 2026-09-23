@@ -71,6 +71,13 @@ export const NAV_ITEMS: NavItem[] = [
     category: 'Orders & Deliveries',
   },
   {
+    label: 'Forming Batches',
+    href: '/forming-batches',
+    module: PermissionModule.DELIVERIES,
+    icon: 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z M12 22V12 M3.3 7L12 12l8.7-5',
+    category: 'Orders & Deliveries',
+  },
+  {
     label: 'Unassigned',
     href: '/unassigned',
     module: PermissionModule.ORDERS,

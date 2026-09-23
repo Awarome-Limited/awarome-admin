@@ -597,3 +597,57 @@ export interface AdminMobileAd {
   createdAt?: string;
   updatedAt?: string;
 }
+
+/**
+ * Batch delivery clusters that have not formed yet, and the courier
+ * assignment that forms one early. Mirrors `FormingCluster` in
+ * awarome-BE/src/modules/deliveries/services/batchDispatch.services.ts.
+ */
+export interface EarlyFormWarning {
+  code: 'before-window';
+  window: string;
+  label: string;
+  startsAt: string;
+  minutesEarly: number;
+  message: string;
+}
+
+export interface FormingBatchJob {
+  _id: string;
+  orderId?: string;
+  deliveryId?: string;
+  deliveryFee?: number;
+  paidAt?: string;
+  createdAt?: string;
+  user?: { firstName?: string; lastName?: string; phone?: string } | string;
+  vendor?: { businessName?: string; name?: string; address?: string } | string;
+  deliveryLocation?: { address?: string };
+  pickupAddress?: { address?: string };
+  dropoffAddress?: { address?: string };
+}
+
+export interface FormingBatchStop {
+  jobType: 'order' | 'delivery';
+  jobId: string;
+  seq: number;
+  job?: FormingBatchJob;
+}
+
+export interface FormingCluster {
+  // null on the flat-discount (windowless) pool — no slot was ever promised.
+  window: string | null;
+  vehicleType: string;
+  size: number;
+  target?: number;
+  closesAt?: string;
+  waitingSince?: string;
+  // What dispatch would do with this cluster the moment it forms on its own.
+  wouldFormAs: 'gig' | 'in-house' | string;
+  earlyWarning?: EarlyFormWarning;
+  stops: FormingBatchStop[];
+}
+
+export interface FormingBatchesPayload {
+  clusters: FormingCluster[];
+  counts: { clusters: number; stops: number };
+}
