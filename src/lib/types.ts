@@ -655,3 +655,129 @@ export interface FormingBatchesPayload {
   clusters: FormingCluster[];
   counts: { clusters: number; stops: number };
 }
+
+/**
+ * Formed batches — every run dispatch built, from offer to completion.
+ * Mirrors `batchesAdmin.services.ts` in awarome-BE.
+ */
+export type BatchStatus =
+  | 'offered'
+  | 'assigned'
+  | 'in-progress'
+  | 'completed'
+  | 'partial'
+  | 'dissolved'
+  | 'unassigned';
+
+export interface BatchRider {
+  _id: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  email?: string;
+  vehicleType?: string;
+  plateNumber?: string;
+  isInHouse?: boolean;
+  status?: string;
+  rating?: number;
+  ratingCount?: number;
+  ordersCompleted?: number;
+  tier?: string;
+  suspended?: boolean;
+  lastLocationAt?: string;
+  location?: { coordinates?: number[] };
+}
+
+export interface BatchSummary {
+  stops: number;
+  delivered: number;
+  failed: number;
+  fare: number;
+}
+
+export interface AdminBatchListItem {
+  _id: string;
+  batchId: string;
+  vehicleType: string;
+  window?: string;
+  windowDate?: string;
+  assignmentMode: 'gig' | 'in-house' | string;
+  status: BatchStatus;
+  rider?: BatchRider | null;
+  declinedCount: number;
+  dispatchedAt?: string;
+  assignedAt?: string;
+  completedAt?: string;
+  createdAt?: string;
+  summary: BatchSummary;
+}
+
+export interface BatchStopPoint {
+  name?: string;
+  address?: string;
+  phone?: string;
+  lat?: number;
+  long?: number;
+}
+
+export interface BatchStopEvent {
+  code: string;
+  label: string;
+  detail?: string;
+  at?: string;
+}
+
+export interface AdminBatchStop {
+  seq: number;
+  jobType: 'order' | 'delivery';
+  jobId: string;
+  status: string;
+  fare: number;
+  commission: number;
+  payout: number;
+  missing?: boolean;
+  reference?: string;
+  deliveryOption?: string;
+  deliveryWindow?: string;
+  paymentMethod?: string;
+  isPaid?: boolean;
+  paidAt?: string;
+  dispatchedAt?: string;
+  acceptedAt?: string;
+  deliveredAt?: string;
+  packagePhoto?: string;
+  channel?: string;
+  createdAt?: string;
+  note?: string;
+  requestType?: string;
+  payOnDelivery?: unknown;
+  orderStatus?: string;
+  paymentStatus?: string;
+  itemsCount?: number;
+  productsCost?: number;
+  customer?: { _id: string; name?: string; phone?: string; email?: string };
+  cancellation?: { reason?: string; note?: string; source?: string; at?: string };
+  cancellationRequest?: { status?: string; reason?: string; note?: string };
+  customerRating?: { stars?: number; comment?: string };
+  riderRating?: { stars?: number; comment?: string };
+  pickup: BatchStopPoint;
+  dropoff: BatchStopPoint;
+  events?: BatchStopEvent[];
+}
+
+export interface AdminBatchDetail
+  extends Omit<AdminBatchListItem, 'summary' | 'declinedCount'> {
+  declinedBy?: { _id: string; firstName?: string; lastName?: string; phone?: string; isInHouse?: boolean }[];
+  centroid?: { lat?: number; long?: number };
+  commissionPercent: number;
+  totals: {
+    stops: number;
+    delivered: number;
+    failed: number;
+    fare: number;
+    commission: number;
+    payout: number;
+  };
+  stops: AdminBatchStop[];
+  activity: AdminActivityLog[];
+}

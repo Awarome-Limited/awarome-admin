@@ -30,6 +30,7 @@ export async function assignBatch(
 
   if (result.ok) {
     revalidatePath('/forming-batches');
+    revalidatePath('/batches', 'layout');
     revalidatePath('/unassigned');
     revalidatePath('/deliveries');
     revalidatePath('/orders');

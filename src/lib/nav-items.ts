@@ -71,6 +71,13 @@ export const NAV_ITEMS: NavItem[] = [
     category: 'Orders & Deliveries',
   },
   {
+    label: 'Batches',
+    href: '/batches',
+    module: PermissionModule.DELIVERIES,
+    icon: 'M3 7h11v10H3z M14 10h4l3 3v4h-7 M7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4 M17 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4',
+    category: 'Orders & Deliveries',
+  },
+  {
     label: 'Forming Batches',
     href: '/forming-batches',
     module: PermissionModule.DELIVERIES,
