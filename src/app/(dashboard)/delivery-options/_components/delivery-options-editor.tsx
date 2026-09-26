@@ -66,6 +66,20 @@ function summarise(row: VehicleAvailability, batchEnabled: boolean): string {
   return `${options.join(' + ')} on ${surfaces.join(' + ')}`;
 }
 
+function describeOutstandingLimit(value: string): string {
+  const limit = Number(value);
+  if (value.trim() === '' || !Number.isInteger(limit) || limit < 0) {
+    return 'Enter a whole number, 0 or more.';
+  }
+  if (limit === 0) {
+    return 'No limit — customers can book any number of pay-on-delivery runs before settling.';
+  }
+  if (limit === 1) {
+    return 'Customers must settle their current run before booking another.';
+  }
+  return `Up to ${limit} unsettled runs per customer.`;
+}
+
 export function DeliveryOptionsEditor({
   config,
 }: {
@@ -75,6 +89,9 @@ export function DeliveryOptionsEditor({
     toRows(config.vehicles ?? [])
   );
   const [batchEnabled, setBatchEnabled] = useState(config.batchEnabled ?? true);
+  const [maxOutstanding, setMaxOutstanding] = useState(
+    String(config.payOnDelivery?.maxOutstanding ?? 1)
+  );
   const [isPending, startTransition] = useTransition();
 
   function updateRow(
@@ -105,10 +122,23 @@ export function DeliveryOptionsEditor({
       return;
     }
 
+    const outstandingLimit = Number(maxOutstanding);
+    if (
+      maxOutstanding.trim() === '' ||
+      !Number.isInteger(outstandingLimit) ||
+      outstandingLimit < 0
+    ) {
+      toast.error(
+        'The pay-on-delivery limit must be a whole number, 0 or more.'
+      );
+      return;
+    }
+
     startTransition(async () => {
       try {
         await updateDeliveryOptions({
           batchEnabled,
+          payOnDelivery: { maxOutstanding: outstandingLimit },
           vehicles: rows.map((row) => ({
             ...row,
             disabledMessage: row.disabledMessage?.trim() || undefined,
@@ -165,6 +195,37 @@ export function DeliveryOptionsEditor({
             <Switch checked={batchEnabled} onCheckedChange={setBatchEnabled} />
             {batchEnabled ? 'Batch delivery is on' : 'Batch delivery is off'}
           </label>
+        </div>
+
+        <div className="rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]">
+          <div className="text-[15px] font-semibold text-foreground">
+            Pay on delivery
+          </div>
+          <div className="mb-[18px] mt-1 text-[13px] text-muted-foreground">
+            How many unsettled pay-on-delivery runs one customer can have at
+            once. Set 0 for no limit.
+          </div>
+          <div className="flex flex-col gap-[7px]">
+            <label
+              htmlFor="pod-max-outstanding"
+              className="text-[12.5px] font-medium text-foreground-secondary"
+            >
+              Unsettled pay-on-delivery runs allowed per customer
+            </label>
+            <input
+              id="pod-max-outstanding"
+              type="number"
+              min={0}
+              step={1}
+              inputMode="numeric"
+              value={maxOutstanding}
+              onChange={(e) => setMaxOutstanding(e.target.value)}
+              className="w-[140px] rounded-[10px] border border-input bg-background px-[13px] py-[9px] text-[13.5px] text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+            />
+            <span className="text-[11.5px] text-muted-foreground">
+              {describeOutstandingLimit(maxOutstanding)}
+            </span>
+          </div>
         </div>
 
         <div className="rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]">

@@ -275,6 +275,10 @@ export interface DeliveryOptionsConfig {
   vehicles: VehicleAvailability[];
   // Master switch for batch delivery itself, independent of any vehicle.
   batchEnabled: boolean;
+  payOnDelivery?: {
+    // Unsettled pay-on-delivery runs one customer may have at once. 0 = no cap.
+    maxOutstanding: number;
+  };
 }
 
 export interface DeliveryZone {
