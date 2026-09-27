@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { authedFetch, ApiError, SingleResponse, PaginatedResponse } from '@/lib/api-client';
 import { AdminRider, AdminOrder } from '@/lib/types';
@@ -24,6 +25,12 @@ import {
 import { formatDate, statusBadgeVariant } from '@/lib/format';
 import { RiderDocuments } from '@/components/rider-documents';
 import { setRiderSuspended } from '../actions';
+import type { RiderPayoutSummary } from '@/lib/types';
+import { getSession } from '@/lib/session';
+import { hasPermission, PermissionAction, PermissionModule } from '@/lib/permissions';
+import { payRiderNow } from '../../payouts/actions';
+import { PayoutActionButton } from '../../payouts/_components/payout-action-button';
+import { naira, payoutStatusLabel, payoutStatusVariant } from '../../payouts/payout-format';
 
 const LIMIT = 10;
 
@@ -58,6 +65,21 @@ export default async function RiderDetailPage({
       />
     );
   }
+
+  // Payout data sits behind the payments permission, which ops staff who can
+  // see riders may not have — the card is simply left out for them.
+  const session = await getSession();
+  const canViewPayouts =
+    !!session && hasPermission(session.profile, PermissionModule.PAYMENTS, PermissionAction.VIEW);
+  const canPay =
+    !!session && hasPermission(session.profile, PermissionModule.PAYMENTS, PermissionAction.UPDATE);
+  const payoutSummary = canViewPayouts
+    ? await authedFetch<SingleResponse<RiderPayoutSummary>>(
+        `/admins/payouts/riders/${id}/summary`
+      )
+        .then((r) => r.data)
+        .catch(() => null)
+    : null;
 
   const verificationStatus =
     rider.verificationStatus || (rider.suspended ? 'rejected' : 'unsubmitted');
@@ -105,6 +127,82 @@ export default async function RiderDetailPage({
           />
         </CardContent>
       </Card>
+
+      {payoutSummary && (
+        <Card>
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
+            <CardTitle>Payouts</CardTitle>
+            {canPay && !payoutSummary.inFlight && payoutSummary.balance >= 100 && payoutSummary.bankAccount?.verified && (
+              <PayoutActionButton
+                label={`Pay ${naira(payoutSummary.balance)} now`}
+                title="Pay this courier now?"
+                description={`${naira(payoutSummary.balance)} — their whole balance — is sent by Paystack transfer to ${payoutSummary.bankAccount.bankName} •••• ${payoutSummary.bankAccount.accountNumber?.slice(-4)} (${payoutSummary.bankAccount.accountName}).`}
+                confirmLabel="Send payout"
+                successMessage="Payout sent to Paystack"
+                action={payRiderNow.bind(null, rider._id)}
+              />
+            )}
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 text-sm">
+            <DetailRow
+              label="Balance owed"
+              value={
+                <span className={payoutSummary.balance < 0 ? 'font-semibold text-destructive' : 'font-semibold'}>
+                  {naira(payoutSummary.balance)}
+                  {payoutSummary.balance < 0 ? ' (owes Awarome)' : ''}
+                </span>
+              }
+            />
+            <DetailRow
+              label="Payout account"
+              value={
+                payoutSummary.bankAccount?.accountNumber ? (
+                  <span className="flex flex-wrap items-center justify-end gap-2">
+                    {payoutSummary.bankAccount.bankName} · {payoutSummary.bankAccount.accountNumber}
+                    {payoutSummary.bankAccount.verified ? (
+                      <Badge variant="positive">Verified</Badge>
+                    ) : (
+                      <Badge variant="warning">Not verified</Badge>
+                    )}
+                  </span>
+                ) : (
+                  'None added'
+                )
+              }
+            />
+            {payoutSummary.bankAccount?.accountName && (
+              <DetailRow label="Account name" value={payoutSummary.bankAccount.accountName} />
+            )}
+            {payoutSummary.inFlight && (
+              <DetailRow
+                label="In flight"
+                value={
+                  <Link href={`/payouts/${payoutSummary.inFlight._id}`} className="flex items-center gap-2 hover:underline">
+                    {naira(payoutSummary.inFlight.amount)}
+                    <Badge variant={payoutStatusVariant(payoutSummary.inFlight.status)}>
+                      {payoutStatusLabel(payoutSummary.inFlight.status)}
+                    </Badge>
+                  </Link>
+                }
+              />
+            )}
+            <DetailRow
+              label="Paid to date"
+              value={`${naira(payoutSummary.totalPaid)} · ${payoutSummary.payoutsCount} ${payoutSummary.payoutsCount === 1 ? 'payout' : 'payouts'}`}
+            />
+            <DetailRow label="Last paid" value={payoutSummary.lastPaidAt ? formatDate(payoutSummary.lastPaidAt) : '—'} />
+            {payoutSummary.bankAccount && !payoutSummary.bankAccount.verified && (
+              <p className="text-[12px] text-warning">
+                This account was saved before bank verification, so automatic payouts skip it. The
+                courier needs to re-save it in the app.
+              </p>
+            )}
+            <Link href={`/payouts?rider=${rider._id}`} className="text-[13px] font-semibold text-primary hover:underline">
+              Payout history →
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

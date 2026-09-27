@@ -159,6 +159,13 @@ export const NAV_ITEMS: NavItem[] = [
     category: 'Finance & Sales',
   },
   {
+    label: 'Rider Payouts',
+    href: '/payouts',
+    module: PermissionModule.PAYMENTS,
+    icon: 'M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
+    category: 'Finance & Sales',
+  },
+  {
     label: 'Refunds',
     href: '/refunds',
     module: PermissionModule.PAYMENTS,

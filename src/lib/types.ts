@@ -781,3 +781,96 @@ export interface AdminBatchDetail
   stops: AdminBatchStop[];
   activity: AdminActivityLog[];
 }
+
+export type RiderPayoutStatus = 'processing' | 'awaiting-otp' | 'success' | 'failed' | 'reversed';
+export type RiderPayoutTrigger = 'scheduled' | 'manual-run' | 'manual-rider';
+
+export interface RiderPayoutBankAccount {
+  bankName?: string;
+  bankCode?: string;
+  accountNumber?: string;
+  accountName?: string;
+}
+
+export interface RiderPayoutEvent {
+  status: RiderPayoutStatus;
+  at: string;
+  source: 'system' | 'paystack' | 'webhook' | 'verify';
+  note?: string;
+}
+
+export interface PayoutStaff {
+  _id: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+}
+
+export interface AdminRiderPayout {
+  _id: string;
+  rider?: (Pick<AdminRider, '_id' | 'firstName' | 'lastName' | 'phone' | 'email' | 'isInHouse' | 'suspended'> & {
+    bankAccount?: RiderPayoutBankAccount;
+    deleted?: boolean;
+  }) | null;
+  run?: string | PayoutRunRef | null;
+  amount: number;
+  currency: string;
+  status: RiderPayoutStatus;
+  reference: string;
+  reason?: string;
+  transferCode?: string;
+  paystackTransferId?: number;
+  recipientCode?: string;
+  bankAccount: RiderPayoutBankAccount;
+  transaction?:
+    | string
+    | { _id: string; amount: number; status: string; type: string; transactionReference?: string; paidAt?: string; createdAt?: string }
+    | null;
+  trigger: RiderPayoutTrigger;
+  initiatedBy?: PayoutStaff | string | null;
+  failureReason?: string;
+  gatewayResponse?: unknown;
+  history?: RiderPayoutEvent[];
+  sentAt?: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PayoutRunRef {
+  _id: string;
+  runKey: string;
+  trigger: RiderPayoutTrigger;
+  status: 'running' | 'completed' | 'failed';
+  startedAt: string;
+  finishedAt?: string;
+}
+
+export interface AdminPayoutRun extends PayoutRunRef {
+  initiatedBy?: PayoutStaff | null;
+  minAmount: number;
+  stats: { eligible: number; initiated: number; failed: number; skipped: number; totalAmount: number };
+  skipped?: {
+    rider?: { _id: string; firstName?: string; lastName?: string; phone?: string } | null;
+    balance: number;
+    reason: string;
+  }[];
+  error?: string;
+}
+
+export interface RiderPayoutSummary {
+  balance: number;
+  bankAccount:
+    | (RiderPayoutBankAccount & { verified: boolean; verifiedAt?: string; hasRecipient: boolean })
+    | null;
+  inFlight: { _id: string; amount: number; status: RiderPayoutStatus; reference: string; createdAt: string } | null;
+  totalPaid: number;
+  payoutsCount: number;
+  lastPaidAt: string | null;
+}
+
+export interface PayoutSettings {
+  payoutsEnabled: boolean;
+  payoutHourLagos: number;
+  payoutMinAmount: number;
+}
