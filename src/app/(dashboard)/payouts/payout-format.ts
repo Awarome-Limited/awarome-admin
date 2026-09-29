@@ -20,6 +20,7 @@ const TRIGGER_LABELS: Record<RiderPayoutTrigger, string> = {
   scheduled: 'Daily run',
   'manual-run': 'Manual run',
   'manual-rider': 'Paid by staff',
+  'manual-vendor': 'Paid by staff',
 };
 
 export const payoutStatusLabel = (status: string) =>
@@ -47,3 +48,9 @@ export const maskedAccount = (bank?: RiderPayoutBankAccount | null) =>
 
 export const formatLagosHour = (hour: number) =>
   `${String(hour).padStart(2, '0')}:00`;
+
+export const vendorName = (vendor?: { businessName?: string; name?: string } | null, fallback = 'Unknown vendor') =>
+  vendor?.businessName || vendor?.name || fallback;
+
+export const percent = (value?: number | null) =>
+  `${(value ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`;

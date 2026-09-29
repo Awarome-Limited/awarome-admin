@@ -783,7 +783,7 @@ export interface AdminBatchDetail
 }
 
 export type RiderPayoutStatus = 'processing' | 'awaiting-otp' | 'success' | 'failed' | 'reversed';
-export type RiderPayoutTrigger = 'scheduled' | 'manual-run' | 'manual-rider';
+export type RiderPayoutTrigger = 'scheduled' | 'manual-run' | 'manual-rider' | 'manual-vendor';
 
 export interface RiderPayoutBankAccount {
   bankName?: string;
@@ -873,4 +873,78 @@ export interface PayoutSettings {
   payoutsEnabled: boolean;
   payoutHourLagos: number;
   payoutMinAmount: number;
+}
+
+export interface VendorPayoutSettings {
+  vendorPayoutsEnabled: boolean;
+  vendorPayoutHourLagos: number;
+  vendorPayoutMinAmount: number;
+}
+
+export interface PayoutSchedule {
+  enabled: boolean;
+  hourLagos: number;
+  minAmount: number;
+}
+
+export interface PayoutVendorRef {
+  _id: string;
+  businessName?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  suspended?: boolean;
+  deleted?: boolean;
+  bankAccount?: RiderPayoutBankAccount;
+}
+
+/** One order's worth of what a vendor is owed. */
+export interface VendorEarning {
+  _id: string;
+  order: string | null;
+  orderId?: string;
+  items: number | null;
+  grossAmount: number;
+  commissionPercent: number;
+  commissionAmount: number;
+  amount: number;
+  priceSource?: 'cart' | 'product';
+  payout: string | null;
+  pickedUpAt: string;
+}
+
+export interface AdminVendorPayout extends Omit<AdminRiderPayout, 'rider'> {
+  vendor?: PayoutVendorRef | null;
+  earningsCount?: number;
+  earnings?: VendorEarning[];
+}
+
+export interface AdminVendorPayoutRun extends Omit<AdminPayoutRun, 'skipped'> {
+  skipped?: {
+    vendor?: { _id: string; businessName?: string; name?: string; phone?: string } | null;
+    balance: number;
+    reason: string;
+  }[];
+}
+
+export interface VendorPayoutSummary extends RiderPayoutSummary {
+  earnings: { gross: number; commission: number; net: number; orders: number };
+  currentCommissionPercent: number;
+  hasCommissionAgreement: boolean;
+}
+
+export interface VendorCommission {
+  _id: string;
+  vendor: string;
+  percent: number;
+  startsAt: string;
+  endsAt: string | null;
+  startDate: string;
+  endDate: string | null;
+  note?: string;
+  active: boolean;
+  upcoming: boolean;
+  createdBy?: PayoutStaff | null;
+  endedBy?: PayoutStaff | null;
+  createdAt: string;
 }

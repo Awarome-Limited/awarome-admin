@@ -16,10 +16,9 @@ import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { getSession } from '@/lib/session';
 import { hasPermission, PermissionAction, PermissionModule } from '@/lib/permissions';
-import type { AdminPayoutRun, AdminRiderPayout, PayoutSettings } from '@/lib/types';
-import { startPayoutRun, updatePayoutSettings } from './actions';
-import { PayoutActionButton } from './_components/payout-action-button';
-import { PayoutSettingsCard } from './_components/payout-settings';
+import type { AdminVendorPayout, AdminVendorPayoutRun, VendorPayoutSettings } from '@/lib/types';
+import { PayoutActionButton } from '../payouts/_components/payout-action-button';
+import { PayoutSettingsCard } from '../payouts/_components/payout-settings';
 import {
   formatLagosHour,
   maskedAccount,
@@ -28,7 +27,9 @@ import {
   payoutStatusVariant,
   payoutTriggerLabel,
   personName,
-} from './payout-format';
+  vendorName,
+} from '../payouts/payout-format';
+import { startVendorPayoutRun, updateVendorPayoutSettings } from './actions';
 
 const LIMIT = 20;
 
@@ -40,7 +41,7 @@ const FILTERS = [
   { key: 'reversed', label: 'Reversed', statuses: 'reversed' },
 ] as const;
 
-type PayoutsResponse = PaginatedResponse<AdminRiderPayout> & {
+type PayoutsResponse = PaginatedResponse<AdminVendorPayout> & {
   counts: Record<string, number>;
   amounts: Record<string, number>;
 };
@@ -58,7 +59,7 @@ function filterCount(counts: Record<string, number>, key: string) {
 
 const RUN_STATUS_VARIANT = { running: 'info', completed: 'positive', failed: 'destructive' } as const;
 
-export default async function PayoutsPage({
+export default async function VendorPayoutsPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
@@ -73,7 +74,7 @@ export default async function PayoutsPage({
   query.set('skip', String(skip));
   query.set('limit', String(LIMIT));
   if (search) query.set('search', search);
-  if (params.rider) query.set('rider', params.rider);
+  if (params.vendor) query.set('vendor', params.vendor);
   if (params.run) query.set('run', params.run);
   if (filter && 'statuses' in filter) query.set('status', filter.statuses);
 
@@ -82,13 +83,13 @@ export default async function PayoutsPage({
   const canEditSettings = !!session && hasPermission(session.profile, PermissionModule.PRICING, PermissionAction.UPDATE);
 
   let result: PayoutsResponse;
-  let runs: AdminPayoutRun[] = [];
-  let settings: PayoutSettings | null = null;
+  let runs: AdminVendorPayoutRun[] = [];
+  let settings: VendorPayoutSettings | null = null;
   try {
     const [payoutsRes, runsRes, configRes] = await Promise.all([
-      authedFetch<PayoutsResponse>(`/admins/payouts?${query.toString()}`),
-      authedFetch<PaginatedResponse<AdminPayoutRun>>('/admins/payouts/runs?limit=6'),
-      authedFetch<SingleResponse<PayoutSettings>>('/admins/dispatch-config').catch(() => null),
+      authedFetch<PayoutsResponse>(`/admins/vendor-payouts?${query.toString()}`),
+      authedFetch<PaginatedResponse<AdminVendorPayoutRun>>('/admins/vendor-payouts/runs?limit=6'),
+      authedFetch<SingleResponse<VendorPayoutSettings>>('/admins/dispatch-config').catch(() => null),
     ]);
     result = payoutsRes;
     runs = runsRes.data;
@@ -120,36 +121,37 @@ export default async function PayoutsPage({
 
   const hrefWith = (changes: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
-    const merged = { search, filter: activeFilter, rider: params.rider, run: params.run, ...changes };
+    const merged = { search, filter: activeFilter, vendor: params.vendor, run: params.run, ...changes };
     Object.entries(merged).forEach(([k, v]) => {
       if (v && !(k === 'filter' && v === 'all')) p.set(k, v);
     });
     const s = p.toString();
-    return `/payouts${s ? `?${s}` : ''}`;
+    return `/vendor-payouts${s ? `?${s}` : ''}`;
   };
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-[23px] font-bold tracking-tight text-foreground">Rider payouts</h1>
+          <h1 className="text-[23px] font-bold tracking-tight text-foreground">Vendor payouts</h1>
           <p className="mt-1 text-[14px] text-muted-foreground">
-            Every Paystack transfer to a courier — what was sent, to which account, and where it
-            stands.
+            Every Paystack transfer to a vendor for the products they sold — delivery fees and
+            service charges are never part of it. A vendor is owed an order once the rider picks it
+            up, less any commission agreed on their vendor page.
             {settings &&
-              (settings.payoutsEnabled
-                ? ` Daily run at ${formatLagosHour(settings.payoutHourLagos)} Lagos time.`
+              (settings.vendorPayoutsEnabled
+                ? ` Daily run at ${formatLagosHour(settings.vendorPayoutHourLagos)} Lagos time.`
                 : ' Automatic payouts are off.')}
           </p>
         </div>
         {canPay && (
           <PayoutActionButton
-            label={running ? 'Run in progress…' : 'Run payouts now'}
-            title="Pay every courier now?"
-            description={`Every courier owed at least ${naira(settings?.payoutMinAmount ?? 0)} with a verified account is sent their full balance by Paystack transfer. Couriers already paid today are only paid anything they have earned since.`}
+            label={running ? 'Run in progress…' : 'Run vendor payouts now'}
+            title="Pay every vendor now?"
+            description={`Every vendor owed at least ${naira(settings?.vendorPayoutMinAmount ?? 0)} with a verified account is sent their full balance by Paystack transfer.`}
             confirmLabel="Send payouts"
-            successMessage="Payout run started — it will appear under Recent runs."
-            action={startPayoutRun}
+            successMessage="Vendor payout run started — it will appear under Recent runs."
+            action={startVendorPayoutRun}
           />
         )}
       </div>
@@ -157,13 +159,13 @@ export default async function PayoutsPage({
       {settings && (
         <PayoutSettingsCard
           settings={{
-            enabled: settings.payoutsEnabled,
-            hourLagos: settings.payoutHourLagos,
-            minAmount: settings.payoutMinAmount,
+            enabled: settings.vendorPayoutsEnabled,
+            hourLagos: settings.vendorPayoutHourLagos,
+            minAmount: settings.vendorPayoutMinAmount,
           }}
           canEdit={canEditSettings}
-          description="Once a day, every courier owed at least the minimum is sent their whole balance by Paystack transfer. Smaller balances roll over to the next day. Transfer OTP must be turned off in the Paystack dashboard, and the Paystack balance funded, or transfers will wait or fail."
-          save={updatePayoutSettings}
+          description="Once a day, every vendor owed at least the minimum is sent their whole balance by Paystack transfer. Smaller balances roll over to the next day. Transfer OTP must be turned off in the Paystack dashboard, and the Paystack balance funded, or transfers will wait or fail."
+          save={updateVendorPayoutSettings}
         />
       )}
 
@@ -180,11 +182,11 @@ export default async function PayoutsPage({
         ))}
       </div>
 
-      {(params.rider || params.run) && (
+      {(params.vendor || params.run) && (
         <div className="flex w-fit items-center gap-2 rounded-[9px] border border-border bg-card px-3 py-1.5 text-[13px] text-foreground-secondary">
-          {params.rider ? "Showing one courier's payouts" : 'Showing one run’s payouts'}
+          {params.vendor ? "Showing one vendor's payouts" : 'Showing one run’s payouts'}
           <Link
-            href={hrefWith({ rider: undefined, run: undefined, skip: undefined })}
+            href={hrefWith({ vendor: undefined, run: undefined, skip: undefined })}
             className="font-semibold text-primary hover:underline"
           >
             Clear
@@ -213,7 +215,7 @@ export default async function PayoutsPage({
             );
           })}
         </div>
-        <SearchBox placeholder="Search courier, account or reference…" />
+        <SearchBox placeholder="Search vendor, account or reference…" />
       </div>
 
       <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
@@ -221,12 +223,12 @@ export default async function PayoutsPage({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Courier</TableHead>
+                <TableHead>Vendor</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="text-right">Orders</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Paid to</TableHead>
                 <TableHead>Source</TableHead>
-                <TableHead>Reference</TableHead>
                 <TableHead>Created</TableHead>
               </TableRow>
             </TableHeader>
@@ -235,14 +237,15 @@ export default async function PayoutsPage({
                 <TableRow key={payout._id}>
                   <TableCell>
                     <div className="flex flex-col">
-                      <Link href={`/payouts/${payout._id}`} className="font-medium hover:underline">
-                        {personName(payout.rider, 'Deleted courier')}
+                      <Link href={`/vendor-payouts/${payout._id}`} className="font-medium hover:underline">
+                        {vendorName(payout.vendor, 'Deleted vendor')}
                       </Link>
-                      <span className="text-[12px] text-muted-foreground">{payout.rider?.phone || '—'}</span>
+                      <span className="font-mono text-[11px] text-muted-foreground">{payout.reference}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right font-semibold tabular-nums">
-                    {naira(payout.amount)}
+                  <TableCell className="text-right font-semibold tabular-nums">{naira(payout.amount)}</TableCell>
+                  <TableCell className="text-right tabular-nums text-muted-foreground">
+                    {payout.earningsCount ?? '—'}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
@@ -259,27 +262,17 @@ export default async function PayoutsPage({
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="whitespace-nowrap">{maskedAccount(payout.bankAccount)}</span>
-                      <span className="text-[12px] text-muted-foreground">
-                        {payout.bankAccount?.accountName || '—'}
-                      </span>
+                      <span className="text-[12px] text-muted-foreground">{payout.bankAccount?.accountName || '—'}</span>
                     </div>
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-muted-foreground">{payoutTriggerLabel(payout.trigger)}</TableCell>
-                  <TableCell>
-                    <Link
-                      href={`/payouts/${payout._id}`}
-                      className="rounded bg-chip px-2 py-0.5 font-mono text-xs hover:underline"
-                    >
-                      {payout.reference}
-                    </Link>
-                  </TableCell>
                   <TableCell className="text-muted-foreground">{formatDate(payout.createdAt)}</TableCell>
                 </TableRow>
               ))}
               {result.data.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
-                    No payouts found.
+                    No vendor payouts found.
                   </TableCell>
                 </TableRow>
               )}
@@ -291,7 +284,7 @@ export default async function PayoutsPage({
             skip={skip}
             limit={LIMIT}
             totalCount={result.totalCount}
-            basePath="/payouts"
+            basePath="/vendor-payouts"
             searchParams={params}
           />
         </div>
@@ -302,7 +295,7 @@ export default async function PayoutsPage({
           Recent runs
         </div>
         {runs.length === 0 ? (
-          <p className="px-[22px] py-6 text-[13px] text-muted-foreground">No payout runs yet.</p>
+          <p className="px-[22px] py-6 text-[13px] text-muted-foreground">No vendor payout runs yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -322,8 +315,8 @@ export default async function PayoutsPage({
                 {runs.map((run) => (
                   <TableRow key={run._id}>
                     <TableCell>
-                      <Link href={`/payouts/runs/${run._id}`} className="font-medium hover:underline">
-                        {run.trigger === 'scheduled' ? `Daily · ${run.runKey}` : 'Manual run'}
+                      <Link href={`/vendor-payouts/runs/${run._id}`} className="font-medium hover:underline">
+                        {run.trigger === 'scheduled' ? `Daily · ${run.runKey.replace(/^vendor-/, '')}` : 'Manual run'}
                       </Link>
                     </TableCell>
                     <TableCell>
@@ -334,9 +327,7 @@ export default async function PayoutsPage({
                     <TableCell className="text-muted-foreground">
                       {run.initiatedBy ? personName(run.initiatedBy) : 'Scheduler'}
                     </TableCell>
-                    <TableCell className="text-right font-semibold tabular-nums">
-                      {naira(run.stats?.totalAmount)}
-                    </TableCell>
+                    <TableCell className="text-right font-semibold tabular-nums">{naira(run.stats?.totalAmount)}</TableCell>
                     <TableCell className="text-right tabular-nums">{run.stats?.initiated ?? 0}</TableCell>
                     <TableCell className="text-right tabular-nums">{run.stats?.failed ?? 0}</TableCell>
                     <TableCell className="text-right tabular-nums">{run.stats?.skipped ?? 0}</TableCell>

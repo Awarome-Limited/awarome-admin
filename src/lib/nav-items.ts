@@ -166,6 +166,13 @@ export const NAV_ITEMS: NavItem[] = [
     category: 'Finance & Sales',
   },
   {
+    label: 'Vendor Payouts',
+    href: '/vendor-payouts',
+    module: PermissionModule.PAYMENTS,
+    icon: 'M3 9l1.5-5h15L21 9 M4 9v10h16V9 M12 11v6 M14.5 12.5h-3.25a1.25 1.25 0 0 0 0 2.5h1.5a1.25 1.25 0 0 1 0 2.5H9.5',
+    category: 'Finance & Sales',
+  },
+  {
     label: 'Refunds',
     href: '/refunds',
     module: PermissionModule.PAYMENTS,

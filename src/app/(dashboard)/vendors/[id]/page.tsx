@@ -17,6 +17,21 @@ import { formatDate } from '@/lib/format';
 import { setVendorSuspended } from '../actions';
 import { SuspendToggle } from '@/components/suspend-toggle';
 import { PaginationControls } from '@/components/pagination-controls';
+import { DetailRow } from '@/components/detail-row';
+import { getSession } from '@/lib/session';
+import { hasPermission, PermissionAction, PermissionModule } from '@/lib/permissions';
+import type { VendorCommission, VendorEarning, VendorPayoutSummary } from '@/lib/types';
+import { VendorCommissions } from './_components/vendor-commissions';
+import { payVendorNow } from '../../vendor-payouts/actions';
+import { PayoutActionButton } from '../../payouts/_components/payout-action-button';
+import {
+  naira,
+  payoutStatusLabel,
+  payoutStatusVariant,
+  percent,
+} from '../../payouts/payout-format';
+
+const EARNINGS_LIMIT = 10;
 
 function formatHours(vendor: AdminVendor): string {
   if (!vendor.opensAt && !vendor.closesAt) return '—';
@@ -91,6 +106,30 @@ export default async function VendorDetailPage({
     productsTotalCount = productsRes.totalCount ?? products.length;
   } catch {
     // non-fatal
+  }
+
+  // Money for this vendor sits behind the payments permission; staff who can
+  // see vendors without it just don't get these sections.
+  const session = await getSession();
+  const canViewPayments =
+    !!session && hasPermission(session.profile, PermissionModule.PAYMENTS, PermissionAction.VIEW);
+  const canPay =
+    !!session && hasPermission(session.profile, PermissionModule.PAYMENTS, PermissionAction.UPDATE);
+  const earningsSkip = Number(sp.eSkip ?? 0);
+  let payoutSummary: VendorPayoutSummary | null = null;
+  let commissions: VendorCommission[] = [];
+  let earnings: PaginatedResponse<VendorEarning> | null = null;
+  if (canViewPayments) {
+    const [summaryRes, commissionsRes, earningsRes] = await Promise.allSettled([
+      authedFetch<SingleResponse<VendorPayoutSummary>>(`/admins/vendor-payouts/vendors/${id}/summary`),
+      authedFetch<SingleResponse<VendorCommission[]>>(`/admins/vendors/${id}/commissions`),
+      authedFetch<PaginatedResponse<VendorEarning>>(
+        `/admins/vendor-payouts/vendors/${id}/earnings?skip=${earningsSkip}&limit=${EARNINGS_LIMIT}`
+      ),
+    ]);
+    if (summaryRes.status === 'fulfilled') payoutSummary = summaryRes.value.data;
+    if (commissionsRes.status === 'fulfilled') commissions = commissionsRes.value.data;
+    if (earningsRes.status === 'fulfilled') earnings = earningsRes.value;
   }
 
   const displayName = vendor.businessName || vendor.name || '—';
@@ -225,6 +264,154 @@ export default async function VendorDetailPage({
           ))}
         </div>
       </div>
+
+      {canViewPayments && (
+        <VendorCommissions vendorId={vendor._id} agreements={commissions} canEdit={canPay} />
+      )}
+
+      {payoutSummary && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.4fr] lg:items-start">
+          <div className="rounded-[14px] border border-border bg-card p-[18px_20px] shadow-[var(--shadow-card)]">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[15px] font-semibold text-foreground">Payouts</span>
+              {canPay &&
+                !payoutSummary.inFlight &&
+                payoutSummary.balance >= 100 &&
+                payoutSummary.bankAccount?.verified && (
+                  <PayoutActionButton
+                    label={`Pay ${naira(payoutSummary.balance)} now`}
+                    title="Pay this vendor now?"
+                    description={`${naira(payoutSummary.balance)} — their whole balance — is sent by Paystack transfer to ${payoutSummary.bankAccount.bankName} •••• ${payoutSummary.bankAccount.accountNumber?.slice(-4)} (${payoutSummary.bankAccount.accountName}).`}
+                    confirmLabel="Send payout"
+                    successMessage="Payout sent to Paystack"
+                    action={payVendorNow.bind(null, vendor._id)}
+                  />
+                )}
+            </div>
+            <div className="flex flex-col gap-3 text-sm">
+              <DetailRow label="Balance owed" value={<span className="font-semibold">{naira(payoutSummary.balance)}</span>} />
+              <DetailRow
+                label="Payout account"
+                value={
+                  payoutSummary.bankAccount?.accountNumber ? (
+                    <span className="flex flex-wrap items-center justify-end gap-2">
+                      {payoutSummary.bankAccount.bankName} · {payoutSummary.bankAccount.accountNumber}
+                      {payoutSummary.bankAccount.verified ? (
+                        <Badge variant="positive">Verified</Badge>
+                      ) : (
+                        <Badge variant="warning">Not verified</Badge>
+                      )}
+                    </span>
+                  ) : (
+                    'None added — the vendor adds it in their app'
+                  )
+                }
+              />
+              {payoutSummary.bankAccount?.accountName && (
+                <DetailRow label="Account name" value={payoutSummary.bankAccount.accountName} />
+              )}
+              {payoutSummary.inFlight && (
+                <DetailRow
+                  label="In flight"
+                  value={
+                    <Link href={`/vendor-payouts/${payoutSummary.inFlight._id}`} className="flex items-center gap-2 hover:underline">
+                      {naira(payoutSummary.inFlight.amount)}
+                      <Badge variant={payoutStatusVariant(payoutSummary.inFlight.status)}>
+                        {payoutStatusLabel(payoutSummary.inFlight.status)}
+                      </Badge>
+                    </Link>
+                  }
+                />
+              )}
+              <DetailRow
+                label="Products sold (picked up)"
+                value={`${naira(payoutSummary.earnings.gross)} · ${payoutSummary.earnings.orders} ${payoutSummary.earnings.orders === 1 ? 'order' : 'orders'}`}
+              />
+              <DetailRow label="Commission kept" value={naira(payoutSummary.earnings.commission)} />
+              <DetailRow
+                label="Paid to date"
+                value={`${naira(payoutSummary.totalPaid)} · ${payoutSummary.payoutsCount} ${payoutSummary.payoutsCount === 1 ? 'payout' : 'payouts'}`}
+              />
+              <DetailRow label="Last paid" value={payoutSummary.lastPaidAt ? formatDate(payoutSummary.lastPaidAt) : '—'} />
+              <Link href={`/vendor-payouts?vendor=${vendor._id}`} className="text-[13px] font-semibold text-primary hover:underline">
+                Payout history →
+              </Link>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
+            <div className="px-5 pb-3 pt-[18px]">
+              <div className="text-[15px] font-semibold text-foreground">Earnings by order</div>
+              <p className="mt-1 text-[12.5px] text-muted-foreground">
+                Credited when the rider picks the order up: this vendor&apos;s products only, less the
+                commission in force when the customer paid.
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order</TableHead>
+                    <TableHead className="text-right">Products</TableHead>
+                    <TableHead className="text-right">Commission</TableHead>
+                    <TableHead className="text-right">Owed</TableHead>
+                    <TableHead>Paid out</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(earnings?.data ?? []).map((e) => (
+                    <TableRow key={e._id}>
+                      <TableCell>
+                        {e.order ? (
+                          <Link href={`/orders/${e.order}`} className="rounded bg-chip px-2 py-0.5 font-mono text-xs hover:underline">
+                            {e.orderId ?? e.order}
+                          </Link>
+                        ) : (
+                          e.orderId ?? '—'
+                        )}
+                        <span className="block text-[11.5px] text-muted-foreground">{formatDate(e.pickedUpAt)}</span>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">{naira(e.grossAmount)}</TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {e.commissionAmount ? `−${naira(e.commissionAmount)} (${percent(e.commissionPercent)})` : '—'}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold tabular-nums">{naira(e.amount)}</TableCell>
+                      <TableCell>
+                        {e.payout ? (
+                          <Link href={`/vendor-payouts/${e.payout}`} className="text-[12.5px] font-semibold text-primary hover:underline">
+                            View payout
+                          </Link>
+                        ) : (
+                          <span className="text-[12.5px] text-muted-foreground">Not yet</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {(earnings?.data.length ?? 0) === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                        No earnings yet. Orders are credited once a rider picks them up.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            {earnings && earnings.totalCount > EARNINGS_LIMIT && (
+              <div className="border-t border-border px-4 py-3">
+                <PaginationControls
+                  skip={earningsSkip}
+                  limit={EARNINGS_LIMIT}
+                  totalCount={earnings.totalCount}
+                  basePath={`/vendors/${id}`}
+                  searchParams={sp}
+                  skipParam="eSkip"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Products table */}
       <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">

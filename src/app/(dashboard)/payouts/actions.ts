@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { authedFetch, type SingleResponse } from '@/lib/api-client';
 import { runAction, type ActionResult } from '@/lib/action-result';
-import type { AdminRiderPayout, PayoutSettings } from '@/lib/types';
+import type { AdminRiderPayout, PayoutSchedule, PayoutSettings } from '@/lib/types';
 
 function revalidatePayouts(riderId?: string) {
   revalidatePath('/payouts', 'layout');
@@ -46,7 +46,12 @@ export async function refreshPayout(payoutId: string): Promise<ActionResult> {
   return result;
 }
 
-export async function updatePayoutSettings(payload: PayoutSettings): Promise<ActionResult> {
+export async function updatePayoutSettings(values: PayoutSchedule): Promise<ActionResult> {
+  const payload: PayoutSettings = {
+    payoutsEnabled: values.enabled,
+    payoutHourLagos: values.hourLagos,
+    payoutMinAmount: values.minAmount,
+  };
   const result = await runAction(() =>
     authedFetch('/admins/dispatch-config', { method: 'PATCH', body: payload })
   );

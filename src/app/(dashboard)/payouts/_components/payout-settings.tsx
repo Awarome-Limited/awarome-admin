@@ -4,35 +4,41 @@ import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import type { PayoutSettings } from '@/lib/types';
-import { updatePayoutSettings } from '../actions';
+import type { PayoutSchedule } from '@/lib/types';
 import { formatLagosHour } from '../payout-format';
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 
+type Result = { ok: true } | { ok: false; error: string };
+
+/** The daily-run switch, hour and minimum — shared by courier and vendor payouts. */
 export function PayoutSettingsCard({
   settings,
   canEdit,
+  description,
+  save: saveSettings,
 }: {
-  settings: PayoutSettings;
+  settings: PayoutSchedule;
   canEdit: boolean;
+  description: string;
+  save: (values: PayoutSchedule) => Promise<Result>;
 }) {
-  const [enabled, setEnabled] = useState(settings.payoutsEnabled);
-  const [hour, setHour] = useState(settings.payoutHourLagos);
-  const [minAmount, setMinAmount] = useState(String(settings.payoutMinAmount));
+  const [enabled, setEnabled] = useState(settings.enabled);
+  const [hour, setHour] = useState(settings.hourLagos);
+  const [minAmount, setMinAmount] = useState(String(settings.minAmount));
   const [isPending, startTransition] = useTransition();
 
   const dirty =
-    enabled !== settings.payoutsEnabled ||
-    hour !== settings.payoutHourLagos ||
-    Number(minAmount) !== settings.payoutMinAmount;
+    enabled !== settings.enabled ||
+    hour !== settings.hourLagos ||
+    Number(minAmount) !== settings.minAmount;
 
   const save = () =>
     startTransition(async () => {
-      const result = await updatePayoutSettings({
-        payoutsEnabled: enabled,
-        payoutHourLagos: hour,
-        payoutMinAmount: Number(minAmount),
+      const result = await saveSettings({
+        enabled,
+        hourLagos: hour,
+        minAmount: Number(minAmount),
       });
       if (result.ok) toast.success('Payout settings saved');
       else toast.error(result.error);
@@ -43,12 +49,7 @@ export function PayoutSettingsCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="text-[15px] font-semibold text-foreground">Automatic daily payouts</div>
-          <p className="mt-1 max-w-xl text-[13px] text-muted-foreground">
-            Once a day, every courier owed at least the minimum is sent their whole balance by
-            Paystack transfer. Smaller balances roll over to the next day. Transfer OTP must be
-            turned off in the Paystack dashboard, and the Paystack balance funded, or transfers
-            will wait or fail.
-          </p>
+          <p className="mt-1 max-w-xl text-[13px] text-muted-foreground">{description}</p>
         </div>
         <label className="flex items-center gap-2 text-[13px] font-semibold text-foreground-secondary">
           <Switch checked={enabled} disabled={!canEdit || isPending} onCheckedChange={setEnabled} />
