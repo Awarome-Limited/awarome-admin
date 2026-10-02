@@ -440,7 +440,7 @@ export function WebBannerDialog({ banner }: { banner?: AdminWebBanner }) {
               {linkType === 'category'
                 ? 'In the app a category link needs one of: groceries, supermarket, appliances, health_and_beauty, fashion, electronics.'
                 : linkType === 'url'
-                  ? 'In the app, awarome.com links to a vendor or product open in the app; anything else opens the browser.'
+                  ? 'Use /packages to open package delivery (the send page on the website, the send flow in the app). Links to a vendor or product open in the app too; anything else opens the browser.'
                   : 'The app opens this in its own store and product screens.'}
             </p>
           )}
