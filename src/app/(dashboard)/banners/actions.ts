@@ -6,11 +6,13 @@ import type {
   WebBannerCtaVariant,
   WebBannerLinkType,
   WebBannerMode,
+  WebBannerPlacement,
   WebBannerTheme,
 } from '@/lib/types';
 
 export interface WebBannerPayload {
   mode?: WebBannerMode;
+  placement?: WebBannerPlacement;
   eyebrow?: string;
   headline?: string;
   subheadline?: string;

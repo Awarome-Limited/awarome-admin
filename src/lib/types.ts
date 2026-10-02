@@ -570,10 +570,13 @@ export type WebBannerMode = 'structured' | 'image';
 export type WebBannerTheme = 'indigo' | 'yellow' | 'peach' | 'custom';
 export type WebBannerCtaVariant = 'primary' | 'accent' | 'outline';
 export type WebBannerLinkType = 'vendor' | 'category' | 'product' | 'url' | 'none';
+/** Where a custom banner shows. Banners saved before this existed are web. */
+export type WebBannerPlacement = 'web' | 'mobile' | 'both';
 
 export interface AdminWebBanner {
   _id: string;
   mode: WebBannerMode;
+  placement?: WebBannerPlacement;
   eyebrow?: string;
   headline?: string;
   subheadline?: string;

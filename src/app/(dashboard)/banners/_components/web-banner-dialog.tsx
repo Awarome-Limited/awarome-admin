@@ -19,9 +19,10 @@ import type {
   WebBannerCtaVariant,
   WebBannerLinkType,
   WebBannerMode,
+  WebBannerPlacement,
   WebBannerTheme,
 } from '@/lib/types';
-import { BannerPreview } from './banner-preview';
+import { AppBannerPreview, BannerPreview } from './banner-preview';
 import {
   createWebBanner,
   updateWebBanner,
@@ -35,6 +36,12 @@ const selectClass =
 const MODES: { key: WebBannerMode; label: string; hint: string }[] = [
   { key: 'structured', label: 'Structured', hint: 'Text + CTA on a brand background' },
   { key: 'image', label: 'Full image', hint: 'One pre-composed artwork' },
+];
+
+const PLACEMENTS: { key: WebBannerPlacement; label: string; hint: string }[] = [
+  { key: 'web', label: 'Website', hint: 'awarome.com homepage hero' },
+  { key: 'mobile', label: 'Mobile app', hint: 'Home screen carousel' },
+  { key: 'both', label: 'Both', hint: 'Website and app' },
 ];
 
 const THEMES: WebBannerTheme[] = ['indigo', 'yellow', 'peach', 'custom'];
@@ -60,6 +67,9 @@ export function WebBannerDialog({ banner }: { banner?: AdminWebBanner }) {
   const [isUploading, setIsUploading] = useState(false);
 
   const [mode, setMode] = useState<WebBannerMode>(banner?.mode ?? 'structured');
+  const [placement, setPlacement] = useState<WebBannerPlacement>(
+    banner?.placement ?? 'web'
+  );
   const [theme, setTheme] = useState<WebBannerTheme>(banner?.theme ?? 'indigo');
   const [ctaVariant, setCtaVariant] = useState<WebBannerCtaVariant>(
     banner?.ctaVariant ?? 'primary'
@@ -117,6 +127,7 @@ export function WebBannerDialog({ banner }: { banner?: AdminWebBanner }) {
 
     const payload: WebBannerPayload = {
       mode,
+      placement,
       theme,
       ctaVariant,
       linkType,
@@ -149,40 +160,83 @@ export function WebBannerDialog({ banner }: { banner?: AdminWebBanner }) {
 
   const linkHint = LINK_TYPES.find((l) => l.key === linkType)?.hint;
 
+  const previewValue = {
+    mode,
+    eyebrow,
+    headline,
+    subheadline,
+    ctaLabel,
+    ctaVariant,
+    theme,
+    backgroundColor,
+    textColor,
+    imageUrl,
+    imageAlt,
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={<Button size="sm" variant={isEdit ? 'outline' : 'default'} />}
       >
-        {isEdit ? 'Edit' : <><PlusIcon data-icon="inline-start" />Create web banner</>}
+        {isEdit ? 'Edit' : <><PlusIcon data-icon="inline-start" />Create banner</>}
       </DialogTrigger>
       <DialogContent className="max-w-[720px]">
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit web banner' : 'Create web banner'}</DialogTitle>
+          <DialogTitle>{isEdit ? 'Edit banner' : 'Create banner'}</DialogTitle>
           <DialogDescription>
-            Shown in the homepage hero on awarome.com. Mobile app banners are unaffected.
+            Build it once and show it on the awarome.com homepage, in the app&apos;s
+            home carousel, or both.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mb-4">
-          <BannerPreview
-            value={{
-              mode,
-              eyebrow,
-              headline,
-              subheadline,
-              ctaLabel,
-              ctaVariant,
-              theme,
-              backgroundColor,
-              textColor,
-              imageUrl,
-              imageAlt,
-            }}
-          />
+        {/* One preview per place it will appear, so the app version is
+            checked at phone size, not guessed from the website one. */}
+        <div className="mb-4 flex flex-col gap-3">
+          {placement !== 'mobile' && (
+            <div className="flex flex-col gap-1.5">
+              {placement === 'both' && (
+                <span className="text-xs font-semibold text-muted-foreground">
+                  Website
+                </span>
+              )}
+              <BannerPreview value={previewValue} />
+            </div>
+          )}
+          {placement !== 'web' && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-muted-foreground">
+                Mobile app
+              </span>
+              <AppBannerPreview value={previewValue} />
+            </div>
+          )}
         </div>
 
         <form action={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label>Shows on</Label>
+            <div className="flex gap-2">
+              {PLACEMENTS.map((p) => (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => setPlacement(p.key)}
+                  className={`flex-1 rounded-[10px] border px-2 py-2 text-xs font-semibold ${
+                    placement === p.key
+                      ? 'border-primary bg-brand-tint2 text-primary'
+                      : 'border-input text-muted-foreground'
+                  }`}
+                >
+                  {p.label}
+                  <span className="mt-0.5 block text-[10px] font-normal opacity-70">
+                    {p.hint}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="flex flex-col gap-2">
             <Label>Banner type</Label>
             <div className="flex gap-2">
@@ -381,6 +435,15 @@ export function WebBannerDialog({ banner }: { banner?: AdminWebBanner }) {
               </div>
             )}
           </div>
+          {placement !== 'web' && linkType !== 'none' && (
+            <p className="-mt-2 text-xs text-muted-foreground">
+              {linkType === 'category'
+                ? 'In the app a category link needs one of: groceries, supermarket, appliances, health_and_beauty, fashion, electronics.'
+                : linkType === 'url'
+                  ? 'In the app, awarome.com links to a vendor or product open in the app; anything else opens the browser.'
+                  : 'The app opens this in its own store and product screens.'}
+            </p>
+          )}
 
           <div className="grid grid-cols-2 gap-3.5">
             <div className="flex flex-col gap-2">

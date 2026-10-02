@@ -25,9 +25,15 @@ import { MobileAdDialog } from './_components/mobile-ad-dialog';
 import { BannerOrderControls } from './_components/banner-order-controls';
 
 const TABS = [
-  { key: 'web', label: 'Web' },
-  { key: 'mobile', label: 'Mobile app' },
+  { key: 'web', label: 'Banners' },
+  { key: 'mobile', label: 'App image ads (legacy)' },
 ] as const;
+
+const PLACEMENT_LABEL: Record<string, string> = {
+  web: 'Website',
+  mobile: 'App',
+  both: 'Website + app',
+};
 
 const THEME_SWATCH: Record<string, string> = {
   indigo: '#120460',
@@ -129,7 +135,9 @@ export default async function BannersPage({
         <>
           <p className="text-[13px] text-muted-foreground">
             {liveCount} of {webBanners.length} live. Order here is the order they
-            appear in the hero carousel.
+            appear on the website hero and in the app&apos;s home carousel.
+            While no banner is live for the app, it falls back to the legacy
+            image ads.
           </p>
 
           <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
@@ -139,6 +147,7 @@ export default async function BannersPage({
                   <TableRow>
                     <TableHead className="w-[70px]">Order</TableHead>
                     <TableHead>Banner</TableHead>
+                    <TableHead>Shows on</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Links to</TableHead>
                     <TableHead>Schedule</TableHead>
@@ -181,6 +190,9 @@ export default async function BannersPage({
                               )}
                             </div>
                           </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {PLACEMENT_LABEL[banner.placement ?? 'web']}
                         </TableCell>
                         <TableCell className="capitalize text-muted-foreground">
                           {banner.mode === 'image' ? 'Full image' : banner.theme}
@@ -234,7 +246,7 @@ export default async function BannersPage({
                             <ConfirmActionButton
                               label="Delete"
                               title="Delete this banner?"
-                              description="It will stop appearing on the website immediately. The mobile app is unaffected."
+                              description="It will stop appearing wherever it's shown (website, app or both) immediately."
                               action={deleteWebBanner.bind(null, banner._id)}
                             />
                           </div>
@@ -245,11 +257,12 @@ export default async function BannersPage({
                   {webBanners.length === 0 && (
                     <TableRow>
                       <TableCell
-                        colSpan={7}
+                        colSpan={8}
                         className="py-10 text-center text-muted-foreground"
                       >
-                        No web banners yet. The homepage falls back to its default
-                        slide until you create one.
+                        No banners yet. The website falls back to its default
+                        slide and the app to the legacy image ads until you
+                        create one.
                       </TableCell>
                     </TableRow>
                   )}
@@ -263,8 +276,9 @@ export default async function BannersPage({
       {tab === 'mobile' && (
         <>
           <p className="text-[13px] text-muted-foreground">
-            The app shows 3 of these at random. Every ad must have a vendor — the
-            app links the banner to that vendor&apos;s store.
+            Image-only ads, each linked to a vendor. Older app versions show 3 of
+            these at random. The current app shows them only while no banner is
+            live for the app — build new app banners on the Banners tab.
           </p>
 
           <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
