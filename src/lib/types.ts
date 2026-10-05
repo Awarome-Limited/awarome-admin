@@ -158,12 +158,13 @@ export interface JobCancellation {
  * Which surface produced a job. Mirrors Channels in awarome-BE. `mobile` is
  * the default, so anything recorded before channels existed reads as mobile.
  */
-export type Channel = 'mobile' | 'web' | 'api';
+export type Channel = 'mobile' | 'web' | 'api' | 'admin';
 
 export const CHANNEL_LABELS: Record<Channel, string> = {
   mobile: 'Mobile',
   web: 'Web',
   api: 'API',
+  admin: 'Admin',
 };
 
 export interface AdminOrder {
@@ -214,6 +215,8 @@ export interface AdminDelivery {
   pickupAddress?: { address?: string; note?: string };
   dropoffAddress?: { address?: string; note?: string };
   cancellation?: JobCancellation;
+  /** Set when this delivery is one drop of a bulk booked from the admin. */
+  bulk?: { _id: string; bulkId: string } | string;
   createdAt?: string;
 }
 
@@ -950,4 +953,139 @@ export interface VendorCommission {
   createdBy?: PayoutStaff | null;
   endedBy?: PayoutStaff | null;
   createdAt: string;
+}
+
+/** An address as deliveries store it. `location` is required to book. */
+export interface DeliveryAddress {
+  address: string;
+  location: { lat: number; long: number };
+  state?: string;
+  lga?: string;
+  district?: string;
+  country?: string;
+}
+
+/** Who settles one drop of a bulk: the vendor afterwards, or the receiver at the door. */
+export type BulkDropPayer = 'vendor' | 'receiver';
+
+export interface BulkPricingTerms {
+  minDropsForFlat: number;
+  flatRate: number;
+  farRate: number;
+  farDistanceKm: number;
+}
+
+export interface BulkDropQuote {
+  index: number;
+  distanceKm: number;
+  standardFee: number;
+  far: boolean;
+  suggestedFee: number;
+}
+
+export interface BulkRunSize {
+  minDrops: number;
+  maxDrops: number;
+}
+
+export interface BulkQuote {
+  terms: BulkPricingTerms;
+  /** Dispatch config's limits for the vehicle — the form's starting values. */
+  runSize: BulkRunSize;
+  vehicleType: string;
+  pricingMode: 'flat' | 'standard';
+  drops: BulkDropQuote[];
+}
+
+export interface BulkSummary {
+  drops: number;
+  delivered: number;
+  cancelled: number;
+  inProgress: number;
+  totalFees: number;
+  vendor: { drops: number; total: number; outstanding: number; dueNow: number; paid: number };
+  receiver: { drops: number; total: number; collected: number; outstanding: number };
+}
+
+export interface BulkDeliveryDrop extends AdminDelivery {
+  note?: string;
+  batchId?: string;
+  vehicleType?: string;
+  bulkPricing?: { listedFee?: number; far?: boolean };
+  payOnDelivery?: {
+    payer?: 'sender' | 'receiver';
+    status?: string;
+    amountDue?: number;
+    postpaid?: boolean;
+    /** Paid so far into the rider's collection account — receivers can pay in parts. */
+    amountReceived?: number;
+    paidAt?: string;
+    collectedAt?: string;
+  };
+}
+
+export interface BulkRun {
+  batchId: string;
+  status: string;
+  rider?: { _id: string; firstName?: string; lastName?: string; phone?: string } | null;
+  stops: number;
+  bulkStops: number;
+  otherStops: number;
+}
+
+export interface AdminBulkDelivery {
+  _id: string;
+  bulkId: string;
+  user?: { _id: string; firstName?: string; lastName?: string; email?: string; phone?: string } | string;
+  createdBy?: { firstName?: string; lastName?: string; email?: string } | string;
+  pickupAddress?: DeliveryAddress;
+  sender?: { name?: string; phone?: string };
+  vehicleType?: string;
+  pricingMode: 'flat' | 'standard';
+  pricingTerms?: BulkPricingTerms;
+  runSize?: BulkRunSize;
+  note?: string;
+  summary: BulkSummary;
+  /** Rider runs the drops went out on, including other customers' drops sharing them. */
+  runs?: BulkRun[];
+  deliveries?: BulkDeliveryDrop[];
+  createdAt: string;
+}
+
+export interface BulkReceivable {
+  user?: { _id?: string; firstName?: string; lastName?: string; email?: string; phone?: string };
+  outstanding: number;
+  dueNow: number;
+  drops: number;
+  deliveredDrops: number;
+  bulks: number;
+  /** When the oldest delivered-but-unpaid drop was delivered. */
+  oldestDueSince?: string | null;
+}
+
+/**
+ * A rider's Paystack virtual account, used only for bulk drops the receiver
+ * pays at the door. It carries the rider's name.
+ */
+export interface RiderCollectionAccount {
+  _id: string;
+  status: 'requested' | 'ready' | 'failed' | 'deactivated';
+  failureReason?: string;
+  accountNumber?: string;
+  accountName?: string;
+  bank?: string;
+}
+
+/** Money into a rider's account that didn't settle a drop as-is. */
+export interface RiderCollectionCredit {
+  accountId: string;
+  accountNumber?: string;
+  rider?: { _id: string; firstName?: string; lastName?: string; phone?: string };
+  kind: 'no-drop' | 'excess';
+  amount: number;
+  reference: string;
+  delivery?: { _id: string; deliveryId?: string; bulk?: string; receiver?: { name?: string } };
+  senderName?: string;
+  senderBank?: string;
+  at: string;
 }

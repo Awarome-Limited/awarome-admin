@@ -134,6 +134,14 @@ export default async function DeliveryDetailPage({
           </div>
           <p className="mt-1.5 text-[13px] text-muted-foreground">
             {[delivery.requestType, formatDate(delivery.createdAt)].filter(Boolean).join(' · ')}
+            {delivery.bulk && typeof delivery.bulk !== 'string' && (
+              <>
+                {' · '}
+                <Link href={`/bulk-deliveries/${delivery.bulk._id}`} className="font-semibold text-primary hover:underline">
+                  Part of bulk {delivery.bulk.bulkId}
+                </Link>
+              </>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">

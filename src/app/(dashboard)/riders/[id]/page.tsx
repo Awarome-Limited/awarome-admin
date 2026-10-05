@@ -31,6 +31,8 @@ import { hasPermission, PermissionAction, PermissionModule } from '@/lib/permiss
 import { payRiderNow } from '../../payouts/actions';
 import { PayoutActionButton } from '../../payouts/_components/payout-action-button';
 import { naira, payoutStatusLabel, payoutStatusVariant } from '../../payouts/payout-format';
+import type { RiderCollectionAccount } from '@/lib/types';
+import { RiderCollectionAccountCard } from './_components/collection-account';
 
 const LIMIT = 10;
 
@@ -80,6 +82,14 @@ export default async function RiderDetailPage({
         .then((r) => r.data)
         .catch(() => null)
     : null;
+
+  const canUpdateRider =
+    !!session && hasPermission(session.profile, PermissionModule.RIDERS, PermissionAction.UPDATE);
+  const collectionAccount = await authedFetch<SingleResponse<RiderCollectionAccount | null>>(
+    `/riders/admin/${id}/collection-account`
+  )
+    .then((r) => r.data)
+    .catch(() => null);
 
   const verificationStatus =
     rider.verificationStatus || (rider.suspended ? 'rejected' : 'unsubmitted');
@@ -203,6 +213,19 @@ export default async function RiderDetailPage({
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Bulk pay-in account</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RiderCollectionAccountCard
+            riderId={rider._id}
+            account={collectionAccount}
+            canUpdate={canUpdateRider}
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

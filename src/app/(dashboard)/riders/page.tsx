@@ -18,6 +18,9 @@ import {
 import { statusBadgeVariant } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { setRiderSuspended } from './actions';
+import { getSession } from '@/lib/session';
+import { hasPermission, PermissionAction, PermissionModule } from '@/lib/permissions';
+import { BackfillCollectionAccounts } from './_components/backfill-collection-accounts';
 
 const LIMIT = 20;
 
@@ -86,11 +89,18 @@ export default async function RidersPage({
     { label: 'Orders completed', value: result.data.reduce((s, r) => s + (r.ordersCompleted ?? 0), 0).toLocaleString() },
   ];
 
+  const session = await getSession();
+  const canUpdateRiders =
+    !!session && hasPermission(session.profile, PermissionModule.RIDERS, PermissionAction.UPDATE);
+
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-[23px] font-bold tracking-tight text-foreground">Riders</h1>
-        <p className="mt-1 text-[14px] text-muted-foreground">Delivery riders on the platform</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-[23px] font-bold tracking-tight text-foreground">Riders</h1>
+          <p className="mt-1 text-[14px] text-muted-foreground">Delivery riders on the platform</p>
+        </div>
+        {canUpdateRiders && <BackfillCollectionAccounts />}
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

@@ -10,6 +10,8 @@ export interface AssignBatchPayload {
   // packages to build one out of right now.
   batchId?: string;
   jobs?: { jobType: 'order' | 'delivery'; id: string }[];
+  /** Jobs from a bulk delivery: its own drops-per-rider limits apply. */
+  bulkId?: string;
 }
 
 /**

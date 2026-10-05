@@ -26,10 +26,12 @@ const FILTERS = [
   { key: 'initialized', label: 'Initialized' },
   { key: 'delivered', label: 'Delivered' },
   { key: 'failed', label: 'Failed' },
+  { key: 'bulk', label: 'Bulk' },
 ] as const;
 
 function filterToQuery(filter: string): Record<string, string> {
   if (filter === 'delivered') return { status: 'confirmed' };
+  if (filter === 'bulk') return { bulk: 'true' };
   if (filter !== 'all') return { status: filter };
   return {};
 }
@@ -181,6 +183,11 @@ export default async function DeliveriesPage({
                     >
                       {delivery.deliveryId}
                     </Link>
+                    {delivery.bulk && typeof delivery.bulk !== 'string' && (
+                      <Link href={`/bulk-deliveries/${delivery.bulk._id}`} className="ml-1.5">
+                        <Badge variant="info">Bulk</Badge>
+                      </Link>
+                    )}
                   </TableCell>
                   <TableCell className="font-medium">{customerName(delivery.user)}</TableCell>
                   <TableCell className="text-muted-foreground">
