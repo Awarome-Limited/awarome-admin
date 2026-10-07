@@ -114,7 +114,18 @@ export interface AdminRider {
   rating?: number;
   ordersCompleted?: number;
   suspended?: boolean;
+  /** Last position the rider app reported, GeoJSON [long, lat]. */
+  location?: { type?: 'Point'; coordinates?: number[] } | null;
+  lastLocationAt?: string;
   createdAt?: string;
+}
+
+/** A rider's last reported position, flattened for the map. */
+export interface RiderPosition {
+  lat: number;
+  long: number;
+  at?: string;
+  status?: string;
 }
 
 export interface AdminOrderCart {
@@ -983,6 +994,12 @@ export interface BulkDropQuote {
   suggestedFee: number;
 }
 
+/**
+ * How a bulk's drops reach riders: split into runs, one trip offered to the
+ * rider pool, one trip handed to a named rider, or left to normal batching.
+ */
+export type BulkDispatchMode = 'runs' | 'single-trip' | 'rider' | 'pool';
+
 export interface BulkRunSize {
   minDrops: number;
   maxDrops: number;
@@ -1044,6 +1061,8 @@ export interface AdminBulkDelivery {
   pricingMode: 'flat' | 'standard';
   pricingTerms?: BulkPricingTerms;
   runSize?: BulkRunSize;
+  /** Absent on bulks booked before it was a choice. */
+  dispatchMode?: BulkDispatchMode;
   note?: string;
   summary: BulkSummary;
   /** Rider runs the drops went out on, including other customers' drops sharing them. */

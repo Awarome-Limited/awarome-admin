@@ -1,9 +1,19 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { PlusIcon, Trash2Icon } from 'lucide-react';
+import {
+  CheckIcon,
+  LayersIcon,
+  PlusIcon,
+  RouteIcon,
+  SearchIcon,
+  SplitIcon,
+  Trash2Icon,
+  UserCheckIcon,
+  type LucideIcon,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -18,7 +28,14 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import type { BulkDropPayer, BulkPricingTerms, BulkRunSize, DeliveryAddress } from '@/lib/types';
+import type {
+  AdminRider,
+  BulkDispatchMode,
+  BulkDropPayer,
+  BulkPricingTerms,
+  BulkRunSize,
+  DeliveryAddress,
+} from '@/lib/types';
 import {
   createBulkDelivery,
   getCustomerPickups,
@@ -29,6 +46,7 @@ import {
 import { AddressInput } from './address-input';
 import { CustomerPicker } from './customer-picker';
 import { parseDrops } from './parse-drops';
+import { SavedAddressMenu } from './saved-address-menu';
 
 const DEFAULT_TERMS: BulkPricingTerms = {
   minDropsForFlat: 10,
@@ -68,7 +86,10 @@ interface FormState {
   vehicleType: string;
   terms: BulkPricingTerms;
   requirePin: boolean;
-  autoBatch: boolean;
+  dispatchMode: BulkDispatchMode;
+  /** For the `rider` mode. */
+  riderId: string;
+  /** Runs mode only. */
   fillFromPool: boolean;
   /** null until the dispatch defaults arrive with the first quote. */
   runSize: BulkRunSize | null;
@@ -106,7 +127,8 @@ const emptyState = (): FormState => ({
   vehicleType: 'bike',
   terms: DEFAULT_TERMS,
   requirePin: false,
-  autoBatch: true,
+  dispatchMode: 'runs',
+  riderId: '',
   fillFromPool: true,
   runSize: null,
   note: '',
@@ -119,7 +141,50 @@ const pointKey = (a: DeliveryAddress) =>
 
 type RouteQuote = { distanceKm: number; standardFee: number };
 
-export function BulkDeliveryForm() {
+const DISPATCH_OPTIONS: {
+  value: BulkDispatchMode;
+  title: string;
+  hint: string;
+  icon: LucideIcon;
+}[] = [
+  {
+    value: 'runs',
+    title: 'Split across riders',
+    hint: 'Cut into runs by direction; each run goes to a different rider.',
+    icon: SplitIcon,
+  },
+  {
+    value: 'single-trip',
+    title: 'One trip, open to riders',
+    hint: 'Every drop on one run. The first rider nearby to accept takes it all.',
+    icon: RouteIcon,
+  },
+  {
+    value: 'rider',
+    title: 'One trip, to a rider I pick',
+    hint: 'Every drop on one run, handed straight to the rider you choose.',
+    icon: UserCheckIcon,
+  },
+  {
+    value: 'pool',
+    title: 'Normal batching',
+    hint: 'Drops join the batch pool and group with app orders going the same way.',
+    icon: LayersIcon,
+  },
+];
+
+/** Drafts saved before dispatch was a choice carried `autoBatch` instead. */
+function migrateDraft(draft: FormState & { autoBatch?: boolean }): FormState {
+  const { autoBatch, ...rest } = draft;
+  return {
+    ...rest,
+    dispatchMode: draft.dispatchMode ?? (autoBatch === false ? 'pool' : 'runs'),
+    riderId: draft.riderId ?? '',
+    requestKey: draft.requestKey || newRequestKey(),
+  };
+}
+
+export function BulkDeliveryForm({ riders }: { riders: AdminRider[] }) {
   const router = useRouter();
   const [state, setState] = useState<FormState>(emptyState);
   const [pickups, setPickups] = useState<PickupSuggestion[]>([]);
@@ -296,12 +361,24 @@ export function BulkDeliveryForm() {
     setState((prev) => ({ ...prev, rows: prev.rows.map((r) => ({ ...r, payer })) }));
   }
 
+  const pickedRider = riders.find((r) => r._id === state.riderId);
+  const dispatchSummary = {
+    runs: state.runSize
+      ? `Split across ${Math.ceil(state.rows.length / Math.max(1, state.runSize.maxDrops))} rider runs`
+      : 'Split across riders',
+    'single-trip': 'One trip, offered to riders nearby',
+    rider: pickedRider ? `One trip, assigned to ${riderName(pickedRider)}` : 'One trip — pick the rider',
+    pool: 'Normal batching with app orders',
+  }[state.dispatchMode];
+
   // ---- Submit -----------------------------------------------------------------
   const problems: string[] = [];
   if (!state.customer) problems.push('Pick the customer these deliveries belong to.');
   if (!state.pickup) problems.push('Pick the pickup address from the suggestions.');
-  if (state.autoBatch && state.runSize && state.runSize.maxDrops < state.runSize.minDrops)
+  if (state.dispatchMode === 'runs' && state.runSize && state.runSize.maxDrops < state.runSize.minDrops)
     problems.push('Max drops per rider must be at least the minimum.');
+  if (state.dispatchMode === 'rider' && !state.riderId)
+    problems.push('Pick the rider taking this bulk.');
   if (!state.senderName.trim() || !state.senderPhone.trim())
     problems.push('Add the sender’s name and phone for the rider.');
   priced.forEach(({ row, fee, collect }, i) => {
@@ -329,8 +406,9 @@ export function BulkDeliveryForm() {
         pricingTerms: state.terms,
         note: state.note.trim() || undefined,
         requirePin: state.requirePin,
-        autoBatch: state.autoBatch,
-        fillFromPool: state.fillFromPool,
+        dispatchMode: state.dispatchMode,
+        ...(state.dispatchMode === 'rider' ? { riderId: state.riderId } : {}),
+        fillFromPool: state.dispatchMode === 'runs' && state.fillFromPool,
         runSize: state.runSize ?? { minDrops: 1, maxDrops: 5 },
         drops: priced.map(({ row, far, fee, collect }) => ({
           dropoffAddress: row.address!,
@@ -349,7 +427,11 @@ export function BulkDeliveryForm() {
         return;
       }
       clearDraft();
-      toast.success(`${state.rows.length} deliveries booked for ${state.customer!.name}`);
+      if (result.data.message.startsWith('Bulk booked, but')) {
+        toast.warning(result.data.message, { duration: 12000 });
+      } else {
+        toast.success(`${state.rows.length} deliveries booked for ${state.customer!.name}`);
+      }
       router.push(`/bulk-deliveries/${result.data._id}`);
     });
   }
@@ -366,8 +448,7 @@ export function BulkDeliveryForm() {
             <Button
               size="sm"
               onClick={() => {
-                // Drafts saved before keys existed get one now.
-                setState({ ...draft, requestKey: draft.requestKey || newRequestKey() });
+                setState(migrateDraft(draft));
                 setDraft(null);
                 if (draft.customer) getCustomerPickups(draft.customer._id).then(setPickups);
               }}
@@ -400,35 +481,29 @@ export function BulkDeliveryForm() {
               <CustomerPicker value={state.customer} onChange={chooseCustomer} />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label>Pickup address</Label>
+              <div className="flex min-h-7 items-center justify-between gap-2">
+                <Label>Pickup address</Label>
+                <SavedAddressMenu
+                  options={pickups}
+                  value={state.pickup}
+                  onPick={(p) =>
+                    set({
+                      pickup: p.address,
+                      pickupQuery: p.address.address,
+                      ...(p.sender?.name ? { senderName: p.sender.name } : {}),
+                      ...(p.sender?.phone ? { senderPhone: p.sender.phone } : {}),
+                    })
+                  }
+                />
+              </div>
               <AddressInput
                 value={state.pickup}
                 query={state.pickupQuery}
                 onChange={(pickup, pickupQuery) => set({ pickup, pickupQuery })}
-                placeholder="Where the rider collects the packages"
+                placeholder={
+                  pickups.length ? 'Search, or choose from saved addresses' : 'Where the rider collects the packages'
+                }
               />
-              {pickups.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {pickups.map((p) => (
-                    <button
-                      key={`${p.label}-${p.address.address}`}
-                      type="button"
-                      onClick={() =>
-                        set({
-                          pickup: p.address,
-                          pickupQuery: p.address.address,
-                          ...(p.sender?.name ? { senderName: p.sender.name } : {}),
-                          ...(p.sender?.phone ? { senderPhone: p.sender.phone } : {}),
-                        })
-                      }
-                      className="max-w-full truncate rounded-[8px] border border-border bg-muted/50 px-2.5 py-1 text-left text-[12px] text-foreground-secondary hover:bg-muted"
-                      title={p.address.address}
-                    >
-                      <span className="font-semibold">{p.label}:</span> {p.address.address}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
@@ -455,7 +530,7 @@ export function BulkDeliveryForm() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Pricing & options</CardTitle>
+            <CardTitle>Pricing</CardTitle>
             <CardDescription>
               {flatMode
                 ? `${state.rows.length} drops — flat rate applies.`
@@ -493,7 +568,7 @@ export function BulkDeliveryForm() {
                 <select
                   id="vehicleType"
                   value={state.vehicleType}
-                  onChange={(e) => set({ vehicleType: e.target.value })}
+                  onChange={(e) => set({ vehicleType: e.target.value, riderId: '' })}
                   className={inputClass}
                 >
                   <option value="bike">Bike</option>
@@ -512,68 +587,6 @@ export function BulkDeliveryForm() {
                 />
               </label>
             </div>
-            <div className="flex flex-col gap-2.5 rounded-[10px] border border-border p-3">
-              <label className="flex items-center justify-between gap-3 text-[13px]">
-                <span className="flex flex-col">
-                  <span className="font-medium text-foreground">Group into rider runs now</span>
-                  <span className="text-[11.5px] text-muted-foreground">
-                    Splits drops by direction from the pickup and sends each run to a rider
-                  </span>
-                </span>
-                <Switch
-                  checked={state.autoBatch}
-                  onCheckedChange={(autoBatch) => set({ autoBatch })}
-                />
-              </label>
-              {state.autoBatch && (
-                <label className="flex items-center justify-between gap-3 text-[13px]">
-                  <span className="flex flex-col">
-                    <span className="font-medium text-foreground">Fill spare seats with other customers’ drops</span>
-                    <span className="text-[11.5px] text-muted-foreground">
-                      Waiting batch drops picked up nearby and dropped along a run. Never adds a rider.
-                    </span>
-                  </span>
-                  <Switch
-                    checked={state.fillFromPool}
-                    onCheckedChange={(fillFromPool) => set({ fillFromPool })}
-                  />
-                </label>
-              )}
-              <div className="grid grid-cols-2 gap-3">
-                <NumberField
-                  label="Min drops per rider"
-                  value={state.runSize?.minDrops ?? NaN}
-                  onChange={(minDrops) =>
-                    set({ runSize: { maxDrops: state.runSize?.maxDrops ?? 5, minDrops: Math.max(1, minDrops) } })
-                  }
-                />
-                <NumberField
-                  label="Max drops per rider"
-                  value={state.runSize?.maxDrops ?? NaN}
-                  onChange={(maxDrops) =>
-                    set({ runSize: { minDrops: state.runSize?.minDrops ?? 1, maxDrops: Math.max(1, maxDrops) } })
-                  }
-                />
-              </div>
-              {state.runSize && (
-                <p className="text-[11.5px] text-muted-foreground">
-                  {(() => {
-                    const n = state.rows.length;
-                    const runs = Math.ceil(n / Math.max(1, state.runSize.maxDrops));
-                    const smallest = Math.floor(n / runs);
-                    return state.autoBatch
-                      ? `${n} drops → ${runs} ${runs === 1 ? 'rider' : 'riders'}, ${smallest}${
-                          smallest === Math.ceil(n / runs) ? '' : `–${Math.ceil(n / runs)}`
-                        } drops each.${
-                          smallest < state.runSize.minDrops
-                            ? ' Runs under the minimum wait in the pool for you to assign.'
-                            : ''
-                        }`
-                      : 'Drops wait in the batch pool; assign them from the bulk page.';
-                  })()}
-                </p>
-              )}
-            </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="note">Note for every rider (optional)</Label>
               <input
@@ -587,6 +600,108 @@ export function BulkDeliveryForm() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Dispatch</CardTitle>
+          <CardDescription>How these {state.rows.length} drops reach riders once booked.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div role="radiogroup" aria-label="Dispatch" className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+            {DISPATCH_OPTIONS.map((option) => {
+              const active = state.dispatchMode === option.value;
+              const Icon = option.icon;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => set({ dispatchMode: option.value })}
+                  className={cn(
+                    'relative flex gap-3 rounded-[12px] border p-3.5 text-left transition-colors',
+                    active
+                      ? 'border-primary bg-brand-tint ring-1 ring-primary'
+                      : 'border-border hover:border-border-strong hover:bg-muted/50'
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'flex size-9 shrink-0 items-center justify-center rounded-[10px]',
+                      active ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                    )}
+                  >
+                    <Icon className="size-[18px]" />
+                  </span>
+                  <span className="flex min-w-0 flex-col gap-0.5 pr-4">
+                    <span className="text-[13px] font-semibold text-foreground">{option.title}</span>
+                    <span className="text-[12px] leading-snug text-muted-foreground">{option.hint}</span>
+                  </span>
+                  {active && <CheckIcon className="absolute top-3 right-3 size-4 text-primary" />}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="rounded-[12px] border border-border bg-muted/30 p-3.5">
+            {state.dispatchMode === 'runs' && (
+              <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[repeat(2,minmax(0,160px))_1fr] sm:items-end">
+                  <NumberField
+                    label="Min drops per rider"
+                    value={state.runSize?.minDrops ?? NaN}
+                    onChange={(minDrops) =>
+                      set({ runSize: { maxDrops: state.runSize?.maxDrops ?? 5, minDrops: Math.max(1, minDrops) } })
+                    }
+                  />
+                  <NumberField
+                    label="Max drops per rider"
+                    value={state.runSize?.maxDrops ?? NaN}
+                    onChange={(maxDrops) =>
+                      set({ runSize: { minDrops: state.runSize?.minDrops ?? 1, maxDrops: Math.max(1, maxDrops) } })
+                    }
+                  />
+                  <label className="flex items-center justify-between gap-3 text-[13px] sm:pl-3">
+                    <span className="flex flex-col">
+                      <span className="font-medium text-foreground">Fill spare seats with other customers’ drops</span>
+                      <span className="text-[11.5px] text-muted-foreground">
+                        Picked up nearby and dropped along a run. Never adds a rider.
+                      </span>
+                    </span>
+                    <Switch
+                      checked={state.fillFromPool}
+                      onCheckedChange={(fillFromPool) => set({ fillFromPool })}
+                    />
+                  </label>
+                </div>
+                {state.runSize && <DispatchNote>{runsPreview(state.rows.length, state.runSize)}</DispatchNote>}
+              </div>
+            )}
+            {state.dispatchMode === 'single-trip' && (
+              <DispatchNote>
+                All {state.rows.length} drops go out as one run, offered to {state.vehicleType} riders near the
+                pickup. The first to accept takes the whole trip. Nobody else’s drops are added.
+              </DispatchNote>
+            )}
+            {state.dispatchMode === 'rider' && (
+              <RiderPicker
+                riders={riders}
+                vehicleType={state.vehicleType}
+                value={state.riderId}
+                onChange={(riderId) => set({ riderId })}
+                invalid={showErrors && !state.riderId}
+                drops={state.rows.length}
+              />
+            )}
+            {state.dispatchMode === 'pool' && (
+              <DispatchNote>
+                Nothing is sent yet. The drops wait in the batch pool and group with app orders heading the
+                same way, as normal batch deliveries do. You can still assign them from the bulk page.
+              </DispatchNote>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
@@ -807,27 +922,187 @@ export function BulkDeliveryForm() {
               {problems.length > 6 && <li>…and {problems.length - 6} more</li>}
             </ul>
           )}
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                clearDraft();
-                setState(emptyState());
-                setPickups([]);
-                setShowErrors(false);
-              }}
-              disabled={isSubmitting}
-            >
-              Clear form
-            </Button>
-            <Button onClick={submit} disabled={isSubmitting || isQuoting}>
-              {isSubmitting
-                ? 'Booking…'
-                : `Book ${state.rows.length} ${state.rows.length === 1 ? 'delivery' : 'deliveries'}`}
-            </Button>
-          </div>
         </CardContent>
       </Card>
+
+      <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-border bg-card/95 px-4 py-3 shadow-[var(--shadow-card)] backdrop-blur supports-[backdrop-filter]:bg-card/85">
+        <div className="flex min-w-0 flex-col">
+          <span className="text-[15px] font-bold tabular-nums text-foreground">
+            {naira(totals.listed)}{' '}
+            <span className="text-[12.5px] font-medium text-muted-foreground">
+              for {state.rows.length} {state.rows.length === 1 ? 'drop' : 'drops'}
+            </span>
+          </span>
+          <span className="truncate text-[12px] text-muted-foreground">{dispatchSummary}</span>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              clearDraft();
+              setState(emptyState());
+              setPickups([]);
+              setShowErrors(false);
+            }}
+            disabled={isSubmitting}
+          >
+            Clear form
+          </Button>
+          <Button onClick={submit} disabled={isSubmitting || isQuoting}>
+            {isSubmitting
+              ? 'Booking…'
+              : `Book ${state.rows.length} ${state.rows.length === 1 ? 'delivery' : 'deliveries'}`}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DispatchNote({ children }: { children: ReactNode }) {
+  return <p className="text-[12.5px] leading-relaxed text-foreground-secondary">{children}</p>;
+}
+
+function runsPreview(drops: number, runSize: BulkRunSize) {
+  const runs = Math.ceil(drops / Math.max(1, runSize.maxDrops));
+  const smallest = Math.floor(drops / runs);
+  const largest = Math.ceil(drops / runs);
+  return `${drops} drops → ${runs} ${runs === 1 ? 'rider' : 'riders'}, ${smallest}${
+    smallest === largest ? '' : `–${largest}`
+  } drops each.${
+    smallest < runSize.minDrops ? ' Runs under the minimum wait in the pool for you to assign.' : ''
+  }`;
+}
+
+const riderName = (rider: AdminRider) =>
+  [rider.firstName, rider.lastName].filter(Boolean).join(' ') || rider.phone || 'Unnamed rider';
+
+/**
+ * Riders are listed with their state rather than filtered to the online ones:
+ * someone about to start a shift is a fine choice. Only vehicle is filtered,
+ * since the whole trip runs on one.
+ */
+function RiderPicker({
+  riders,
+  vehicleType,
+  value,
+  onChange,
+  invalid,
+  drops,
+}: {
+  riders: AdminRider[];
+  vehicleType: string;
+  value: string;
+  onChange: (riderId: string) => void;
+  invalid: boolean;
+  drops: number;
+}) {
+  const [search, setSearch] = useState('');
+  const eligible = useMemo(
+    () =>
+      riders
+        .filter((r) => !r.vehicleType || r.vehicleType === vehicleType)
+        .sort(
+          (a, b) =>
+            Number(b.status === 'online') - Number(a.status === 'online') ||
+            Number(!!b.isInHouse) - Number(!!a.isInHouse) ||
+            riderName(a).localeCompare(riderName(b))
+        ),
+    [riders, vehicleType]
+  );
+  const term = search.trim().toLowerCase();
+  const shown = term
+    ? eligible.filter((r) =>
+        [riderName(r), r.phone, r.plateNumber].some((v) => v?.toLowerCase().includes(term))
+      )
+    : eligible;
+  const chosen = eligible.find((r) => r._id === value);
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-[12.5px] text-foreground-secondary">
+          {chosen ? (
+            <>
+              All {drops} drops go to <span className="font-semibold text-foreground">{riderName(chosen)}</span> as
+              one run. They’re told straight away, even if offline.
+            </>
+          ) : (
+            `Pick who takes all ${drops} drops. ${vehicleType} riders only.`
+          )}
+        </span>
+        <div className="relative w-full sm:w-64">
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, phone or plate"
+            className={cn(inputClass, 'bg-card pl-8')}
+          />
+        </div>
+      </div>
+      <div
+        role="radiogroup"
+        aria-label="Rider"
+        aria-invalid={invalid}
+        className={cn(
+          'max-h-[264px] overflow-y-auto rounded-[10px] border bg-card',
+          invalid ? 'border-destructive' : 'border-border'
+        )}
+      >
+        {shown.length === 0 ? (
+          <p className="px-3 py-6 text-center text-[12.5px] text-muted-foreground">
+            {eligible.length === 0 ? `No ${vehicleType} riders to assign this to.` : 'No rider matches that search.'}
+          </p>
+        ) : (
+          shown.map((rider) => {
+            const active = rider._id === value;
+            const online = rider.status === 'online';
+            return (
+              <button
+                key={rider._id}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => onChange(rider._id)}
+                className={cn(
+                  'flex w-full items-center gap-3 border-b border-border px-3 py-2 text-left last:border-0',
+                  active ? 'bg-brand-tint' : 'hover:bg-muted/60'
+                )}
+              >
+                <span
+                  className={cn(
+                    'flex size-8 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold',
+                    active ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground-secondary'
+                  )}
+                >
+                  {active ? <CheckIcon className="size-4" /> : riderName(rider).slice(0, 1).toUpperCase()}
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-[13px] font-semibold text-foreground">{riderName(rider)}</span>
+                  <span className="truncate text-[11.5px] text-muted-foreground">
+                    {[rider.phone, rider.plateNumber].filter(Boolean).join(' · ') || '—'}
+                  </span>
+                </span>
+                <span className="flex shrink-0 items-center gap-1.5 text-[11.5px]">
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-foreground-secondary">
+                    {rider.isInHouse ? 'In-house' : 'Gig'}
+                  </span>
+                  <span
+                    className={cn(
+                      'inline-flex items-center gap-1 rounded-full px-2 py-0.5',
+                      online ? 'bg-positive-bg text-positive' : 'bg-muted text-muted-foreground'
+                    )}
+                  >
+                    <span className={cn('size-1.5 rounded-full', online ? 'bg-positive' : 'bg-muted-foreground/60')} />
+                    {online ? 'Online' : rider.status || 'Offline'}
+                  </span>
+                </span>
+              </button>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }

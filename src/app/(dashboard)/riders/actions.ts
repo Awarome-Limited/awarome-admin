@@ -1,8 +1,10 @@
 'use server';
 
 import { refresh, revalidatePath } from 'next/cache';
-import { authedFetch } from '@/lib/api-client';
+import { authedFetch, type SingleResponse } from '@/lib/api-client';
 import { runAction, type ActionResult } from '@/lib/action-result';
+import { riderPosition } from '@/lib/rider-position';
+import type { AdminRider, RiderPosition } from '@/lib/types';
 
 export async function setRiderSuspended(id: string, suspended: boolean) {
   await authedFetch(`/riders/admin/${id}/suspend`, {
@@ -62,4 +64,14 @@ export async function backfillRiderCollectionAccounts(): Promise<
     message = res.message;
   });
   return result.ok ? { ok: true, message } : result;
+}
+
+/** Polled by the rider map. Null when the rider has never reported a position. */
+export async function getRiderPosition(id: string): Promise<RiderPosition | null> {
+  try {
+    const res = await authedFetch<SingleResponse<AdminRider>>(`/riders/admin/${id}`);
+    return riderPosition(res.data);
+  } catch {
+    return null;
+  }
 }

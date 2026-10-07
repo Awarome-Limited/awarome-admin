@@ -24,7 +24,9 @@ import {
 } from '@/components/ui/table';
 import { formatDate, statusBadgeVariant } from '@/lib/format';
 import { RiderDocuments } from '@/components/rider-documents';
-import { setRiderSuspended } from '../actions';
+import { getRiderPosition, setRiderSuspended } from '../actions';
+import { RiderLocationMap } from '@/components/rider-location-map';
+import { riderPosition } from '@/lib/rider-position';
 import type { RiderPayoutSummary } from '@/lib/types';
 import { getSession } from '@/lib/session';
 import { hasPermission, PermissionAction, PermissionModule } from '@/lib/permissions';
@@ -134,6 +136,18 @@ export default async function RiderDetailPage({
                 action={setRiderSuspended.bind(null, rider._id)}
               />
             }
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Current location</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RiderLocationMap
+            initial={riderPosition(rider)}
+            load={getRiderPosition.bind(null, rider._id)}
           />
         </CardContent>
       </Card>

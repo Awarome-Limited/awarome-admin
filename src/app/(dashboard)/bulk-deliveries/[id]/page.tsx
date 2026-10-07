@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { authedFetch, ApiError, PaginatedResponse, SingleResponse } from '@/lib/api-client';
 import { getSession } from '@/lib/session';
 import { hasPermission, PermissionAction, PermissionModule } from '@/lib/permissions';
-import type { AdminBulkDelivery, AdminRider } from '@/lib/types';
+import type { AdminBulkDelivery, AdminRider, BulkDispatchMode } from '@/lib/types';
 import { ApiErrorCard } from '@/components/api-error-card';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,13 @@ import { formatDate, statusBadgeVariant } from '@/lib/format';
 import { BulkDrops } from './_components/bulk-drops';
 
 const RIDER_LIMIT = 200;
+
+const DISPATCH_LABELS: Record<BulkDispatchMode, string> = {
+  runs: 'split across riders',
+  'single-trip': 'one trip, offered to riders',
+  rider: 'one trip, assigned to a rider',
+  pool: 'normal batching',
+};
 
 const naira = (amount: number) => `₦${Math.round(amount).toLocaleString('en-NG')}`;
 
@@ -166,8 +173,11 @@ export default async function BulkDeliveryDetailPage({
             ) : (
               <span>Normal app pricing (under {terms?.minDropsForFlat ?? 10} drops)</span>
             )}
-            <span className="capitalize">{bulk.vehicleType || 'bike'} · batch dispatch</span>
-            {bulk.runSize && (
+            <span>
+              <span className="capitalize">{bulk.vehicleType || 'bike'}</span> ·{' '}
+              {bulk.dispatchMode ? DISPATCH_LABELS[bulk.dispatchMode] : 'batch dispatch'}
+            </span>
+            {bulk.runSize && (!bulk.dispatchMode || bulk.dispatchMode === 'runs') && (
               <span>
                 {bulk.runSize.minDrops}–{bulk.runSize.maxDrops} drops per rider
               </span>

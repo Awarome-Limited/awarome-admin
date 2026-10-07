@@ -12,6 +12,7 @@ import { runAction, type ActionResult } from '@/lib/action-result';
 import type {
   AdminBulkDelivery,
   AdminUser,
+  BulkDispatchMode,
   BulkDropPayer,
   BulkPricingTerms,
   BulkQuote,
@@ -58,7 +59,9 @@ export interface CreateBulkPayload {
   pricingTerms: BulkPricingTerms;
   note?: string;
   requirePin: boolean;
-  autoBatch: boolean;
+  dispatchMode: BulkDispatchMode;
+  /** The rider taking the whole bulk, for the `rider` mode. */
+  riderId?: string;
   fillFromPool: boolean;
   runSize: BulkRunSize;
   drops: BulkDropPayload[];
@@ -157,18 +160,20 @@ export async function quoteBulkDelivery(payload: {
 
 export async function createBulkDelivery(
   payload: CreateBulkPayload
-): Promise<DataResult<{ _id: string; bulkId: string }>> {
+): Promise<DataResult<{ _id: string; bulkId: string; message: string }>> {
   const result = await fetchResult(async () => {
     const res = await authedFetch<SingleResponse<AdminBulkDelivery>>('/bulk-deliveries', {
       method: 'POST',
       body: payload,
     });
-    return { _id: res.data._id, bulkId: res.data.bulkId };
+    // Says so when the bulk booked but its rider couldn't take it.
+    return { _id: res.data._id, bulkId: res.data.bulkId, message: res.message };
   });
   if (result.ok) {
     revalidatePath('/bulk-deliveries');
     revalidatePath('/deliveries');
     revalidatePath('/forming-batches');
+    revalidatePath('/batches', 'layout');
   }
   return result;
 }
