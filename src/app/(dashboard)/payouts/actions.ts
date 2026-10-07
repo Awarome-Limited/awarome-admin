@@ -61,3 +61,22 @@ export async function updatePayoutSettings(values: PayoutSchedule): Promise<Acti
   }
   return result;
 }
+
+/**
+ * A hand correction to a courier's balance — writing off commission they owe
+ * on pay-on-delivery runs, or moving a payment that landed in the wrong
+ * wallet. Signed: positive credits the courier, negative debits them.
+ */
+export async function adjustRiderBalance(
+  riderId: string,
+  payload: { amount: number; reason: string }
+): Promise<ActionResult> {
+  const result = await runAction(() =>
+    authedFetch(`/admins/payouts/riders/${riderId}/adjust`, {
+      method: 'POST',
+      body: payload,
+    })
+  );
+  if (result.ok) revalidatePayouts(riderId);
+  return result;
+}

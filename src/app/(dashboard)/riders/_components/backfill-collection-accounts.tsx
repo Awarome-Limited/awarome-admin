@@ -21,7 +21,7 @@ export function BackfillCollectionAccounts() {
         })
       }
     >
-      {isPending ? 'Requesting…' : 'Set up pay-in accounts'}
+      {isPending ? 'Requesting…' : 'Set up wallet accounts'}
     </Button>
   );
 }

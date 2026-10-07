@@ -99,6 +99,12 @@ export interface AdminRiderDocuments {
 
 export interface AdminRider {
   _id: string;
+  /** Wallet balance; negative when they owe Awarome commission. */
+  balance?: number;
+  /** Commission owed on pay-on-delivery runs they collected themselves. */
+  owed?: number;
+  /** Owes more than the debt limit, so can't accept jobs. */
+  debtLocked?: boolean;
   firstName?: string;
   lastName?: string;
   email?: string;
@@ -877,6 +883,12 @@ export interface AdminPayoutRun extends PayoutRunRef {
 
 export interface RiderPayoutSummary {
   balance: number;
+  /** Commission the courier owes on pay-on-delivery runs; 0 when in credit. */
+  owed: number;
+  /** The debt limit in force. */
+  threshold: number;
+  /** Over the limit: they can see jobs but not accept them. */
+  locked: boolean;
   bankAccount:
     | (RiderPayoutBankAccount & { verified: boolean; verifiedAt?: string; hasRecipient: boolean })
     | null;
@@ -1095,7 +1107,10 @@ export interface RiderCollectionAccount {
   accountNumber?: string;
   accountName?: string;
   bank?: string;
-  /** Set when the rider is also a customer and collects into that customer-app account. */
+  /** Paystack bank slug. Riders belong on `wema-bank`; anything else is left over. */
+  bankSlug?: string;
+  /** Only on records from before riders had their own bank, when a rider who
+   *  was also a customer shared that customer's account. */
   customer?: string;
 }
 

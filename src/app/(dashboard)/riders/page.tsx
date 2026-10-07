@@ -28,11 +28,15 @@ const FILTERS = [
   { key: 'all', label: 'All' },
   { key: 'active', label: 'Active' },
   { key: 'suspended', label: 'Suspended' },
+  { key: 'owing', label: 'Owes commission' },
+  { key: 'over-limit', label: 'Over debt limit' },
 ] as const;
 
 function filterToQuery(filter: string): Record<string, string> {
   if (filter === 'active') return { suspended: 'false' };
   if (filter === 'suspended') return { suspended: 'true' };
+  if (filter === 'owing') return { owing: 'any' };
+  if (filter === 'over-limit') return { owing: 'over-limit' };
   return {};
 }
 
@@ -155,6 +159,7 @@ export default async function RidersPage({
                 <TableHead>Phone</TableHead>
                 <TableHead>Online status</TableHead>
                 <TableHead className="text-right">Orders completed</TableHead>
+                <TableHead className="text-right">Owes</TableHead>
                 <TableHead>Account status</TableHead>
               </TableRow>
             </TableHeader>
@@ -179,6 +184,18 @@ export default async function RidersPage({
                   <TableCell className="text-right font-semibold tabular-nums">
                     {rider.ordersCompleted ?? 0}
                   </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {rider.owed ? (
+                      <span className="flex items-center justify-end gap-2">
+                        <span className={rider.debtLocked ? 'font-semibold text-destructive' : 'font-semibold'}>
+                          ₦{rider.owed.toLocaleString('en-NG')}
+                        </span>
+                        {rider.debtLocked && <Badge variant="destructive">Locked</Badge>}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <SuspendToggle
                       suspended={!!rider.suspended}
@@ -189,7 +206,7 @@ export default async function RidersPage({
               ))}
               {result.data.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                     No riders found.
                   </TableCell>
                 </TableRow>

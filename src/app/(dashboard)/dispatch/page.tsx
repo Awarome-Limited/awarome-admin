@@ -18,6 +18,7 @@ interface DispatchConfig {
   unassignedAfterMs: number;
   vendorAcceptTimeoutMs: number;
   riderCommissionPercent: number;
+  riderDebtThreshold: number;
 }
 
 export default async function DispatchPage() {
@@ -40,6 +41,7 @@ export default async function DispatchPage() {
     const num = (name: string) => Number(formData.get(name));
     await updateDispatchConfig({
       riderCommissionPercent: num('riderCommissionPercent'),
+      riderDebtThreshold: num('riderDebtThreshold'),
       unassignedAfterMs: num('unassignedAfterMinutes') * 60 * 1000,
       vendorAcceptTimeoutMs: num('vendorAcceptTimeoutMinutes') * 60 * 1000,
       redispatchIntervalMs: num('redispatchIntervalSeconds') * 1000,
@@ -73,6 +75,18 @@ export default async function DispatchPage() {
           name: 'riderCommissionPercent',
           unit: '%',
           value: config.riderCommissionPercent,
+        },
+      ],
+    },
+    {
+      title: 'Rider debt',
+      sub: 'Riders collect pay-on-delivery money themselves and owe Awarome the commission on it. Past this amount they still see jobs but can’t accept them until they fund their wallet or earn it down on prepaid jobs.',
+      fields: [
+        {
+          label: 'Debt limit',
+          name: 'riderDebtThreshold',
+          unit: '₦',
+          value: config.riderDebtThreshold ?? 3000,
         },
       ],
     },

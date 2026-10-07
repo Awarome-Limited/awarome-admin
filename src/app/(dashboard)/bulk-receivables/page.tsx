@@ -154,8 +154,10 @@ export default async function BulkReceivablesPage() {
         <CardHeader>
           <CardTitle>Rider account payments to review ({riderCredits.length})</CardTitle>
           <CardDescription>
-            Transfers into riders’ pay-in accounts that didn’t settle a drop. Refund or apply each one,
-            then mark it resolved.
+            From before riders collected payment themselves: transfers into riders’ pay-in accounts
+            that didn’t settle a drop. Credit each to the rider’s wallet (Adjust balance on their page)
+            or refund it, then mark it resolved. New transfers into rider accounts fund their wallet
+            automatically and never appear here.
           </CardDescription>
         </CardHeader>
         <CardContent>

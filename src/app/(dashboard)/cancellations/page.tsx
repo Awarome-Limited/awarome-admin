@@ -82,6 +82,7 @@ const REASONS: Record<string, string> = {
   'vehicle-breakdown': 'Vehicle broke down',
   accident: 'Had an accident',
   'customer-unreachable': 'Receiver unreachable',
+  'payment-refused': "Customer couldn't pay",
   'wrong-address': 'Wrong address',
   'package-issue': 'Problem with the package',
   unsafe: 'Unsafe to continue',

@@ -17,9 +17,10 @@ const STATUS: Record<RiderCollectionAccount['status'], { text: string; variant: 
 };
 
 /**
- * The rider's own pay-in account. Receivers on bulk drops the receiver pays
- * transfer into it at the door; without it, the rider shows the vendor's
- * account instead.
+ * The rider's own dedicated account, on Wema. Anything transferred into it
+ * funds their rider wallet — usually to clear commission owed on
+ * pay-on-delivery runs. Customers' accounts are on Titan, so a rider who is
+ * also a customer has one of each.
  */
 export function RiderCollectionAccountCard({
   riderId,
@@ -48,8 +49,8 @@ export function RiderCollectionAccountCard({
     return (
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
         <span className="text-muted-foreground">
-          No account yet. One is requested when the rider is approved, or the first time they reach a
-          bulk drop the receiver pays.
+          No account yet. One is requested when the rider is approved, or the first time they open
+          their wallet.
         </span>
         {canUpdate && (
           <Button size="sm" variant="outline" onClick={retry} disabled={isPending}>
@@ -61,6 +62,9 @@ export function RiderCollectionAccountCard({
   }
 
   const status = STATUS[account.status];
+  // From before riders had their own bank: the shared customer account, or an
+  // old rider account elsewhere. Retrying asks Paystack for a Wema one.
+  const legacy = account.status !== 'deactivated' && (!!account.customer || account.bankSlug !== 'wema-bank');
   return (
     <div className="flex flex-col gap-2 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -77,22 +81,28 @@ export function RiderCollectionAccountCard({
           {account.bank ? ` · ${account.bank}` : ''}
         </span>
       )}
-      {account.customer && account.status !== 'deactivated' && (
+      {legacy && (
         <span className="rounded-[10px] bg-muted px-3 py-2 text-[12.5px] text-foreground-secondary">
-          This is also their{' '}
-          <Link href={`/users/${account.customer}`} className="font-semibold text-primary hover:underline">
-            customer account
-          </Link>
-          . A transfer counts as a bulk collection only while they’re at a receiver-pays drop; at any other
-          time it goes to their own wallet.
+          {account.customer ? (
+            <>
+              This is still their{' '}
+              <Link href={`/users/${account.customer}`} className="font-semibold text-primary hover:underline">
+                customer account
+              </Link>
+              , from before riders had their own. Move them to a Wema wallet account so top-ups reach
+              their rider wallet.
+            </>
+          ) : (
+            'This account is from before riders moved to Wema. Move them to a Wema wallet account.'
+          )}
         </span>
       )}
       {account.status === 'failed' && account.failureReason && (
         <span className="text-[13px] text-destructive">{account.failureReason}</span>
       )}
-      {canUpdate && account.status === 'failed' && (
+      {canUpdate && (account.status === 'failed' || legacy) && (
         <Button size="sm" variant="outline" className="w-fit" onClick={retry} disabled={isPending}>
-          Retry
+          {legacy ? 'Move to Wema account' : 'Retry'}
         </Button>
       )}
     </div>

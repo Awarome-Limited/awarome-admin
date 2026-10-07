@@ -17,6 +17,7 @@ export interface DispatchConfigPayload {
   unassignedAfterMs?: number;
   vendorAcceptTimeoutMs?: number;
   riderCommissionPercent?: number;
+  riderDebtThreshold?: number;
 }
 
 export async function updateDispatchConfig(payload: DispatchConfigPayload) {

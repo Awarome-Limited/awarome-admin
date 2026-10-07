@@ -35,6 +35,7 @@ import { PayoutActionButton } from '../../payouts/_components/payout-action-butt
 import { naira, payoutStatusLabel, payoutStatusVariant } from '../../payouts/payout-format';
 import type { RiderCollectionAccount } from '@/lib/types';
 import { RiderCollectionAccountCard } from './_components/collection-account';
+import { AdjustBalanceDialog } from './_components/adjust-balance-dialog';
 
 const LIMIT = 10;
 
@@ -155,7 +156,12 @@ export default async function RiderDetailPage({
       {payoutSummary && (
         <Card>
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
-            <CardTitle>Payouts</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              Payouts
+              {payoutSummary.locked && <Badge variant="destructive">Locked — over debt limit</Badge>}
+            </CardTitle>
+            <div className="flex flex-wrap items-center gap-2">
+            {canPay && <AdjustBalanceDialog riderId={rider._id} owed={payoutSummary.owed ?? 0} />}
             {canPay && !payoutSummary.inFlight && payoutSummary.balance >= 100 && payoutSummary.bankAccount?.verified && (
               <PayoutActionButton
                 label={`Pay ${naira(payoutSummary.balance)} now`}
@@ -166,17 +172,33 @@ export default async function RiderDetailPage({
                 action={payRiderNow.bind(null, rider._id)}
               />
             )}
+            </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 text-sm">
-            <DetailRow
-              label="Balance owed"
-              value={
-                <span className={payoutSummary.balance < 0 ? 'font-semibold text-destructive' : 'font-semibold'}>
-                  {naira(payoutSummary.balance)}
-                  {payoutSummary.balance < 0 ? ' (owes Awarome)' : ''}
-                </span>
-              }
-            />
+            {payoutSummary.balance < 0 ? (
+              <DetailRow
+                label="Owes Awarome"
+                value={
+                  <span className={payoutSummary.locked ? 'font-semibold text-destructive' : 'font-semibold text-warning'}>
+                    {naira(-payoutSummary.balance)}
+                    <span className="font-normal text-muted-foreground">
+                      {' '}of {naira(payoutSummary.threshold ?? 0)} limit
+                    </span>
+                  </span>
+                }
+              />
+            ) : (
+              <DetailRow
+                label="Balance owed"
+                value={<span className="font-semibold">{naira(payoutSummary.balance)}</span>}
+              />
+            )}
+            {payoutSummary.balance < 0 && (
+              <p className="text-[12px] text-muted-foreground">
+                Commission on pay-on-delivery runs the courier collected themselves. It clears as they
+                fund their wallet or earn on card and bank-transfer jobs.
+              </p>
+            )}
             <DetailRow
               label="Payout account"
               value={
@@ -230,7 +252,7 @@ export default async function RiderDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Bulk pay-in account</CardTitle>
+          <CardTitle>Wallet funding account</CardTitle>
         </CardHeader>
         <CardContent>
           <RiderCollectionAccountCard
