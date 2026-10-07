@@ -1093,6 +1093,8 @@ export interface RiderCollectionAccount {
   accountNumber?: string;
   accountName?: string;
   bank?: string;
+  /** Set when the rider is also a customer and collects into that customer-app account. */
+  customer?: string;
 }
 
 /** Money into a rider's account that didn't settle a drop as-is. */

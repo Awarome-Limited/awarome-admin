@@ -1,6 +1,7 @@
 'use client';
 
 import { useTransition } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -74,6 +75,16 @@ export function RiderCollectionAccountCard({
         <span className="text-muted-foreground">
           {account.accountName}
           {account.bank ? ` · ${account.bank}` : ''}
+        </span>
+      )}
+      {account.customer && account.status !== 'deactivated' && (
+        <span className="rounded-[10px] bg-muted px-3 py-2 text-[12.5px] text-foreground-secondary">
+          This is also their{' '}
+          <Link href={`/users/${account.customer}`} className="font-semibold text-primary hover:underline">
+            customer account
+          </Link>
+          . A transfer counts as a bulk collection only while they’re at a receiver-pays drop; at any other
+          time it goes to their own wallet.
         </span>
       )}
       {account.status === 'failed' && account.failureReason && (
