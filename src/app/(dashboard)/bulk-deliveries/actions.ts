@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { refresh, revalidatePath } from 'next/cache';
 import { unstable_rethrow } from 'next/navigation';
 import {
   ApiError,
@@ -206,4 +206,48 @@ export async function resolveRiderCollectionCredit(
   );
   if (result.ok) revalidatePath('/bulk-receivables');
   return result;
+}
+
+export interface UpdateBulkDropPayload {
+  receiver?: { name?: string; phone?: string };
+  note?: string | null;
+  dropoffAddress?: DeliveryAddress;
+  payer?: BulkDropPayer;
+  fee?: number;
+  amountToCollect?: number;
+  far?: boolean;
+}
+
+/** The API's own message says what changed, and when pricing would differ. */
+async function patchBulk(id: string, path: string, body: unknown): Promise<DataResult<string>> {
+  const result = await fetchResult(async () => {
+    const res = await authedFetch<SingleResponse<AdminBulkDelivery>>(`/bulk-deliveries/${id}${path}`, {
+      method: 'PATCH',
+      body,
+    });
+    return res.message;
+  });
+  if (result.ok) {
+    revalidatePath(`/bulk-deliveries/${id}`);
+    revalidatePath('/deliveries');
+    refresh();
+  }
+  return result;
+}
+
+/** Corrects the sender on the bulk and every drop still to be delivered. */
+export async function updateBulkSender(
+  id: string,
+  sender: { name: string; phone: string }
+): Promise<DataResult<string>> {
+  return patchBulk(id, '/sender', { sender });
+}
+
+/** Corrects one drop before it is delivered, even with a rider on it. */
+export async function updateBulkDrop(
+  id: string,
+  deliveryId: string,
+  payload: UpdateBulkDropPayload
+): Promise<DataResult<string>> {
+  return patchBulk(id, `/drops/${deliveryId}`, payload);
 }

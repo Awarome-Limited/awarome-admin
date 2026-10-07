@@ -19,6 +19,7 @@ import {
 import { statusBadgeVariant } from '@/lib/format';
 import type { AdminRider, BulkDeliveryDrop } from '@/lib/types';
 import { settleBulkVendor } from '../../actions';
+import { EditDropDialog, type BulkPricingContext } from './edit-dialogs';
 
 const naira = (amount: number) => `₦${Math.round(amount).toLocaleString('en-NG')}`;
 
@@ -29,6 +30,8 @@ const isPostpaid = (d: BulkDeliveryDrop) => !!d.payOnDelivery?.postpaid;
 const vendorOwes = (d: BulkDeliveryDrop) =>
   isPostpaid(d) && !isCancelled(d) && OUTSTANDING.includes(d.payOnDelivery?.status ?? 'pending');
 // Batching only makes sense for drops nobody has picked up yet.
+// Details can be corrected until the package changes hands.
+const isEditable = (d: BulkDeliveryDrop) => !isCancelled(d) && d.riderStatus !== 'delivered';
 const isBatchable = (d: BulkDeliveryDrop) =>
   !isCancelled(d) && !d.rider && (d.riderStatus ?? 'pending') === 'pending';
 
@@ -55,12 +58,14 @@ export function BulkDrops({
   riders,
   vehicleType,
   canUpdate,
+  pricing,
 }: {
   bulkId: string;
   drops: BulkDeliveryDrop[];
   riders: AdminRider[];
   vehicleType: string;
   canUpdate: boolean;
+  pricing: BulkPricingContext;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const chosen = useMemo(() => drops.filter((d) => selected.has(d._id)), [drops, selected]);
@@ -141,6 +146,7 @@ export function BulkDrops({
               <th className="px-2 py-2">Payment</th>
               <th className="px-2 py-2">Delivery</th>
               <th className="px-2 py-2">Run · Rider</th>
+              {canUpdate && <th className="w-10 px-2 py-2" />}
             </tr>
           </thead>
           <tbody>
@@ -213,6 +219,9 @@ export function BulkDrops({
                     )}
                     <div>{riderName(d.rider) ?? <span className="text-muted-foreground">No rider yet</span>}</div>
                   </td>
+                  {canUpdate && (
+                    <td className="px-2 py-1.5">{isEditable(d) && <EditDropDialog bulkId={bulkId} drop={d} pricing={pricing} />}</td>
+                  )}
                 </tr>
               );
             })}

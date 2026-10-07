@@ -1025,6 +1025,8 @@ export interface BulkSummary {
 }
 
 export interface BulkDeliveryDrop extends AdminDelivery {
+  /** Bulk drops are always booked on a pinned address. */
+  dropoffAddress?: DeliveryAddress & { note?: string };
   note?: string;
   batchId?: string;
   vehicleType?: string;

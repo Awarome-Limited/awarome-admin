@@ -9,8 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDate, statusBadgeVariant } from '@/lib/format';
 import { BulkDrops } from './_components/bulk-drops';
+import { EditSenderDialog } from './_components/edit-dialogs';
 
 const RIDER_LIMIT = 200;
+
+// What the API applies to bulks booked without stored terms.
+const DEFAULT_TERMS = { minDropsForFlat: 10, flatRate: 2500, farRate: 3000, farDistanceKm: 25 };
 
 const DISPATCH_LABELS: Record<BulkDispatchMode, string> = {
   runs: 'split across riders',
@@ -151,8 +155,9 @@ export default async function BulkDeliveryDetailPage({
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between gap-2">
             <CardTitle>Pickup</CardTitle>
+            {canUpdate && <EditSenderDialog bulkId={bulk._id} sender={bulk.sender} />}
           </CardHeader>
           <CardContent className="flex flex-col gap-1 text-[13px]">
             <span className="font-semibold">{bulk.pickupAddress?.address || '—'}</span>
@@ -231,6 +236,12 @@ export default async function BulkDeliveryDetailPage({
           riders={riders}
           vehicleType={bulk.vehicleType || 'bike'}
           canUpdate={canUpdate}
+          pricing={{
+            pickupAddress: bulk.pickupAddress,
+            vehicleType: bulk.vehicleType || 'bike',
+            pricingMode: bulk.pricingMode,
+            terms: { ...DEFAULT_TERMS, ...bulk.pricingTerms },
+          }}
         />
       </Card>
     </div>
