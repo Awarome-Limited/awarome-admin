@@ -11,6 +11,15 @@ export interface NavItem {
 export const DASHBOARD_ICON = 'M3 3h7v7H3z M14 3h7v7h-7z M14 14h7v7h-7z M3 14h7v7H3z';
 
 export const NAV_ITEMS: NavItem[] = [
+  // Insights
+  {
+    label: 'Analytics',
+    href: '/analytics',
+    module: PermissionModule.ANALYTICS,
+    icon: 'M3 3v18h18 M7 16v-4 M12 16V8 M17 16v-7',
+    category: 'Insights',
+  },
+
   // Orders
   {
     label: 'Orders',

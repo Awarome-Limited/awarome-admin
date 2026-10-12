@@ -491,6 +491,82 @@ export interface AnalyticsOverview {
   topRiders: { riderId: string; name?: string; deliveriesCompleted: number }[];
 }
 
+export type AnalyticsPeriodType = 'day' | 'week' | 'month';
+
+export interface AnalyticsKpis {
+  /** Paid order totals plus paid standalone delivery fees, by payment time. */
+  revenue: number;
+  orderRevenue: number;
+  deliveryRevenue: number;
+  refunds: number;
+  refundCount: number;
+  netRevenue: number;
+  productsCost: number;
+  orderDeliveryFees: number;
+  serviceCharges: number;
+  paidOrders: number;
+  paidDeliveries: number;
+  jobs: number;
+  avgOrderValue: number;
+  avgDeliveryFee: number;
+  promoOrders: number;
+  completedOrders: number;
+  completedDeliveries: number;
+  completedJobs: number;
+  cancelledJobs: number;
+  /** Payment to handover; null when nothing was delivered. */
+  avgFulfilmentMinutes: number | null;
+  activeCustomers: number;
+  /** Customers whose first ever payment fell in this period. */
+  newPayingCustomers: number;
+  signups: { customers: number; vendors: number; riders: number };
+}
+
+export interface AnalyticsTrendPoint {
+  key: string;
+  label: string;
+  orderRevenue: number;
+  deliveryRevenue: number;
+  revenue: number;
+  orders: number;
+  deliveries: number;
+  jobs: number;
+}
+
+export interface AnalyticsBreakdownRow {
+  key: string;
+  count: number;
+  revenue: number;
+}
+
+export interface AnalyticsSummary {
+  period: {
+    type: AnalyticsPeriodType;
+    anchor: string;
+    label: string;
+    start: string;
+    end: string;
+    /** The period is still running; `previous` is cut to the same length. */
+    isPartial: boolean;
+    prevAnchor: string;
+    nextAnchor: string | null;
+    timezone: string;
+    previous: { start: string; end: string; label: string };
+  };
+  kpis: { current: AnalyticsKpis; previous: AnalyticsKpis };
+  series: AnalyticsTrendPoint[];
+  history: AnalyticsTrendPoint[];
+  breakdowns: {
+    channel: AnalyticsBreakdownRow[];
+    deliveryOption: AnalyticsBreakdownRow[];
+    paymentMethod: AnalyticsBreakdownRow[];
+    vehicleType: AnalyticsBreakdownRow[];
+  };
+  topVendors: { vendorId: string; name?: string; totalSales: number; orderCount: number }[];
+  topRiders: { riderId: string; name?: string; deliveriesCompleted: number }[];
+  topCustomers: { userId: string; name?: string; email?: string; spend: number; jobs: number }[];
+}
+
 export interface AdminPromoCode {
   _id: string;
   code: string;
