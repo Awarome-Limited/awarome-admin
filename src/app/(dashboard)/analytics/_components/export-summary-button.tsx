@@ -27,32 +27,41 @@ const KPI_ROWS: { label: string; value: (k: AnalyticsKpis) => number | null }[] 
   { label: 'Rider signups', value: (k) => k.signups.riders },
 ];
 
+const BUCKET_HEADINGS: Record<AnalyticsSummary['range']['bucketUnit'], string> = {
+  hour: 'Hour',
+  day: 'Day',
+  week: 'Week starting',
+  month: 'Month starting',
+};
+
 export function ExportSummaryButton({ summary }: { summary: AnalyticsSummary }) {
   function handleExport() {
-    const { period, kpis, series } = summary;
+    const { range, kpis, series } = summary;
     const str = (value: number | null) => (value === null ? '' : String(value));
 
     const summaryTable = toCsv(
       KPI_ROWS.map((row) => ({
         Metric: row.label,
-        [period.label]: str(row.value(kpis.current)),
-        [`Previous (${period.previous.label})`]: str(row.value(kpis.previous)),
+        [range.label]: str(row.value(kpis.current)),
+        [`Previous (${range.previous.label})`]: str(row.value(kpis.previous)),
       }))
     );
     const seriesTable = toCsv(
       series.map((point) => ({
-        [period.type === 'day' ? 'Hour' : 'Day']: point.key,
+        [BUCKET_HEADINGS[range.bucketUnit]]: point.key,
         'Order revenue (₦)': String(point.orderRevenue),
         'Delivery revenue (₦)': String(point.deliveryRevenue),
         'Total revenue (₦)': String(point.revenue),
         Orders: String(point.orders),
         Deliveries: String(point.deliveries),
+        'Previous range revenue (₦)': String(point.previousRevenue),
+        'Previous range jobs': String(point.previousJobs),
       }))
     );
 
     downloadCsv(
       `${summaryTable}\r\n\r\n${seriesTable}`,
-      `awarome-${period.type}-summary-${period.anchor}.csv`
+      `awarome-summary-${range.from}-to-${range.to}.csv`
     );
   }
 

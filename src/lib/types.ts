@@ -491,8 +491,6 @@ export interface AnalyticsOverview {
   topRiders: { riderId: string; name?: string; deliveriesCompleted: number }[];
 }
 
-export type AnalyticsPeriodType = 'day' | 'week' | 'month';
-
 export interface AnalyticsKpis {
   /** Paid order totals plus paid standalone delivery fees, by payment time. */
   revenue: number;
@@ -531,6 +529,9 @@ export interface AnalyticsTrendPoint {
   orders: number;
   deliveries: number;
   jobs: number;
+  /** The same bucket's position in the previous range. */
+  previousRevenue: number;
+  previousJobs: number;
 }
 
 export interface AnalyticsBreakdownRow {
@@ -540,22 +541,22 @@ export interface AnalyticsBreakdownRow {
 }
 
 export interface AnalyticsSummary {
-  period: {
-    type: AnalyticsPeriodType;
-    anchor: string;
+  range: {
+    /** Inclusive Lagos dates. */
+    from: string;
+    to: string;
     label: string;
     start: string;
     end: string;
-    /** The period is still running; `previous` is cut to the same length. */
+    days: number;
+    /** The range is still running; `previous` is cut to the same length. */
     isPartial: boolean;
-    prevAnchor: string;
-    nextAnchor: string | null;
+    bucketUnit: 'hour' | 'day' | 'week' | 'month';
     timezone: string;
-    previous: { start: string; end: string; label: string };
+    previous: { from: string; to: string; start: string; end: string; label: string };
   };
   kpis: { current: AnalyticsKpis; previous: AnalyticsKpis };
   series: AnalyticsTrendPoint[];
-  history: AnalyticsTrendPoint[];
   breakdowns: {
     channel: AnalyticsBreakdownRow[];
     deliveryOption: AnalyticsBreakdownRow[];

@@ -1,28 +1,25 @@
 import Link from 'next/link';
 import { authedFetch, ApiError, SingleResponse } from '@/lib/api-client';
-import type {
-  AnalyticsBreakdownRow,
-  AnalyticsPeriodType,
-  AnalyticsSummary,
-} from '@/lib/types';
+import type { AnalyticsBreakdownRow, AnalyticsSummary } from '@/lib/types';
 import { ApiErrorCard } from '@/components/api-error-card';
 import { cn } from '@/lib/utils';
-import { PeriodControls } from './_components/period-controls';
+import { RangePicker } from './_components/range-picker';
 import { ExportSummaryButton } from './_components/export-summary-button';
-import { RevenueBarsChart, RevenueBarsLegend } from './_components/revenue-bars-chart';
+import { TrendChart, TrendLegend } from './_components/trend-chart';
+import {
+  DEFAULT_PRESET,
+  type DateRange,
+  isDayKey,
+  isPresetKey,
+  lagosToday,
+  resolvePreset,
+} from './_lib/ranges';
 
-const PERIOD_TYPES: AnalyticsPeriodType[] = ['day', 'week', 'month'];
-
-const PERIOD_NOUN: Record<AnalyticsPeriodType, string> = {
+const BUCKET_NOUN: Record<AnalyticsSummary['range']['bucketUnit'], string> = {
+  hour: 'hour',
   day: 'day',
   week: 'week',
   month: 'month',
-};
-
-const HISTORY_TITLE: Record<AnalyticsPeriodType, string> = {
-  day: 'Last 14 days',
-  week: 'Last 12 weeks',
-  month: 'Last 12 months',
 };
 
 const BREAKDOWN_LABELS: Record<string, Record<string, string>> = {
@@ -61,22 +58,25 @@ export default async function AnalyticsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const type = PERIOD_TYPES.includes(params.period as AnalyticsPeriodType)
-    ? (params.period as AnalyticsPeriodType)
-    : 'day';
-  const query = new URLSearchParams({ period: type });
-  if (params.date) query.set('date', params.date);
+  const preset = isPresetKey(params.range) ? params.range : DEFAULT_PRESET;
+  const today = lagosToday();
+  const requested: DateRange =
+    resolvePreset(preset, today) ?? {
+      from: isDayKey(params.from) ? params.from : today,
+      to: isDayKey(params.to) ? params.to : today,
+    };
 
   let summary: AnalyticsSummary;
   try {
     const result = await authedFetch<SingleResponse<AnalyticsSummary>>(
-      `/admins/analytics/summary?${query}`
+      `/admins/analytics/summary?${new URLSearchParams({ ...requested })}`
     );
     summary = result.data;
   } catch (error) {
     return (
       <div className="flex flex-col gap-4">
         <PageHeading />
+        <RangePicker preset={preset} range={requested} />
         <ApiErrorCard
           message={error instanceof ApiError ? error.message : 'Failed to load analytics.'}
         />
@@ -84,10 +84,10 @@ export default async function AnalyticsPage({
     );
   }
 
-  const { period, kpis, series, history, breakdowns } = summary;
+  const { range, kpis, series, breakdowns } = summary;
   const cur = kpis.current;
   const prev = kpis.previous;
-  const noun = PERIOD_NOUN[period.type];
+  const bucket = BUCKET_NOUN[range.bucketUnit];
 
   return (
     <div className="flex flex-col gap-4">
@@ -96,19 +96,20 @@ export default async function AnalyticsPage({
         <ExportSummaryButton summary={summary} />
       </div>
 
-      <PeriodControls
-        type={period.type}
-        anchor={period.anchor}
-        label={period.label}
-        prevAnchor={period.prevAnchor}
-        nextAnchor={period.nextAnchor}
-      />
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        {/* Keyed so the picker's local state resets after every navigation. */}
+        <RangePicker
+          key={`${preset}:${range.from}:${range.to}`}
+          preset={preset}
+          range={{ from: range.from, to: range.to }}
+        />
+        <span className="text-[13.5px] font-semibold text-foreground">{range.label}</span>
+      </div>
 
       <p className="-mt-1 text-[12.5px] text-muted-foreground">
-        {period.isPartial
-          ? `${noun === 'day' ? 'Today' : `This ${noun}`} so far, compared with the same point ${noun === 'day' ? 'yesterday' : `last ${noun}`} (${period.previous.label}).`
-          : `Compared with the previous ${noun} (${period.previous.label}).`}{' '}
-        Lagos time. Revenue counts money received, dated by when it was paid.
+        Compared with {range.previous.label}
+        {range.isPartial ? ', up to the same point in time' : ''}. Lagos time. Revenue counts
+        money received, dated by when it was paid.
       </p>
 
       {/* Headline KPIs */}
@@ -178,14 +179,11 @@ export default async function AnalyticsPage({
 
       {/* Charts */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <Panel
-          title={period.type === 'day' ? 'Revenue by hour' : 'Revenue by day'}
-          aside={<RevenueBarsLegend />}
-        >
-          <RevenueBarsChart data={series} />
+        <Panel title={`Revenue by ${bucket}`} aside={<TrendLegend metric="revenue" />}>
+          <TrendChart data={series} metric="revenue" />
         </Panel>
-        <Panel title={HISTORY_TITLE[period.type]} aside={<RevenueBarsLegend />}>
-          <RevenueBarsChart data={history} emptyMessage="No paid activity in this range." />
+        <Panel title={`Paid jobs by ${bucket}`} aside={<TrendLegend metric="jobs" />}>
+          <TrendChart data={series} metric="jobs" />
         </Panel>
       </div>
 
@@ -227,7 +225,7 @@ export default async function AnalyticsPage({
       <div className="grid gap-4 lg:grid-cols-3">
         <Panel title="Top vendors">
           <Leaderboard
-            empty="No vendor sales in this period."
+            empty="No vendor sales in this range."
             columns={['Vendor', 'Orders', 'Sales']}
             rows={summary.topVendors.map((v) => ({
               key: v.vendorId,
@@ -240,7 +238,7 @@ export default async function AnalyticsPage({
         </Panel>
         <Panel title="Top riders">
           <Leaderboard
-            empty="No completed runs in this period."
+            empty="No completed runs in this range."
             columns={['Rider', '', 'Delivered']}
             rows={summary.topRiders.map((r) => ({
               key: r.riderId,
@@ -253,7 +251,7 @@ export default async function AnalyticsPage({
         </Panel>
         <Panel title="Top customers">
           <Leaderboard
-            empty="No paying customers in this period."
+            empty="No paying customers in this range."
             columns={['Customer', 'Jobs', 'Spend']}
             rows={summary.topCustomers.map((c) => ({
               key: c.userId,
@@ -274,7 +272,7 @@ function PageHeading() {
     <div>
       <h1 className="text-[24px] font-bold tracking-tight text-foreground">Analytics</h1>
       <p className="mt-1.5 text-[14px] text-muted-foreground">
-        Daily, weekly and monthly summaries across orders and deliveries.
+        Summaries across orders and deliveries for any date range.
       </p>
     </div>
   );
