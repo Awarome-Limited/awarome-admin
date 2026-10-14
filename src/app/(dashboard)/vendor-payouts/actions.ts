@@ -3,7 +3,12 @@
 import { revalidatePath } from 'next/cache';
 import { authedFetch, type SingleResponse } from '@/lib/api-client';
 import { runAction, type ActionResult } from '@/lib/action-result';
-import type { AdminVendorPayout, PayoutSchedule, VendorPayoutSettings } from '@/lib/types';
+import type {
+  AdminVendorPayout,
+  OfflinePayoutPayload,
+  PayoutSchedule,
+  VendorPayoutSettings,
+} from '@/lib/types';
 
 function revalidateVendorPayouts(vendorId?: string) {
   revalidatePath('/vendor-payouts', 'layout');
@@ -86,5 +91,17 @@ export async function endVendorCommission(
     })
   );
   if (result.ok) revalidatePath(`/vendors/${vendorId}`);
+  return result;
+}
+
+/** Money already sent from Awarome's bank account; nothing is transferred. */
+export async function recordVendorBankPayout(
+  vendorId: string,
+  payload: OfflinePayoutPayload
+): Promise<ActionResult> {
+  const result = await runAction(() =>
+    authedFetch(`/admins/vendor-payouts/vendors/${vendorId}/offline`, { method: 'POST', body: payload })
+  );
+  if (result.ok) revalidateVendorPayouts(vendorId);
   return result;
 }

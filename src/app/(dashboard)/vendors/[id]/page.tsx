@@ -22,7 +22,8 @@ import { getSession } from '@/lib/session';
 import { hasPermission, PermissionAction, PermissionModule } from '@/lib/permissions';
 import type { VendorCommission, VendorEarning, VendorPayoutSummary } from '@/lib/types';
 import { VendorCommissions } from './_components/vendor-commissions';
-import { payVendorNow } from '../../vendor-payouts/actions';
+import { payVendorNow, recordVendorBankPayout } from '../../vendor-payouts/actions';
+import { RecordBankPayoutDialog } from '../../payouts/_components/record-bank-payout-dialog';
 import { PayoutActionButton } from '../../payouts/_components/payout-action-button';
 import {
   naira,
@@ -274,19 +275,28 @@ export default async function VendorDetailPage({
           <div className="rounded-[14px] border border-border bg-card p-[18px_20px] shadow-[var(--shadow-card)]">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <span className="text-[15px] font-semibold text-foreground">Payouts</span>
-              {canPay &&
-                !payoutSummary.inFlight &&
-                payoutSummary.balance >= 100 &&
-                payoutSummary.bankAccount?.verified && (
-                  <PayoutActionButton
-                    label={`Pay ${naira(payoutSummary.balance)} now`}
-                    title="Pay this vendor now?"
-                    description={`${naira(payoutSummary.balance)} — their whole balance — is sent by Paystack transfer to ${payoutSummary.bankAccount.bankName} •••• ${payoutSummary.bankAccount.accountNumber?.slice(-4)} (${payoutSummary.bankAccount.accountName}).`}
-                    confirmLabel="Send payout"
-                    successMessage="Payout sent to Paystack"
-                    action={payVendorNow.bind(null, vendor._id)}
+              <div className="flex flex-wrap items-center gap-2">
+                {canPay && !payoutSummary.inFlight && payoutSummary.balance > 0 && (
+                  <RecordBankPayoutDialog
+                    payee="this vendor"
+                    owed={payoutSummary.balance}
+                    action={recordVendorBankPayout.bind(null, vendor._id)}
                   />
                 )}
+                {canPay &&
+                  !payoutSummary.inFlight &&
+                  payoutSummary.balance >= 100 &&
+                  payoutSummary.bankAccount?.verified && (
+                    <PayoutActionButton
+                      label={`Pay ${naira(payoutSummary.balance)} now`}
+                      title="Pay this vendor now?"
+                      description={`${naira(payoutSummary.balance)} — their whole balance — is sent by Paystack transfer to ${payoutSummary.bankAccount.bankName} •••• ${payoutSummary.bankAccount.accountNumber?.slice(-4)} (${payoutSummary.bankAccount.accountName}).`}
+                      confirmLabel="Send payout"
+                      successMessage="Payout sent to Paystack"
+                      action={payVendorNow.bind(null, vendor._id)}
+                    />
+                  )}
+              </div>
             </div>
             <div className="flex flex-col gap-3 text-sm">
               <DetailRow label="Balance owed" value={<span className="font-semibold">{naira(payoutSummary.balance)}</span>} />

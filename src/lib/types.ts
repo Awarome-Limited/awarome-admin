@@ -900,7 +900,22 @@ export interface AdminBatchDetail
 }
 
 export type RiderPayoutStatus = 'processing' | 'awaiting-otp' | 'success' | 'failed' | 'reversed';
-export type RiderPayoutTrigger = 'scheduled' | 'manual-run' | 'manual-rider' | 'manual-vendor';
+export type RiderPayoutTrigger =
+  | 'scheduled'
+  | 'manual-run'
+  | 'manual-rider'
+  | 'manual-vendor'
+  | 'manual-business'
+  | 'offline';
+
+/** A payout already sent from Awarome's bank account, recorded by staff. */
+export interface OfflinePayoutPayload {
+  /** Naira; riders and vendors only. Omitted pays the whole balance. */
+  amount?: number;
+  paidAt?: string;
+  bankReference?: string;
+  note?: string;
+}
 
 export interface RiderPayoutBankAccount {
   bankName?: string;
@@ -945,6 +960,8 @@ export interface AdminRiderPayout {
     | null;
   trigger: RiderPayoutTrigger;
   initiatedBy?: PayoutStaff | string | null;
+  bankReference?: string;
+  note?: string;
   failureReason?: string;
   gatewayResponse?: unknown;
   history?: RiderPayoutEvent[];
@@ -1002,6 +1019,12 @@ export interface VendorPayoutSettings {
   vendorPayoutsEnabled: boolean;
   vendorPayoutHourLagos: number;
   vendorPayoutMinAmount: number;
+}
+
+export interface BusinessPayoutSettings {
+  businessPayoutsEnabled: boolean;
+  businessPayoutHourLagos: number;
+  businessPayoutMinAmount: number;
 }
 
 export interface PayoutSchedule {
@@ -1311,4 +1334,38 @@ export interface AdminBusinessPayout {
   bank: { bankName?: string; last4?: string };
   status: 'pending' | 'success' | 'failed' | 'reversed';
   createdAt: string;
+}
+
+export type BusinessPayoutStatus = AdminBusinessPayout['status'];
+
+/** A business settlement as staff see it. Amounts are in kobo. */
+export interface AdminBusinessPayoutRecord {
+  _id: string;
+  business?: { _id: string; name: string; status: 'active' | 'suspended'; pickupPhone?: string } | null;
+  reference: string;
+  amountKobo: number;
+  deliveryCount: number;
+  bankSnapshot?: RiderPayoutBankAccount;
+  status: BusinessPayoutStatus;
+  transferCode?: string;
+  failureReason?: string;
+  runKey: string;
+  run?: string | PayoutRunRef | null;
+  trigger?: RiderPayoutTrigger;
+  initiatedBy?: PayoutStaff | string | null;
+  bankReference?: string;
+  note?: string;
+  paidAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  deliveries?: AdminBusinessDelivery[];
+}
+
+/** Run amounts are in naira, like rider and vendor runs. */
+export interface AdminBusinessPayoutRun extends Omit<AdminPayoutRun, 'skipped'> {
+  skipped?: {
+    business?: { _id: string; name: string; status?: string } | null;
+    balance: number;
+    reason: string;
+  }[];
 }

@@ -1,4 +1,9 @@
-import type { RiderPayoutBankAccount, RiderPayoutStatus, RiderPayoutTrigger } from '@/lib/types';
+import type {
+  BusinessPayoutStatus,
+  RiderPayoutBankAccount,
+  RiderPayoutStatus,
+  RiderPayoutTrigger,
+} from '@/lib/types';
 
 const STATUS_LABELS: Record<RiderPayoutStatus, string> = {
   processing: 'Processing',
@@ -21,6 +26,8 @@ const TRIGGER_LABELS: Record<RiderPayoutTrigger, string> = {
   'manual-run': 'Manual run',
   'manual-rider': 'Paid by staff',
   'manual-vendor': 'Paid by staff',
+  'manual-business': 'Paid by staff',
+  offline: 'Bank transfer',
 };
 
 export const payoutStatusLabel = (status: string) =>
@@ -54,3 +61,16 @@ export const vendorName = (vendor?: { businessName?: string; name?: string } | n
 
 export const percent = (value?: number | null) =>
   `${(value ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`;
+
+const BUSINESS_STATUS: Record<BusinessPayoutStatus, { label: string; variant: 'positive' | 'info' | 'destructive' }> = {
+  pending: { label: 'In flight', variant: 'info' },
+  success: { label: 'Paid', variant: 'positive' },
+  failed: { label: 'Failed', variant: 'destructive' },
+  reversed: { label: 'Reversed', variant: 'destructive' },
+};
+
+export const businessPayoutStatusLabel = (status: string) =>
+  BUSINESS_STATUS[status as BusinessPayoutStatus]?.label ?? status;
+
+export const businessPayoutStatusVariant = (status: string) =>
+  BUSINESS_STATUS[status as BusinessPayoutStatus]?.variant ?? 'secondary';

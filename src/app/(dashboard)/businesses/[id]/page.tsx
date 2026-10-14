@@ -14,6 +14,9 @@ import { AddMemberDialog } from '../_components/add-member-dialog';
 import { FeeModeSelect } from '../_components/fee-mode-select';
 import { ResendInviteButton } from '../_components/resend-invite-button';
 import { setBusinessSuspended } from '../actions';
+import { PayoutActionButton } from '../../payouts/_components/payout-action-button';
+import { payBusinessNow, recordBusinessBankPayout } from '../../business-payouts/actions';
+import { RecordBankPayoutDialog } from '../../payouts/_components/record-bank-payout-dialog';
 
 const STATUS: Record<AdminBusinessDelivery['status'], { label: string; variant: 'positive' | 'warning' | 'info' | 'destructive' | 'secondary' }> = {
   awaiting_rider: { label: 'Awaiting rider', variant: 'warning' },
@@ -40,6 +43,7 @@ export default async function BusinessDetailPage({ params }: { params: Promise<{
   const session = await getSession();
   const canUpdate = !!session && hasPermission(session.profile, PermissionModule.BUSINESSES, PermissionAction.UPDATE);
   const canCreate = !!session && hasPermission(session.profile, PermissionModule.BUSINESSES, PermissionAction.CREATE);
+  const canPay = !!session && hasPermission(session.profile, PermissionModule.PAYMENTS, PermissionAction.UPDATE);
 
   let business: AdminBusinessDetail;
   let deliveries: AdminBusinessDelivery[] = [];
@@ -81,6 +85,27 @@ export default async function BusinessDetailPage({ params }: { params: Promise<{
           <div className="mt-1 text-[13px] text-muted-foreground">
             From {business.wallet.deliveries} deliveries · next payout {formatDate(business.wallet.nextPayoutAt)}
           </div>
+          {canPay && business.wallet.balanceKobo > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <RecordBankPayoutDialog
+                payee={business.name}
+                owed={business.wallet.balanceKobo / 100}
+                fixedAmount
+                action={recordBusinessBankPayout.bind(null, business.id)}
+              />
+              {business.payoutAccount && (
+                <PayoutActionButton
+                  label="Pay now"
+                  variant="outline"
+                  title={`Pay ${business.name} now?`}
+                  description={`Everything in the wallet (${formatNaira(business.wallet.balanceKobo)}), including today's deliveries, is sent by Paystack transfer to ${business.payoutAccount.bankName} ••${business.payoutAccount.last4}, without waiting for the daily run.`}
+                  confirmLabel="Send payout"
+                  successMessage="Payout sent to Paystack"
+                  action={payBusinessNow.bind(null, business.id)}
+                />
+              )}
+            </div>
+          )}
         </div>
         <div className={card}>
           <div className="text-[13px] font-medium text-muted-foreground">Payout account</div>
@@ -188,7 +213,12 @@ export default async function BusinessDetailPage({ params }: { params: Promise<{
       </div>
 
       <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="px-5 py-4 text-[15px] font-semibold">Payouts</div>
+        <div className="flex items-center justify-between px-5 py-4">
+          <div className="text-[15px] font-semibold">Payouts</div>
+          <Link href={`/business-payouts?business=${business.id}`} className="text-[13px] font-semibold text-primary hover:underline">
+            All payouts →
+          </Link>
+        </div>
         <Table>
           <TableHeader>
             <TableRow>

@@ -161,6 +161,13 @@ export const NAV_ITEMS: NavItem[] = [
     category: 'Finance',
   },
   {
+    label: 'Business Payouts',
+    href: '/business-payouts',
+    module: PermissionModule.PAYMENTS,
+    icon: 'M3 21h18 M5 21V7l7-4 7 4v14 M12 9v8 M14.5 10.5h-3.25a1.25 1.25 0 0 0 0 2.5h1.5a1.25 1.25 0 0 1 0 2.5H9.5',
+    category: 'Finance',
+  },
+  {
     label: 'Bulk Receivables',
     href: '/bulk-receivables',
     module: PermissionModule.PAYMENTS,

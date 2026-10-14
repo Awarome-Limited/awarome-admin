@@ -134,6 +134,13 @@ export default async function PayoutDetailPage({
             <CardContent className="flex flex-col gap-3 text-sm">
               <DetailRow label="Amount" value={<span className="font-semibold tabular-nums">{naira(payout.amount)}</span>} />
               <DetailRow label="Reference" value={<span className="font-mono text-xs">{payout.reference}</span>} />
+              {payout.trigger === 'offline' && (
+                <>
+                  <DetailRow label="Paid from" value="Awarome's bank account" />
+                  <DetailRow label="Bank reference" value={payout.bankReference ? <span className="font-mono text-xs">{payout.bankReference}</span> : '—'} />
+                  <DetailRow label="Note" value={payout.note || '—'} />
+                </>
+              )}
               <DetailRow label="Paystack transfer code" value={payout.transferCode ? <span className="font-mono text-xs">{payout.transferCode}</span> : '—'} />
               <DetailRow label="Paystack transfer ID" value={payout.paystackTransferId ?? '—'} />
               <DetailRow label="Recipient code" value={payout.recipientCode ? <span className="font-mono text-xs">{payout.recipientCode}</span> : '—'} />

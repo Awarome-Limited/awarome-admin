@@ -30,7 +30,8 @@ import { riderPosition } from '@/lib/rider-position';
 import type { RiderPayoutSummary } from '@/lib/types';
 import { getSession } from '@/lib/session';
 import { hasPermission, PermissionAction, PermissionModule } from '@/lib/permissions';
-import { payRiderNow } from '../../payouts/actions';
+import { payRiderNow, recordRiderBankPayout } from '../../payouts/actions';
+import { RecordBankPayoutDialog } from '../../payouts/_components/record-bank-payout-dialog';
 import { PayoutActionButton } from '../../payouts/_components/payout-action-button';
 import { naira, payoutStatusLabel, payoutStatusVariant } from '../../payouts/payout-format';
 import type { RiderCollectionAccount } from '@/lib/types';
@@ -162,6 +163,13 @@ export default async function RiderDetailPage({
             </CardTitle>
             <div className="flex flex-wrap items-center gap-2">
             {canPay && <AdjustBalanceDialog riderId={rider._id} owed={payoutSummary.owed ?? 0} />}
+            {canPay && !payoutSummary.inFlight && payoutSummary.balance > 0 && (
+              <RecordBankPayoutDialog
+                payee="this courier"
+                owed={payoutSummary.balance}
+                action={recordRiderBankPayout.bind(null, rider._id)}
+              />
+            )}
             {canPay && !payoutSummary.inFlight && payoutSummary.balance >= 100 && payoutSummary.bankAccount?.verified && (
               <PayoutActionButton
                 label={`Pay ${naira(payoutSummary.balance)} now`}

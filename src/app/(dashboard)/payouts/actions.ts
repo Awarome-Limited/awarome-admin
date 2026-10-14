@@ -3,7 +3,12 @@
 import { revalidatePath } from 'next/cache';
 import { authedFetch, type SingleResponse } from '@/lib/api-client';
 import { runAction, type ActionResult } from '@/lib/action-result';
-import type { AdminRiderPayout, PayoutSchedule, PayoutSettings } from '@/lib/types';
+import type {
+  AdminRiderPayout,
+  OfflinePayoutPayload,
+  PayoutSchedule,
+  PayoutSettings,
+} from '@/lib/types';
 
 function revalidatePayouts(riderId?: string) {
   revalidatePath('/payouts', 'layout');
@@ -76,6 +81,18 @@ export async function adjustRiderBalance(
       method: 'POST',
       body: payload,
     })
+  );
+  if (result.ok) revalidatePayouts(riderId);
+  return result;
+}
+
+/** Money already sent from Awarome's bank account; nothing is transferred. */
+export async function recordRiderBankPayout(
+  riderId: string,
+  payload: OfflinePayoutPayload
+): Promise<ActionResult> {
+  const result = await runAction(() =>
+    authedFetch(`/admins/payouts/riders/${riderId}/offline`, { method: 'POST', body: payload })
   );
   if (result.ok) revalidatePayouts(riderId);
   return result;
