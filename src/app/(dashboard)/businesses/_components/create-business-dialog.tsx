@@ -90,7 +90,7 @@ export function CreateBusinessDialog() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2 sm:col-span-2">
               <Label htmlFor="name">Business name</Label>
-              <Input id="name" name="name" required placeholder="As registered — payouts must match it" />
+              <Input id="name" name="name" required placeholder="As the business is known" />
             </div>
             <div className="flex flex-col gap-2 sm:col-span-2">
               <Label>Warehouse (pickup) address</Label>
