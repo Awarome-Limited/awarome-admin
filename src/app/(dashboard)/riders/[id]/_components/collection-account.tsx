@@ -17,10 +17,11 @@ const STATUS: Record<RiderCollectionAccount['status'], { text: string; variant: 
 };
 
 /**
- * The rider's own dedicated account, on Wema. Anything transferred into it
- * funds their rider wallet — usually to clear commission owed on
- * pay-on-delivery runs. Customers' accounts are on Titan, so a rider who is
- * also a customer has one of each.
+ * The rider's own dedicated account: it funds their rider wallet, and
+ * receivers pay into it on Awarome Business drops. It is opened under a
+ * rider-only Paystack email, so it is separate from any customer account the
+ * rider has, even on the same bank. Older accounts keep taking payments for a
+ * grace period after a move.
  */
 export function RiderCollectionAccountCard({
   riderId,
@@ -62,9 +63,10 @@ export function RiderCollectionAccountCard({
   }
 
   const status = STATUS[account.status];
-  // From before riders had their own bank: the shared customer account, or an
-  // old rider account elsewhere. Retrying asks Paystack for a Wema one.
-  const legacy = account.status !== 'deactivated' && (!!account.customer || account.bankSlug !== 'wema-bank');
+  // Not the current kind of rider account: the shared customer account from
+  // before riders had their own, or one on the old bank. Retrying moves them.
+  const legacy = account.status !== 'deactivated' && (!!account.customer || account.current === false);
+  const stillOpen = (account.previousAccounts ?? []).filter((p) => !p.closedAt);
   return (
     <div className="flex flex-col gap-2 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -89,20 +91,27 @@ export function RiderCollectionAccountCard({
               <Link href={`/users/${account.customer}`} className="font-semibold text-primary hover:underline">
                 customer account
               </Link>
-              , from before riders had their own. Move them to a Wema wallet account so top-ups reach
+              , from before riders had their own. Move them to their own rider account so top-ups reach
               their rider wallet.
             </>
           ) : (
-            'This account is from before riders moved to Wema. Move them to a Wema wallet account.'
+            'This account is from before the move to the current rider bank. Moving them keeps this one working for 30 days.'
           )}
         </span>
       )}
+      {stillOpen.map((p) => (
+        <span key={p.accountNumber} className="text-[12.5px] text-muted-foreground">
+          Previous account {p.bank ? `${p.bank} ` : ''}
+          <span className="font-mono">{p.accountNumber}</span> still takes payments until{' '}
+          {new Date(p.closesAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}.
+        </span>
+      ))}
       {account.status === 'failed' && account.failureReason && (
         <span className="text-[13px] text-destructive">{account.failureReason}</span>
       )}
       {canUpdate && (account.status === 'failed' || legacy) && (
         <Button size="sm" variant="outline" className="w-fit" onClick={retry} disabled={isPending}>
-          {legacy ? 'Move to Wema account' : 'Retry'}
+          {legacy ? 'Move to new rider account' : 'Retry'}
         </Button>
       )}
     </div>

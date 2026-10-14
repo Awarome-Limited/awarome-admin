@@ -1201,8 +1201,17 @@ export interface RiderCollectionAccount {
   accountNumber?: string;
   accountName?: string;
   bank?: string;
-  /** Paystack bank slug. Riders belong on `wema-bank`; anything else is left over. */
+  /** Paystack bank slug of the account. */
   bankSlug?: string;
+  /** On the current rider bank, under the rider-only Paystack email. False means it should be moved. */
+  current?: boolean;
+  /** Accounts the rider used before; each keeps taking payments until closesAt. */
+  previousAccounts?: {
+    accountNumber: string;
+    bank?: string;
+    closesAt: string;
+    closedAt?: string;
+  }[];
   /** Only on records from before riders had their own bank, when a rider who
    *  was also a customer shared that customer's account. */
   customer?: string;
