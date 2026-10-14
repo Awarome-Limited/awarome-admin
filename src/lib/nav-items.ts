@@ -66,6 +66,13 @@ export const NAV_ITEMS: NavItem[] = [
     category: 'Dispatch & Fleet',
   },
   {
+    label: 'Support Tickets',
+    href: '/support-tickets',
+    module: PermissionModule.ORDERS,
+    icon: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z M12 7v4 M12 14h.01',
+    category: 'Dispatch & Fleet',
+  },
+  {
     label: 'Cancellations',
     href: '/cancellations',
     module: PermissionModule.ORDERS,
