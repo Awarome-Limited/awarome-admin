@@ -19,18 +19,25 @@ const newSession = () =>
  * `query` seeds the search box, which is how pasted WhatsApp addresses arrive:
  * the text is there, and ops only has to pick the right match.
  */
-export function AddressInput({
+type Result<T> = { ok: true; data: T } | { ok: false; error: string };
+
+export function AddressInput<A extends DeliveryAddress = DeliveryAddress>({
   value,
   query: initialQuery,
   onChange,
   placeholder = 'Search for an address…',
   compact = false,
+  search: searchFn = searchPlaces,
+  resolve: resolveFn = getPlace as unknown as (placeId: string, session: string) => Promise<Result<A>>,
 }: {
-  value: DeliveryAddress | null;
+  value: A | null;
   query?: string;
-  onChange: (address: DeliveryAddress | null, query: string) => void;
+  onChange: (address: A | null, query: string) => void;
   placeholder?: string;
   compact?: boolean;
+  // Defaults to the bulk-delivery endpoints; other pages pass their own.
+  search?: (query: string, session: string) => Promise<Result<PlaceSuggestion[]>>;
+  resolve?: (placeId: string, session: string) => Promise<Result<A>>;
 }) {
   const [query, setQuery] = useState(value?.address ?? initialQuery ?? '');
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
@@ -58,7 +65,7 @@ export function AddressInput({
     }
     debounceRef.current = setTimeout(() => {
       startSearch(async () => {
-        const result = await searchPlaces(text, sessionRef.current);
+        const result = await searchFn(text, sessionRef.current);
         if (!result.ok) {
           toast.error(result.error);
           return;
@@ -79,7 +86,7 @@ export function AddressInput({
     setOpen(false);
     setSuggestions([]);
     startResolve(async () => {
-      const result = await getPlace(place.placeId, sessionRef.current);
+      const result = await resolveFn(place.placeId, sessionRef.current);
       // A details call closes Google's billing session; start a fresh one.
       sessionRef.current = newSession();
       if (!result.ok) {

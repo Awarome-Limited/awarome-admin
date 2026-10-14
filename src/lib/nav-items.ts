@@ -116,6 +116,13 @@ export const NAV_ITEMS: NavItem[] = [
     icon: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M19 8v6 M22 11h-6',
     category: 'Customers & Partners',
   },
+  {
+    label: 'Businesses',
+    href: '/businesses',
+    module: PermissionModule.BUSINESSES,
+    icon: 'M3 21h18 M5 21V7l7-4 7 4v14 M9 21v-6h6v6 M9 10h.01 M15 10h.01',
+    category: 'Customers & Partners',
+  },
 
   // Finance
   {

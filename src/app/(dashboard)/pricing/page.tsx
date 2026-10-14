@@ -52,6 +52,9 @@ export default async function PricingPage() {
       batchFlatFeeBike: num('batchFlatFeeBike'),
       batchFlatFeeCar: num('batchFlatFeeCar'),
       batchFlatFeeTruck: num('batchFlatFeeTruck'),
+      paystackCollectionPercent: num('paystackCollectionPercent'),
+      // Entered in naira, stored in kobo.
+      paystackCollectionCapKobo: Math.round(num('paystackCollectionCapNaira') * 100),
     });
   }
 
@@ -66,6 +69,14 @@ export default async function PricingPage() {
         { label: 'Price per km — truck', name: 'pricePerKmTruck', unit: '₦', value: config.pricePerKmTruck },
         { label: 'Minimum delivery charge', name: 'minimumDeliveryCharge', unit: '₦', value: config.minimumDeliveryCharge },
         { label: 'Service charge cap', name: 'serviceChargeCap', unit: '₦', value: config.serviceChargeCap },
+      ],
+    },
+    {
+      title: 'Payment collection (Paystack)',
+      sub: "Awarome Business only. Paystack's fee for receiving the receiver's transfer, passed straight to the business — it is not Awarome revenue. New bookings use these values; existing deliveries keep the rate they were booked at.",
+      fields: [
+        { label: 'Collection charge', name: 'paystackCollectionPercent', unit: '%', value: config.paystackCollectionPercent ?? 1 },
+        { label: 'Charge cap', name: 'paystackCollectionCapNaira', unit: '₦', value: (config.paystackCollectionCapKobo ?? 30000) / 100 },
       ],
     },
     {
@@ -98,7 +109,7 @@ export default async function PricingPage() {
           <Fragment key={group.title}>
             {/* The live batch model sits directly under the base rates it
                 discounts, and above the legacy bands it replaced. */}
-            {index === 1 && <BatchPricingModelSection config={config} />}
+            {index === 2 && <BatchPricingModelSection config={config} />}
             <div className="rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]">
               <div className="text-[15px] font-semibold text-foreground">{group.title}</div>
               <div className="mb-[18px] mt-1 text-[13px] text-muted-foreground">{group.sub}</div>

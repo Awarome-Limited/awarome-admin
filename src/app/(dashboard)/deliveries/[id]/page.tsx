@@ -110,6 +110,28 @@ export default async function DeliveryDetailPage({
       label: 'Paid',
       value: delivery.isPaid ? 'Yes' : 'No',
     },
+    // Awarome Business: what the receiver pays, what comes off, what the
+    // business is owed. The Paystack fee shows quoted vs actual for reconciliation.
+    ...(delivery.businessCod
+      ? (() => {
+          const cod = delivery.businessCod;
+          const naira = (kobo?: number) => (kobo == null ? '—' : `₦${(kobo / 100).toLocaleString()}`);
+          return [
+            { label: 'Business', value: cod.batchRef ? `Batch ${cod.batchRef}` : 'Single booking' },
+            { label: 'Fee mode', value: cod.feeMode === 'added' ? 'Added on top' : 'Included' },
+            { label: 'Receiver pays', value: naira(cod.collectKobo) },
+            {
+              label: 'Paystack fee',
+              value:
+                cod.collectionFeeActualKobo != null && cod.collectionFeeActualKobo !== cod.collectionFeeKobo
+                  ? `${naira(cod.collectionFeeKobo)} quoted · ${naira(cod.collectionFeeActualKobo)} actual`
+                  : naira(cod.collectionFeeKobo),
+            },
+            { label: 'Business net', value: naira(cod.netKobo) },
+            { label: 'Settlement', value: cod.walletStatus.replace('_', ' ') },
+          ];
+        })()
+      : []),
   ];
 
   return (

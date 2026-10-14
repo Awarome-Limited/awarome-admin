@@ -215,6 +215,19 @@ export interface AdminOrder {
 export interface AdminDelivery {
   _id: string;
   deliveryId?: string;
+  /** Set on Awarome Business runs. */
+  business?: string;
+  businessCod?: {
+    amountKobo: number;
+    feeMode: 'inclusive' | 'added';
+    deliveryFeeKobo: number;
+    collectKobo: number;
+    collectionFeeKobo: number;
+    collectionFeeActualKobo?: number;
+    netKobo: number;
+    walletStatus: string;
+    batchRef?: string;
+  };
   user?: { _id: string; firstName?: string; lastName?: string; email?: string; phone?: string } | string;
   rider?: { _id: string; firstName?: string; lastName?: string; phone?: string } | string;
   requestType?: string;
@@ -273,6 +286,10 @@ export interface PricingConfig {
   batchFlatFeeBike: number;
   batchFlatFeeCar: number;
   batchFlatFeeTruck: number;
+  // Awarome Business: Paystack's charge for receiving a pay-on-delivery
+  // transfer, passed through to the business. Percent, capped (kobo).
+  paystackCollectionPercent: number;
+  paystackCollectionCapKobo: number;
 }
 
 export type VehicleType = 'bike' | 'car' | 'truck';
@@ -1203,4 +1220,86 @@ export interface RiderCollectionCredit {
   senderName?: string;
   senderBank?: string;
   at: string;
+}
+
+// ─── Awarome Business ─────────────────────────────────────────────────────
+
+export type BusinessRole = 'owner' | 'admin' | 'dispatcher' | 'finance';
+export type BusinessFeeMode = 'inclusive' | 'added';
+
+export interface BusinessAddress {
+  text: string;
+  lat: number;
+  lng: number;
+  placeId: string;
+  state?: string;
+  lga?: string;
+  district?: string;
+  country?: string;
+}
+
+export interface AdminBusinessMember {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: BusinessRole;
+  status: 'active' | 'invited';
+  lastLoginAt: string | null;
+}
+
+export interface AdminBusiness {
+  id: string;
+  name: string;
+  status: 'active' | 'suspended';
+  pickupAddress: BusinessAddress;
+  pickupPhone: string;
+  defaultFeeMode: BusinessFeeMode;
+  payoutAccount: {
+    bankName: string;
+    accountName: string;
+    accountNumber?: string;
+    last4: string;
+    verifiedAt: string;
+  } | null;
+  createdAt: string;
+  owner?: AdminBusinessMember | null;
+  deliveries?: number;
+}
+
+export interface AdminBusinessDetail extends AdminBusiness {
+  members: AdminBusinessMember[];
+  wallet: {
+    balanceKobo: number;
+    deliveries: number;
+    nextPayoutAt: string;
+    bank: { bankName: string; last4: string } | null;
+  };
+}
+
+export interface AdminBusinessDelivery {
+  id: string;
+  reference: string;
+  batchRef: string | null;
+  status: 'awaiting_rider' | 'assigned' | 'picked_up' | 'in_transit' | 'delivered' | 'failed' | 'cancelled';
+  receiver: { name: string; phone: string };
+  dropoff: { text: string };
+  money: {
+    collectKobo: number;
+    deliveryFeeKobo: number;
+    collectionFeeKobo: number;
+    netKobo: number;
+    walletStatus: string;
+  };
+  createdAt: string;
+}
+
+export interface AdminBusinessPayout {
+  id: string;
+  reference: string;
+  amountKobo: number;
+  deliveryCount: number;
+  bank: { bankName?: string; last4?: string };
+  status: 'pending' | 'success' | 'failed' | 'reversed';
+  createdAt: string;
 }
