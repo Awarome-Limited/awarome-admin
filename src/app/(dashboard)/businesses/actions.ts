@@ -6,7 +6,7 @@ import { ApiError, authedFetch, SingleResponse } from '@/lib/api-client';
 import { runAction, type ActionResult } from '@/lib/action-result';
 import type {
   BusinessAddress,
-  BusinessFeeMode,
+  BusinessBatchRouting, BusinessFeeMode,
   BusinessRole,
   DeliveryAddress,
 } from '@/lib/types';
@@ -107,6 +107,7 @@ export async function updateBusiness(
     pickupPhone?: string;
     pickupAddress?: PickedAddress;
     defaultFeeMode?: BusinessFeeMode;
+    batchRouting?: BusinessBatchRouting;
   }
 ): Promise<ActionResult> {
   return runAction(async () => {

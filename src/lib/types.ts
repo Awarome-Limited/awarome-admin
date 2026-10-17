@@ -328,6 +328,38 @@ export interface DeliveryZoneConfig {
   zones: DeliveryZone[];
 }
 
+export interface ServiceAreaBounds {
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
+}
+
+/** A state we serve, matched on the geocoder's state name or an alias. */
+export interface ServiceAreaState {
+  name: string;
+  aliases: string[];
+  // Keeps an address elsewhere in the country from passing on the name alone.
+  bounds?: ServiceAreaBounds | null;
+  active: boolean;
+}
+
+/** A place outside the served states that we still serve, e.g. Mararaba. */
+export interface ServiceAreaPlace {
+  name: string;
+  keywords: string[];
+  lat: number;
+  lng: number;
+  radiusKm: number;
+  active: boolean;
+}
+
+export interface ServiceAreaConfig {
+  states: ServiceAreaState[];
+  extraPlaces: ServiceAreaPlace[];
+  outsideMessage: string;
+}
+
 // 0 = Sunday … 6 = Saturday. `opensAt`/`closesAt` are 'HH:MM' West Africa Time;
 // '23:59' means end-of-day, and a close at or before the open is an overnight
 // range that runs into the next day.
@@ -1258,6 +1290,8 @@ export interface RiderCollectionCredit {
 
 export type BusinessRole = 'owner' | 'admin' | 'dispatcher' | 'finance';
 export type BusinessFeeMode = 'inclusive' | 'added';
+/** Whether a batch's drops must all head the same way. */
+export type BusinessBatchRouting = 'same_route' | 'any_route';
 
 export interface BusinessAddress {
   text: string;
@@ -1287,6 +1321,7 @@ export interface AdminBusiness {
   pickupAddress: BusinessAddress;
   pickupPhone: string;
   defaultFeeMode: BusinessFeeMode;
+  batchRouting: BusinessBatchRouting;
   payoutAccount: {
     bankName: string;
     accountName: string;

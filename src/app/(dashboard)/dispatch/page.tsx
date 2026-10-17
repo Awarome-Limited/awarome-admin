@@ -19,6 +19,7 @@ interface DispatchConfig {
   vendorAcceptTimeoutMs: number;
   riderCommissionPercent: number;
   riderDebtThreshold: number;
+  businessBatchMaxDrops: number;
 }
 
 export default async function DispatchPage() {
@@ -51,6 +52,7 @@ export default async function DispatchPage() {
       dropoffRadiusKm: num('dropoffRadiusKm'),
       pickupRadiusKm: num('pickupRadiusKm'),
       selectionCutoffMinutes: num('selectionCutoffMinutes'),
+      businessBatchMaxDrops: num('businessBatchMaxDrops'),
       batchMaxWaitMs: num('batchMaxWaitMinutes') * 60 * 1000,
       batchMaxSize: {
         bike: num('batchMaxSizeBike'),
@@ -129,6 +131,13 @@ export default async function DispatchPage() {
         { label: 'Gig-pool target size', name: 'batchTargetSize', unit: '#', value: config.batchTargetSize },
         { label: 'Dropoff radius', name: 'dropoffRadiusKm', unit: 'km', value: config.dropoffRadiusKm },
         { label: 'Pickup radius', name: 'pickupRadiusKm', unit: 'km', value: config.pickupRadiusKm },
+      ],
+    },
+    {
+      title: 'Awarome Business batches',
+      sub: 'A business batch booking goes out as one trip, broadcast to riders. This caps how many drops that trip can carry (at least 3). For same-route businesses, every drop must also be within the dropoff radius above of one another.',
+      fields: [
+        { label: 'Max drops per batch', name: 'businessBatchMaxDrops', unit: '#', value: config.businessBatchMaxDrops ?? 8 },
       ],
     },
     {

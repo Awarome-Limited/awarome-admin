@@ -7,7 +7,7 @@ import {
   type DateRange,
   type RangePresetKey,
   lagosToday,
-} from '../_lib/ranges';
+} from './ranges';
 
 const control =
   'h-[34px] rounded-[9px] border border-border-strong bg-card px-3 text-[13px] text-foreground-secondary outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50';
@@ -22,7 +22,7 @@ export function RangePicker({ preset, range }: { preset: RangePresetKey; range: 
   function choose(next: RangePresetKey) {
     setSelected(next);
     // Custom waits for both dates and Apply; every other preset applies at once.
-    if (next !== 'custom') router.push(`/analytics?range=${next}`);
+    if (next !== 'custom') router.push(`/?range=${next}`);
   }
 
   const canApply = from && to && from <= to && to <= today;
@@ -47,7 +47,7 @@ export function RangePicker({ preset, range }: { preset: RangePresetKey; range: 
           className="flex flex-wrap items-center gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            if (canApply) router.push(`/analytics?range=custom&from=${from}&to=${to}`);
+            if (canApply) router.push(`/?range=custom&from=${from}&to=${to}`);
           }}
         >
           <input

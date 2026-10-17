@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { formatDate, formatNaira } from '@/lib/format';
 import { AddMemberDialog } from '../_components/add-member-dialog';
 import { FeeModeSelect } from '../_components/fee-mode-select';
+import { BatchRoutingSelect } from '../_components/batch-routing-select';
 import { ResendInviteButton } from '../_components/resend-invite-button';
 import { setBusinessSuspended } from '../actions';
 import { PayoutActionButton } from '../../payouts/_components/payout-action-button';
@@ -126,6 +127,18 @@ export default async function BusinessDetailPage({ params }: { params: Promise<{
             <DetailRow
               label="Delivery fee default"
               value={canUpdate ? <FeeModeSelect businessId={business.id} value={business.defaultFeeMode} /> : business.defaultFeeMode}
+            />
+            <DetailRow
+              label="Batch deliveries"
+              value={
+                canUpdate ? (
+                  <BatchRoutingSelect businessId={business.id} value={business.batchRouting ?? 'same_route'} />
+                ) : (business.batchRouting ?? 'same_route') === 'same_route' ? (
+                  'Same route only'
+                ) : (
+                  'Any route'
+                )
+              }
             />
             <DetailRow label="Onboarded" value={formatDate(business.createdAt)} />
           </div>
