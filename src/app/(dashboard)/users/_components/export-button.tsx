@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { downloadCsv, toCsv } from '@/lib/csv';
 import { exportUsers } from '../actions';
+import { Button } from '@/components/ui/button';
 
 export function ExportButton() {
   const [isPending, startTransition] = useTransition();
@@ -45,11 +46,7 @@ export function ExportButton() {
   }
 
   return (
-    <button
-      onClick={handleExport}
-      disabled={isPending}
-      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-[7px] text-[13px] font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-    >
+    <Button variant="outline" onClick={handleExport} loading={isPending}>
       {isPending ? (
         'Exporting…'
       ) : (
@@ -62,6 +59,6 @@ export function ExportButton() {
           Export CSV
         </>
       )}
-    </button>
+    </Button>
   );
 }

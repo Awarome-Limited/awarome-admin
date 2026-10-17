@@ -11,6 +11,7 @@ import { ROLE_LABELS } from '@/lib/staff-roles';
 import { cn } from '@/lib/utils';
 import { AwaromeMark } from '@/components/awarome-mark';
 import { CommandPalette } from './command-palette';
+import { LinkPending } from '@/components/link-pending';
 
 function NavIcon({ d }: { d: string }) {
   return (
@@ -140,6 +141,7 @@ export function Sidebar({
                           <span className="absolute left-6 size-1.5 rounded-full bg-[#FFD500]" />
                         )}
                         <span>{item.label}</span>
+                        <LinkPending className={cn('text-[#FFD500]', item.queue ? 'right-10' : 'right-3')} />
                         {item.queue && (
                           <Suspense fallback={null}>
                             <QueueBadge counts={queueCounts} queue={item.queue} />

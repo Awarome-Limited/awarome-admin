@@ -1,7 +1,9 @@
 'use client';
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
+import { Spinner } from '@/components/submit-button';
+import { startNavigationProgress } from '@/components/navigation-progress';
 
 export function SearchBox({ placeholder = 'Search…' }: { placeholder?: string }) {
   const router = useRouter();
@@ -15,6 +17,8 @@ export function SearchBox({ placeholder = 'Search…' }: { placeholder?: string 
   // value used to remount it every time the debounce fired, which dropped focus
   // (and any characters typed since) in the middle of a search.
   const [value, setValue] = useState(urlValue);
+  // Pending from the moment the query is sent until the new results render.
+  const [isPending, startTransition] = useTransition();
 
   // Re-sync only when the URL changed from somewhere else — a filter pill, a
   // back/forward navigation — not from our own debounced push.
@@ -46,12 +50,15 @@ export function SearchBox({ placeholder = 'Search…' }: { placeholder?: string 
       const query = params.toString();
       // replace, not push: otherwise every keystroke becomes a history entry
       // and Back has to be pressed once per character to leave the page.
-      router.replace(query ? `${pathname}?${query}` : pathname);
+      startNavigationProgress();
+      startTransition(() => {
+        router.replace(query ? `${pathname}?${query}` : pathname);
+      });
     }, 400);
   };
 
   return (
-    <div className="relative w-full sm:w-auto">
+    <div className="relative w-full sm:w-auto" aria-busy={isPending}>
       <svg
         className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
         width="14"
@@ -71,8 +78,12 @@ export function SearchBox({ placeholder = 'Search…' }: { placeholder?: string 
         value={value}
         onChange={(event) => handleChange(event.target.value)}
         placeholder={placeholder}
+        aria-label={placeholder}
         className="h-[38px] w-full rounded-full border border-border bg-background pl-9 pr-4 text-[13.5px] text-foreground outline-none sm:w-[300px] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
       />
+      {isPending && (
+        <Spinner className="pointer-events-none absolute top-1/2 right-3.5 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
+      )}
     </div>
   );
 }

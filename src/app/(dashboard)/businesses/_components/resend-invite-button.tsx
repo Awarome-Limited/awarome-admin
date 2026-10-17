@@ -8,7 +8,7 @@ import { resendBusinessInvite } from '../actions';
 export function ResendInviteButton({ businessId, memberId, email }: { businessId: string; memberId: string; email: string }) {
   const [isPending, startTransition] = useTransition();
   return (
-    <Button
+    <Button loading={isPending}
       size="sm"
       variant="ghost"
       disabled={isPending}

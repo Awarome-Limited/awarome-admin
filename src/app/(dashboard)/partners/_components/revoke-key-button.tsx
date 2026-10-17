@@ -51,7 +51,7 @@ export function RevokeKeyButton({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={revoke} disabled={isPending}>
+          <AlertDialogAction loading={isPending} onClick={revoke} disabled={isPending}>
             {isPending ? 'Revoking…' : 'Revoke key'}
           </AlertDialogAction>
         </AlertDialogFooter>

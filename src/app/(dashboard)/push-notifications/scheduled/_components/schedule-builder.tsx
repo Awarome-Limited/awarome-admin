@@ -43,6 +43,7 @@ import { cn } from '@/lib/utils';
 import { PushPreviewCard } from '../../_components/push-preview-card';
 import { createScheduledPushes } from '../actions';
 import { ScheduleRowEditor } from './schedule-row-editor';
+import { startNavigationProgress } from '@/components/navigation-progress';
 
 const pushes = (n: number) => `${n.toLocaleString()} push${n === 1 ? '' : 'es'}`;
 const sends = (n: number) => `${n.toLocaleString()} send${n === 1 ? '' : 's'}`;
@@ -253,6 +254,7 @@ export function ScheduleBuilder({
       if (result.ok) {
         scheduled.current = true;
         toast.success(`Scheduled ${pushes(result.created)}.`);
+        startNavigationProgress();
         router.push('/push-notifications/scheduled');
         return;
       }
@@ -497,14 +499,9 @@ export function ScheduleBuilder({
               Remove {invalidRows.length} with errors
             </Button>
           )}
-          <button
-            type="button"
-            onClick={requestSchedule}
-            disabled={isPending}
-            className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-primary px-5 py-[10px] text-[13.5px] font-semibold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
-          >
+          <Button type="button" onClick={requestSchedule} loading={isPending}>
             {isPending ? 'Scheduling…' : `Schedule ${sends(sendCount)}`}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -533,7 +530,7 @@ export function ScheduleBuilder({
           )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>Keep editing</AlertDialogCancel>
-            <Button onClick={schedule} disabled={isPending}>
+            <Button loading={isPending} onClick={schedule} disabled={isPending}>
               {isPending ? 'Scheduling…' : 'Schedule'}
             </Button>
           </AlertDialogFooter>

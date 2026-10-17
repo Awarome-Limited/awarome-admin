@@ -88,7 +88,7 @@ export function AddMemberDialog({ businessId, hasOwner }: { businessId: string; 
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>Cancel</Button>
-            <Button type="submit" disabled={isPending}>{isPending ? 'Sending…' : 'Send invite'}</Button>
+            <Button loading={isPending} type="submit" disabled={isPending}>{isPending ? 'Sending…' : 'Send invite'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -109,7 +109,7 @@ export function AddContactDialog({ partnerId }: { partnerId: string }) {
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button loading={isPending} type="submit" disabled={isPending}>
               {isPending ? 'Adding…' : 'Add contact'}
             </Button>
           </DialogFooter>

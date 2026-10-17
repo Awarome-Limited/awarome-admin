@@ -110,7 +110,7 @@ export function CreatePartnerDialog() {
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button loading={isPending} type="submit" disabled={isPending}>
               {isPending ? 'Creating…' : 'Add partner'}
             </Button>
           </DialogFooter>

@@ -23,6 +23,7 @@ import {
   searchBusinessPlaces,
   type PickedAddress,
 } from '../actions';
+import { startNavigationProgress } from '@/components/navigation-progress';
 
 /**
  * Onboards a logistics business: its warehouse (the pickup for every
@@ -68,6 +69,7 @@ export function CreateBusinessDialog() {
       }
       setOpen(false);
       setPickup(null);
+      startNavigationProgress();
       router.push(`/businesses/${result.id}`);
     });
   }
@@ -136,7 +138,7 @@ export function CreateBusinessDialog() {
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button loading={isPending} type="submit" disabled={isPending}>
               {isPending ? 'Creating…' : 'Create and invite owner'}
             </Button>
           </DialogFooter>

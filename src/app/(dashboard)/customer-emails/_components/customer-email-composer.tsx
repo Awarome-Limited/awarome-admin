@@ -22,6 +22,7 @@ import { PresetPicker } from './preset-picker';
 import { RecipientPicker } from './recipient-picker';
 import { EmailPreview } from './email-preview';
 import { SaveTemplateDialog } from './save-template-dialog';
+import { Spinner } from '@/components/ui/spinner';
 
 const MAX_BODY = 5000;
 
@@ -328,9 +329,13 @@ export function CustomerEmailComposer({
             type="button"
             onClick={handleSend}
             disabled={isPending}
+          aria-busy={isPending || undefined}
             className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-primary px-5 py-[11px] text-[13.5px] font-semibold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
           >
-            <svg
+            {isPending ? (
+              <Spinner />
+            ) : (
+              <svg
               width="15"
               height="15"
               viewBox="0 0 24 24"
@@ -343,6 +348,7 @@ export function CustomerEmailComposer({
               <path d="M4 4h16v16H4z" />
               <path d="M4 6l8 6 8-6" />
             </svg>
+            )}
             {isPending ? 'Sending…' : 'Send email'}
           </button>
         </div>

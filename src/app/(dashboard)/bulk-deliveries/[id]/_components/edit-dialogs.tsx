@@ -99,7 +99,7 @@ export function EditSenderDialog({
           <Button variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
             Cancel
           </Button>
-          <Button onClick={save} disabled={isPending || !name.trim() || !phone.trim()}>
+          <Button loading={isPending} onClick={save} disabled={isPending || !name.trim() || !phone.trim()}>
             {isPending ? 'Saving…' : 'Save'}
           </Button>
         </DialogFooter>
@@ -458,7 +458,7 @@ export function EditDropDialog({
           <Button variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
             Cancel
           </Button>
-          <Button
+          <Button loading={isPending}
             onClick={save}
             disabled={
               isPending ||

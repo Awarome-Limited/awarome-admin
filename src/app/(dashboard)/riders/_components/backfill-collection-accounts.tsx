@@ -9,7 +9,7 @@ import { backfillRiderCollectionAccounts } from '../actions';
 export function BackfillCollectionAccounts() {
   const [isPending, startTransition] = useTransition();
   return (
-    <Button
+    <Button loading={isPending}
       size="sm"
       variant="outline"
       disabled={isPending}

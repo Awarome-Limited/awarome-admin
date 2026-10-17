@@ -251,7 +251,7 @@ function AddCommissionDialog({ vendorId }: { vendorId: string }) {
           <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
             Cancel
           </Button>
-          <Button type="button" onClick={submit} disabled={isPending || !valid}>
+          <Button loading={isPending} type="button" onClick={submit} disabled={isPending || !valid}>
             {isPending ? 'Saving…' : 'Save agreement'}
           </Button>
         </DialogFooter>
@@ -311,7 +311,7 @@ function EndCommissionDialog({ vendorId, agreement }: { vendorId: string; agreem
           <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
             Cancel
           </Button>
-          <Button type="button" onClick={submit} disabled={isPending || !endDate}>
+          <Button loading={isPending} type="button" onClick={submit} disabled={isPending || !endDate}>
             {isPending ? 'Saving…' : 'Save end date'}
           </Button>
         </DialogFooter>

@@ -324,7 +324,7 @@ function SettleDialog({ bulkId, drops }: { bulkId: string; drops: BulkDeliveryDr
           <Button variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
             Cancel
           </Button>
-          <Button onClick={confirm} disabled={isPending}>
+          <Button loading={isPending} onClick={confirm} disabled={isPending}>
             {isPending ? 'Saving…' : `Mark ${naira(total)} paid`}
           </Button>
         </DialogFooter>

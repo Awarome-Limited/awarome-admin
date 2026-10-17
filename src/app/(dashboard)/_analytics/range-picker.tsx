@@ -10,6 +10,7 @@ import {
   type RangePresetKey,
   lagosToday,
 } from './ranges';
+import { startNavigationProgress } from '@/components/navigation-progress';
 
 /** The four ranges people reach for; everything else lives in the "More" menu. */
 const QUICK: RangePresetKey[] = ['today', 'last7', 'last30', 'thisMonth'];
@@ -27,7 +28,10 @@ export function RangePicker({ preset, range }: { preset: RangePresetKey; range: 
   function choose(next: RangePresetKey) {
     setSelected(next);
     // Custom waits for both dates and Apply; every other preset applies at once.
-    if (next !== 'custom') router.push(`/?range=${next}`);
+    if (next !== 'custom') {
+      startNavigationProgress();
+      router.push(`/?range=${next}`);
+    }
   }
 
   const canApply = from && to && from <= to && to <= today;
@@ -68,7 +72,10 @@ export function RangePicker({ preset, range }: { preset: RangePresetKey; range: 
           className="flex flex-wrap items-center gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            if (canApply) router.push(`/?range=custom&from=${from}&to=${to}`);
+            if (canApply) {
+              startNavigationProgress();
+              router.push(`/?range=custom&from=${from}&to=${to}`);
+            }
           }}
         >
           <input

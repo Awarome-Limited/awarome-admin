@@ -6,6 +6,7 @@ import { AdminAudienceList } from '@/lib/types';
 import { AUDIENCE_LABELS, MESSAGE_MAX as MAX_BODY } from '@/lib/scheduled-push';
 import type { BroadcastPushPayload, BroadcastResult } from '../actions';
 import { RadioCards } from '@/components/radio-cards';
+import { Spinner } from '@/components/ui/spinner';
 
 const AUDIENCE_OPTIONS: BroadcastPushPayload['audience'][] = [
   'everyone',
@@ -198,9 +199,13 @@ export function ComposeForm({
         <button
           type="submit"
           disabled={isPending}
+          aria-busy={isPending || undefined}
           className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-[14px] font-medium whitespace-nowrap text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
         >
-          <svg
+          {isPending ? (
+            <Spinner />
+          ) : (
+            <svg
             width="15"
             height="15"
             viewBox="0 0 24 24"
@@ -213,6 +218,7 @@ export function ComposeForm({
             <path d="M22 2L11 13" />
             <path d="M22 2l-7 20-4-9-9-4 20-7z" />
           </svg>
+          )}
           {isPending ? 'Sending…' : 'Send notification'}
         </button>
       </div>

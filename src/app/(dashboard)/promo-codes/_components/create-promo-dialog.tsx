@@ -132,7 +132,7 @@ export function CreatePromoDialog() {
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" loading={isPending}>
               Create code
             </Button>
           </DialogFooter>

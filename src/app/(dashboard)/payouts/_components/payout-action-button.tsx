@@ -54,7 +54,7 @@ export function PayoutActionButton({
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger render={<Button variant={variant} size={size} disabled={isPending} />}>
+      <AlertDialogTrigger render={<Button loading={isPending} variant={variant} size={size} disabled={isPending} />}>
         {isPending ? 'Working…' : label}
       </AlertDialogTrigger>
       <AlertDialogContent>
@@ -64,7 +64,7 @@ export function PayoutActionButton({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
-          <AlertDialogAction disabled={isPending} onClick={run}>
+          <AlertDialogAction loading={isPending} disabled={isPending} onClick={run}>
             {isPending ? 'Working…' : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -85,7 +85,7 @@ export function PayoutQuickAction({
 }) {
   const [isPending, startTransition] = useTransition();
   return (
-    <Button
+    <Button loading={isPending}
       variant="outline"
       size="sm"
       disabled={isPending}

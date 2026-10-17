@@ -17,6 +17,7 @@ import {
 import { VENDOR_TYPES } from '@/lib/types';
 import { toDisplayTime } from '@/lib/format';
 import { createVendor } from '../actions';
+import { startNavigationProgress } from '@/components/navigation-progress';
 
 const TYPE_LABELS: Record<(typeof VENDOR_TYPES)[number], string> = {
   groceries: 'Groceries',
@@ -80,6 +81,7 @@ export default function AddVendorPage() {
           closesAt,
           location: { lat, long },
         });
+        startNavigationProgress();
         router.push(`/vendors/${vendorId}`);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to create vendor.');
@@ -107,14 +109,17 @@ export default function AddVendorPage() {
               />
               {error && <InlineNotice>{error}</InlineNotice>}
               <div className="flex flex-col gap-2 border-t border-border pt-4">
-                <Button type="submit" size="lg" disabled={isPending}>
+                <Button loading={isPending} type="submit" size="lg" disabled={isPending}>
                   {isPending ? 'Creating…' : 'Create vendor'}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   disabled={isPending}
-                  onClick={() => router.push('/vendors')}
+                  onClick={() => {
+                    startNavigationProgress();
+                    router.push('/vendors');
+                  }}
                 >
                   Cancel
                 </Button>

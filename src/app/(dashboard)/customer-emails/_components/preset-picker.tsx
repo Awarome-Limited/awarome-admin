@@ -207,7 +207,7 @@ export function PresetPicker({
             >
               Cancel
             </Button>
-            <Button
+            <Button loading={isDeleting}
               variant="destructive"
               onClick={confirmDelete}
               disabled={isDeleting}

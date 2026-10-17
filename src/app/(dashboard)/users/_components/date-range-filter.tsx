@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { startNavigationProgress } from '@/components/navigation-progress';
 
 export function DateRangeFilter() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export function DateRangeFilter() {
     if (value) params.set(key, value);
     else params.delete(key);
     params.delete('skip');
+    startNavigationProgress();
     router.push(`${pathname}?${params.toString()}`);
   }
 
@@ -23,6 +25,7 @@ export function DateRangeFilter() {
     params.delete('dateFrom');
     params.delete('dateTo');
     params.delete('skip');
+    startNavigationProgress();
     router.push(`${pathname}?${params.toString()}`);
   }
 

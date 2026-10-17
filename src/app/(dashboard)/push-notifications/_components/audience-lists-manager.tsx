@@ -7,6 +7,7 @@ import { AdminAudienceList } from '@/lib/types';
 import { createAudienceList } from '../actions';
 import { formatDate } from '@/lib/format';
 import { ContactsInput, useContactsInput } from './contacts-input';
+import { startNavigationProgress } from '@/components/navigation-progress';
 
 export function AudienceListsManager({
   lists: initialLists,
@@ -142,10 +143,11 @@ export function AudienceListsManager({
                 return (
                   <tr
                     key={list._id}
-                    onClick={() =>
-                      router.push(`/push-notifications/audience-lists/${list._id}`)
-                    }
-                    className="cursor-pointer transition-colors hover:bg-muted/50"
+                    onClick={() => {
+                      startNavigationProgress();
+                      router.push(`/push-notifications/audience-lists/${list._id}`);
+                    }}
+                    className="cursor-pointer transition-colors hover:bg-muted"
                   >
                     <td className="border-t border-border px-5 py-[13px]">
                       <div className="flex items-center gap-[11px]">

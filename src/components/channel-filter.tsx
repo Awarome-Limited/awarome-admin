@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { CHANNEL_LABELS } from '@/lib/types';
+import { startNavigationProgress } from '@/components/navigation-progress';
 
 /**
  * Narrows a list to one surface. Preserves every other query param so it
@@ -21,6 +22,7 @@ export function ChannelFilter() {
     // A new filter means a new result set — page 1.
     params.delete('skip');
     const query = params.toString();
+    startNavigationProgress();
     router.push(`${pathname}${query ? `?${query}` : ''}`);
   }
 

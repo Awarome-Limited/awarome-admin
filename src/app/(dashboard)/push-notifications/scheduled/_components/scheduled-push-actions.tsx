@@ -147,7 +147,7 @@ function CancelPushButton({ push }: { push: AdminScheduledPush }) {
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isPending}>Keep it</AlertDialogCancel>
-          <Button variant="destructive" onClick={cancel} disabled={isPending}>
+          <Button loading={isPending} variant="destructive" onClick={cancel} disabled={isPending}>
             {isPending ? 'Cancelling…' : wholeSeries ? 'Cancel series' : 'Cancel push'}
           </Button>
         </AlertDialogFooter>
@@ -257,7 +257,7 @@ function EditPushDialog({
           <Button variant="outline" onClick={onClose} disabled={isPending}>
             Close
           </Button>
-          <Button onClick={save} disabled={isPending}>
+          <Button loading={isPending} onClick={save} disabled={isPending}>
             {isPending ? 'Saving…' : 'Save changes'}
           </Button>
         </DialogFooter>

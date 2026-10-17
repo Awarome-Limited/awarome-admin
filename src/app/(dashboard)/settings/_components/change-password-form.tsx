@@ -4,6 +4,7 @@ import { useTransition, useRef, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { changePassword } from '../actions';
+import { Button } from '@/components/ui/button';
 
 const inputClass =
   'field pr-11';
@@ -118,13 +119,9 @@ export function ChangePasswordForm() {
       </label>
 
       <div className="flex items-center justify-end border-t border-border pt-4">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-[11px] text-[13.5px] font-semibold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
-        >
+        <Button type="submit" loading={isPending}>
           {isPending ? 'Saving…' : 'Change password'}
-        </button>
+        </Button>
       </div>
     </form>
   );

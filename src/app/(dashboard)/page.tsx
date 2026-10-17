@@ -22,6 +22,25 @@ import {
 } from '@/components/ui/table';
 import { formatDate, statusBadgeVariant } from '@/lib/format';
 import { AnalyticsView, Panel } from './_analytics/analytics-view';
+import { Bone, SectionSkeleton } from '@/components/skeletons';
+
+function NeedsYouNowSkeleton() {
+  return (
+    <section
+      role="status"
+      aria-busy
+      className="flex flex-col gap-4 rounded-[10px] border border-border bg-card px-[22px] py-5"
+    >
+      <span className="sr-only">Loading queues</span>
+      <Bone className="h-5 w-40" />
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Bone key={i} className="h-[104px] rounded-[8px]" />
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function greeting() {
   const hour = Number(
@@ -47,7 +66,7 @@ export default async function DashboardHomePage({
     !!session && hasPermission(session.profile, PermissionModule.ANALYTICS, PermissionAction.VIEW);
 
   const attention = session && (
-    <Suspense fallback={<div className="h-[188px] animate-pulse rounded-[10px] bg-muted" />}>
+    <Suspense fallback={<NeedsYouNowSkeleton />}>
       <NeedsYouNow profile={session.profile} />
     </Suspense>
   );
@@ -70,7 +89,13 @@ export default async function DashboardHomePage({
     <div className="flex flex-col gap-7">
       <AnalyticsView params={params} title={title} attention={attention} />
       {/* Live, not tied to the range; loads on its own so it never holds up the numbers. */}
-      <Suspense fallback={<div className="h-40 animate-pulse rounded-[10px] bg-muted" />}>
+      <Suspense
+        fallback={
+          <section className="overflow-hidden rounded-[10px] border border-border bg-card">
+            <SectionSkeleton />
+          </section>
+        }
+      >
         <LatestPaidJobs />
       </Suspense>
     </div>

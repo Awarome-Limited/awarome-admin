@@ -54,7 +54,7 @@ export function RiderCollectionAccountCard({
           their wallet.
         </span>
         {canUpdate && (
-          <Button size="sm" variant="outline" onClick={retry} disabled={isPending}>
+          <Button size="sm" variant="outline" onClick={retry} loading={isPending}>
             Set up now
           </Button>
         )}
@@ -110,7 +110,7 @@ export function RiderCollectionAccountCard({
         <span className="text-[13px] text-destructive">{account.failureReason}</span>
       )}
       {canUpdate && (account.status === 'failed' || legacy) && (
-        <Button size="sm" variant="outline" className="w-fit" onClick={retry} disabled={isPending}>
+        <Button size="sm" variant="outline" className="w-fit" onClick={retry} loading={isPending}>
           {legacy ? 'Move to new rider account' : 'Retry'}
         </Button>
       )}

@@ -51,6 +51,8 @@ import { AddressInput } from './address-input';
 import { CustomerPicker } from './customer-picker';
 import { parseDrops } from './parse-drops';
 import { SavedAddressMenu } from './saved-address-menu';
+import { startNavigationProgress } from '@/components/navigation-progress';
+import { Spinner } from '@/components/ui/spinner';
 
 const DEFAULT_TERMS: BulkPricingTerms = {
   minDropsForFlat: 10,
@@ -437,6 +439,7 @@ export function BulkDeliveryForm({ riders }: { riders: AdminRider[] }) {
       } else {
         toast.success(`${state.rows.length} deliveries booked for ${state.customer!.name}`);
       }
+      startNavigationProgress();
       router.push(`/bulk-deliveries/${result.data._id}`);
     });
   }
@@ -966,8 +969,10 @@ export function BulkDeliveryForm({ riders }: { riders: AdminRider[] }) {
           type="button"
           onClick={submit}
           disabled={isSubmitting || isQuoting}
-          className="h-9 rounded-full bg-[#FFD500] px-4 font-semibold whitespace-nowrap text-[#120460] transition-opacity hover:opacity-90 disabled:opacity-60"
+          aria-busy={isSubmitting || isQuoting || undefined}
+          className="inline-flex h-9 items-center gap-2 rounded-full bg-[#FFD500] px-4 font-semibold whitespace-nowrap text-[#120460] transition-opacity hover:opacity-90 disabled:cursor-progress disabled:opacity-80"
         >
+          {(isSubmitting || isQuoting) && <Spinner />}
           {isSubmitting ? 'Booking…' : isQuoting ? 'Pricing…' : bookLabel}
         </button>
       </div>

@@ -134,7 +134,7 @@ export function IssueKeyDialog({ partnerId }: { partnerId: string }) {
                 <Button type="button" variant="outline" onClick={close} disabled={isPending}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isPending}>
+                <Button loading={isPending} type="submit" disabled={isPending}>
                   {isPending ? 'Issuing…' : 'Issue key'}
                 </Button>
               </DialogFooter>

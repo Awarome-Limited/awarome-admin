@@ -6,6 +6,7 @@ import { CornerDownLeft, Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import type { NavWorkspace } from '@/lib/nav-items';
 import { cn } from '@/lib/utils';
+import { startNavigationProgress } from '@/components/navigation-progress';
 
 /** "Jump to anything": ⌘K / Ctrl+K opens a filterable list of every page the user can see. */
 export function CommandPalette({
@@ -44,6 +45,7 @@ export function CommandPalette({
 
   function go(href: string) {
     onOpenChange(false);
+    startNavigationProgress();
     router.push(href);
   }
 

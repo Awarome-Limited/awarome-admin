@@ -60,7 +60,7 @@ export function AccountStatusControl({
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogTrigger
           render={
-            <Button variant={suspended ? 'outline' : 'destructive'} size="sm" disabled={isPending} />
+            <Button loading={isPending} variant={suspended ? 'outline' : 'destructive'} size="sm" disabled={isPending} />
           }
         >
           {isPending ? 'Saving…' : suspended ? 'Reactivate' : 'Suspend'}

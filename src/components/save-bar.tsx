@@ -1,5 +1,7 @@
 'use client';
 
+import { Spinner } from '@/components/ui/spinner';
+
 /**
  * Floating save bar (DESIGN.md §4): appears only while a form is dirty, so
  * nobody has to remember a static Save button. Indigo pill, bottom centre.
@@ -43,8 +45,10 @@ export function SaveBar({
         form={form}
         onClick={onSave}
         disabled={saving}
-        className="h-9 rounded-full bg-[#FFD500] px-4 font-semibold text-[#120460] transition-opacity hover:opacity-90 disabled:opacity-60"
+        aria-busy={saving || undefined}
+        className="inline-flex h-9 items-center gap-2 rounded-full bg-[#FFD500] px-4 font-semibold text-[#120460] transition-opacity hover:opacity-90 disabled:cursor-progress disabled:opacity-80"
       >
+        {saving && <Spinner />}
         {saving ? 'Saving…' : 'Save changes'}
       </button>
     </div>

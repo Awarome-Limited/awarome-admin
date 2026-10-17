@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { LinkPending } from '@/components/link-pending';
 
 /**
  * Segmented control (DESIGN.md "Segmented tabs"): a sunk pill track whose
@@ -42,12 +43,13 @@ export function SegmentedLinks({
           key={item.key}
           href={item.href}
           aria-current={item.key === active ? 'page' : undefined}
-          className={segmentItem(item.key === active)}
+          className={cn(segmentItem(item.key === active), 'relative')}
         >
           {item.label}
           {item.count !== undefined && (
             <span className="text-[12px] text-muted-foreground tabular-nums">{item.count}</span>
           )}
+          <LinkPending className="text-muted-foreground" />
         </Link>
       ))}
     </nav>

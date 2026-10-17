@@ -219,7 +219,7 @@ export function SaveTemplateDialog({
           >
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={isPending}>
+          <Button onClick={handleSave} loading={isPending}>
             {isPending
               ? 'Saving…'
               : updating

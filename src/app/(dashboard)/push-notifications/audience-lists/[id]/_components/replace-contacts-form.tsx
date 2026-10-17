@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import type { ActionResult } from '@/lib/action-result';
 import type { ContactsPayload } from '../../../actions';
 import { ContactsInput, useContactsInput } from '../../../_components/contacts-input';
+import { Button } from '@/components/ui/button';
 
 export function ReplaceContactsForm({
   action,
@@ -36,13 +37,14 @@ export function ReplaceContactsForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
       <ContactsInput state={contacts} disabled={isPending} />
-      <button
+      <Button
         type="submit"
+        loading={isPending}
         disabled={isPending || contacts.count === 0}
-        className="self-start rounded-full bg-primary px-[18px] py-[9px] text-[13px] font-semibold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
+        className="self-start"
       >
         {isPending ? 'Replacing…' : 'Replace contacts'}
-      </button>
+      </Button>
     </form>
   );
 }

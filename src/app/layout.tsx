@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Poppins, JetBrains_Mono } from "next/font/google";
 import { cookies } from "next/headers";
+import { Suspense } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { NavigationProgress } from "@/components/navigation-progress";
 import "./globals.css";
@@ -43,7 +44,10 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <NavigationProgress />
+        {/* useSearchParams needs a boundary so it never forces client rendering. */}
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         {children}
         <Toaster />
       </body>

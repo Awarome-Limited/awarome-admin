@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { startNavigationProgress } from '@/components/navigation-progress';
 
 interface VendorOption {
   _id: string;
@@ -20,6 +21,7 @@ export function VendorFilter({ vendors, currentVendorId }: { vendors: VendorOpti
       params.delete('vendor');
     }
     params.delete('skip');
+    startNavigationProgress();
     router.push(`${pathname}?${params.toString()}`);
   };
 

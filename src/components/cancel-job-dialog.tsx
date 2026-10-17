@@ -67,7 +67,7 @@ export function CancelJobDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
-        render={<Button size="sm" variant="destructive" disabled={isPending} />}
+        render={<Button size="sm" variant="destructive" loading={isPending} />}
       >
         Cancel {jobType}
       </DialogTrigger>

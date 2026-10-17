@@ -122,7 +122,7 @@ export function AdjustBalanceDialog({ riderId, owed }: { riderId: string; owed: 
           <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
             Cancel
           </Button>
-          <Button type="button" onClick={submit} disabled={isPending || !valid}>
+          <Button loading={isPending} type="button" onClick={submit} disabled={isPending || !valid}>
             {isPending ? 'Saving…' : direction === 'credit' ? `Credit ${amount > 0 ? naira(amount) : ''}` : `Debit ${amount > 0 ? naira(amount) : ''}`}
           </Button>
         </DialogFooter>

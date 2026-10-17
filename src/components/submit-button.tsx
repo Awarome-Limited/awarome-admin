@@ -25,47 +25,10 @@ export function SubmitButton({
   const { pending } = useFormStatus();
 
   return (
-    <Button
-      type="submit"
-      disabled={pending}
-      variant={variant}
-      size={size}
-      className={className}
-    >
-      {pending ? (
-        <>
-          <Spinner />
-          {pendingLabel}
-        </>
-      ) : (
-        children
-      )}
+    <Button type="submit" loading={pending} variant={variant} size={size} className={className}>
+      {pending ? pendingLabel : children}
     </Button>
   );
 }
 
-export function Spinner({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className ?? 'size-3.5 animate-spin'}
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
-      <circle
-        cx="12"
-        cy="12"
-        r="9"
-        stroke="currentColor"
-        strokeWidth="3"
-        opacity="0.25"
-      />
-      <path
-        d="M21 12a9 9 0 0 0-9-9"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
+export { Spinner } from '@/components/ui/spinner';

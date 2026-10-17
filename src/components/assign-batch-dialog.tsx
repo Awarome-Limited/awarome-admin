@@ -75,7 +75,7 @@ export function AssignBatchDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size={size} disabled={isPending} />}>
+      <DialogTrigger render={<Button size={size} loading={isPending} />}>
         {label}
       </DialogTrigger>
       <DialogContent>
@@ -131,7 +131,7 @@ export function AssignBatchDialog({
           >
             Back
           </Button>
-          <Button
+          <Button loading={isPending}
             type="button"
             onClick={submit}
             disabled={isPending || !riderId}

@@ -179,7 +179,7 @@ export function RecordBankPayoutDialog({
           <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
             Cancel
           </Button>
-          <Button type="button" onClick={submit} disabled={isPending || !valid}>
+          <Button loading={isPending} type="button" onClick={submit} disabled={isPending || !valid}>
             {isPending ? 'Saving…' : `Record ${naira(amount)} paid`}
           </Button>
         </DialogFooter>
