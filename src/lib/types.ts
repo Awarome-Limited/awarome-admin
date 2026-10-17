@@ -566,7 +566,8 @@ export interface AnalyticsKpis {
   activeCustomers: number;
   /** Customers whose first ever payment fell in this period. */
   newPayingCustomers: number;
-  signups: { customers: number; vendors: number; riders: number };
+  /** New accounts created in the period. Partners are onboarded by ops rather than signing up. */
+  signups: { customers: number; vendors: number; riders: number; businesses: number; partners: number };
 }
 
 export interface AnalyticsTrendPoint {

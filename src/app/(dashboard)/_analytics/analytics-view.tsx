@@ -31,6 +31,18 @@ const BREAKDOWN_LABELS: Record<string, Record<string, string>> = {
   vehicleType: {},
 };
 
+const SIGNUP_ROWS: { key: keyof AnalyticsSummary['kpis']['current']['signups']; label: string; href: string }[] = [
+  { key: 'customers', label: 'Customers', href: '/users' },
+  { key: 'riders', label: 'Riders', href: '/riders' },
+  { key: 'vendors', label: 'Vendors', href: '/vendors' },
+  { key: 'businesses', label: 'Businesses', href: '/businesses' },
+  { key: 'partners', label: 'API partners', href: '/partners' },
+];
+
+// Older backends only send the first three kinds.
+const signupTotal = (signups: Partial<Record<string, number>>) =>
+  SIGNUP_ROWS.reduce((sum, row) => sum + (signups[row.key] ?? 0), 0);
+
 const naira = (value: number) => `₦ ${Math.round(value).toLocaleString()}`;
 const count = (value: number) => value.toLocaleString();
 
@@ -219,13 +231,25 @@ export async function AnalyticsView({
             ]}
           />
         </Panel>
-        <Panel title="New signups">
+        <Panel
+          title="New signups"
+          aside={
+            <span className="flex items-center gap-2">
+              <Delta current={signupTotal(cur.signups)} previous={signupTotal(prev.signups)} />
+              <span className="text-[13.5px] font-medium tabular-nums text-foreground">
+                {count(signupTotal(cur.signups))} total
+              </span>
+            </span>
+          }
+        >
           <StatList
-            rows={[
-              ['Customers', count(cur.signups.customers), cur.signups.customers, prev.signups.customers],
-              ['Vendors', count(cur.signups.vendors), cur.signups.vendors, prev.signups.vendors],
-              ['Riders', count(cur.signups.riders), cur.signups.riders, prev.signups.riders],
-            ]}
+            rows={SIGNUP_ROWS.map((row) => [
+              row.label,
+              count(cur.signups[row.key] ?? 0),
+              cur.signups[row.key] ?? 0,
+              prev.signups[row.key] ?? 0,
+              row.href,
+            ])}
           />
         </Panel>
       </section>
@@ -485,16 +509,22 @@ function Breakdown({
 function StatList({
   rows,
 }: {
-  rows: [label: string, value: string, current?: number, previous?: number][];
+  rows: [label: string, value: string, current?: number, previous?: number, href?: string][];
 }) {
   return (
     <div className="flex flex-col">
-      {rows.map(([label, value, current, previous]) => (
+      {rows.map(([label, value, current, previous, href]) => (
         <div
           key={label}
           className="flex items-center justify-between gap-3 border-t border-border py-2.5 first:border-0 first:pt-0"
         >
-          <span className="text-[13.5px] text-foreground-secondary">{label}</span>
+          {href ? (
+            <Link href={href} className="text-[13.5px] text-foreground-secondary hover:text-primary">
+              {label}
+            </Link>
+          ) : (
+            <span className="text-[13.5px] text-foreground-secondary">{label}</span>
+          )}
           <span className="flex items-center gap-2">
             {current !== undefined && previous !== undefined && (
               <Delta current={current} previous={previous} />

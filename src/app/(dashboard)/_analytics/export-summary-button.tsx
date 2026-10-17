@@ -25,6 +25,8 @@ const KPI_ROWS: { label: string; value: (k: AnalyticsKpis) => number | null }[] 
   { label: 'Customer signups', value: (k) => k.signups.customers },
   { label: 'Vendor signups', value: (k) => k.signups.vendors },
   { label: 'Rider signups', value: (k) => k.signups.riders },
+  { label: 'Business signups', value: (k) => k.signups.businesses },
+  { label: 'API partners onboarded', value: (k) => k.signups.partners },
 ];
 
 const BUCKET_HEADINGS: Record<AnalyticsSummary['range']['bucketUnit'], string> = {
