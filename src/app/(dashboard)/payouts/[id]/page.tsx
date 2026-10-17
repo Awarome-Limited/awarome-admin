@@ -10,9 +10,10 @@ import { formatDate, statusBadgeVariant } from '@/lib/format';
 import { DetailHeader, InlineNotice, PageStack } from '@/components/page';
 import { getSession } from '@/lib/session';
 import { hasPermission, PermissionAction, PermissionModule } from '@/lib/permissions';
-import type { AdminRiderPayout, PayoutRunRef, RiderPayoutEvent } from '@/lib/types';
-import { payRiderNow, refreshPayout } from '../actions';
+import type { AdminRiderPayout, PayoutRunRef, RiderPayoutEvent, RiderPayoutSummary } from '@/lib/types';
+import { approvePayoutRequest, payRiderNow, refreshPayout, rejectPayoutRequest } from '../actions';
 import { PayoutActionButton, PayoutQuickAction } from '../_components/payout-action-button';
+import { RejectRequestDialog } from '../_components/reject-request-dialog';
 import {
   naira,
   payoutStatusLabel,
@@ -28,6 +29,8 @@ const SOURCE_LABELS: Record<RiderPayoutEvent['source'], string> = {
   paystack: 'Paystack API',
   webhook: 'Paystack webhook',
   verify: 'Status check',
+  staff: 'Staff',
+  rider: 'Courier',
 };
 
 export default async function PayoutDetailPage({
@@ -52,11 +55,24 @@ export default async function PayoutDetailPage({
 
   const session = await getSession();
   const canPay = !!session && hasPermission(session.profile, PermissionModule.PAYMENTS, PermissionAction.UPDATE);
+  const requested = payout.status === 'requested';
+
+  // A request is decided against where the courier stands now, not when they asked.
+  let summary: RiderPayoutSummary | null = null;
+  if (requested && payout.rider) {
+    summary = await authedFetch<SingleResponse<RiderPayoutSummary>>(
+      `/admins/payouts/riders/${payout.rider._id}/summary`
+    )
+      .then((res) => res.data)
+      .catch(() => null);
+  }
 
   const rider = payout.rider;
   const run = typeof payout.run === 'object' ? (payout.run as PayoutRunRef | null) : null;
   const transaction = typeof payout.transaction === 'object' ? payout.transaction : null;
   const staff = typeof payout.initiatedBy === 'object' ? payout.initiatedBy : null;
+  const reviewer = typeof payout.reviewedBy === 'object' ? payout.reviewedBy : null;
+  const byCourier = payout.trigger === 'rider-request';
   const inFlight = IN_FLIGHT.includes(payout.status);
   const bank = payout.bankAccount ?? {};
   const currentBank = rider?.bankAccount;
@@ -90,7 +106,26 @@ export default async function PayoutDetailPage({
                 action={refreshPayout.bind(null, payout._id)}
               />
             )}
-            {canPay && rider && !inFlight && payout.status !== 'success' && (
+            {canPay && requested && rider && (
+              <>
+                <RejectRequestDialog
+                  courier={personName(rider)}
+                  amount={naira(payout.amount)}
+                  action={rejectPayoutRequest.bind(null, payout._id)}
+                />
+                {!accountChanged && (
+                  <PayoutActionButton
+                    label="Approve and pay"
+                    title={`Send ${naira(payout.amount)} to ${personName(rider)}?`}
+                    description={`${naira(payout.amount)} is sent by Paystack transfer to ${bank.bankName ?? 'their bank'} •••• ${bank.accountNumber?.slice(-4) ?? ''} (${bank.accountName ?? 'no name on file'}). This can't be undone once Paystack accepts it.`}
+                    confirmLabel="Approve and send"
+                    successMessage="Approved — transfer sent to Paystack"
+                    action={approvePayoutRequest.bind(null, payout._id)}
+                  />
+                )}
+              </>
+            )}
+            {canPay && rider && (payout.status === 'failed' || payout.status === 'reversed') && (
               <PayoutActionButton
                 label="Pay courier now"
                 title="Send this courier's balance now?"
@@ -104,6 +139,30 @@ export default async function PayoutDetailPage({
         }
       />
 
+      {requested && (
+        <InlineNotice tone="info">
+          {personName(rider, 'The courier')} asked to withdraw {naira(payout.amount)} on {formatDate(payout.createdAt)}.
+          The amount is held off their balance until you approve or reject it; nothing has been sent.
+          {summary &&
+            (summary.balance < 0
+              ? ` Since asking they have gone on to owe ${naira(summary.owed)} in commission — consider rejecting, or approving knowing that debt stays on their account.`
+              : ` They have ${naira(summary.balance)} more in their wallet beyond this request.`)}
+        </InlineNotice>
+      )}
+      {requested && accountChanged && (
+        <InlineNotice>
+          The courier has changed their payout account since asking, so this request can’t be paid as made. Reject
+          it so they can ask again with the new account.
+        </InlineNotice>
+      )}
+      {(payout.status === 'rejected' || payout.status === 'cancelled') && (
+        <InlineNotice tone="info">
+          {payout.status === 'rejected'
+            ? `Rejected${reviewer ? ` by ${personName(reviewer)}` : ''}${payout.reviewNote ? `: “${payout.reviewNote}”` : ''}.`
+            : 'Cancelled by the courier.'}{' '}
+          Nothing was sent and the amount went back into their balance.
+        </InlineNotice>
+      )}
       {payout.status === 'awaiting-otp' && (
         <InlineNotice>
           Paystack is holding this transfer for an OTP. Finalise it from the Paystack dashboard, and turn off
@@ -268,7 +327,20 @@ export default async function PayoutDetailPage({
                   )
                 }
               />
-              <DetailRow label="Started by" value={staff ? personName(staff) : 'Scheduler'} />
+              <DetailRow
+                label="Started by"
+                value={byCourier ? 'Courier, from the app' : staff ? personName(staff) : 'Scheduler'}
+              />
+              {byCourier && (
+                <DetailRow
+                  label={payout.status === 'rejected' ? 'Rejected by' : 'Approved by'}
+                  value={
+                    reviewer
+                      ? `${personName(reviewer)}${payout.reviewedAt ? ` · ${formatDate(payout.reviewedAt)}` : ''}`
+                      : '—'
+                  }
+                />
+              )}
             </CardContent>
           </Card>
         </div>

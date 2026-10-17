@@ -43,6 +43,34 @@ export async function payRiderNow(riderId: string): Promise<ActionResult> {
   return result;
 }
 
+/**
+ * Sends a courier's withdrawal request by Paystack transfer. Like paying a
+ * courier now, a refused transfer comes back as a failed payout, which is a
+ * failure to whoever approved it.
+ */
+export async function approvePayoutRequest(payoutId: string): Promise<ActionResult> {
+  let payout: SingleResponse<AdminRiderPayout> | undefined;
+  const result = await runAction(async () => {
+    payout = await authedFetch<SingleResponse<AdminRiderPayout>>(`/admins/payouts/${payoutId}/approve`, {
+      method: 'POST',
+    });
+  });
+  revalidatePayouts();
+  if (result.ok && payout?.data.status === 'failed') {
+    return { ok: false, error: payout.message };
+  }
+  return result;
+}
+
+/** Turns a courier's request down; the reason is sent to the courier. */
+export async function rejectPayoutRequest(payoutId: string, reason: string): Promise<ActionResult> {
+  const result = await runAction(() =>
+    authedFetch(`/admins/payouts/${payoutId}/reject`, { method: 'POST', body: { reason } })
+  );
+  if (result.ok) revalidatePayouts();
+  return result;
+}
+
 export async function refreshPayout(payoutId: string): Promise<ActionResult> {
   const result = await runAction(() =>
     authedFetch(`/admins/payouts/${payoutId}/refresh`, { method: 'POST' })

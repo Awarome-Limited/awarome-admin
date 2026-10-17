@@ -38,6 +38,8 @@ const SOURCE_LABELS: Record<RiderPayoutEvent['source'], string> = {
   paystack: 'Paystack API',
   webhook: 'Paystack webhook',
   verify: 'Status check',
+  staff: 'Staff',
+  rider: 'Courier',
 };
 
 export default async function VendorPayoutDetailPage({

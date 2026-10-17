@@ -6,22 +6,29 @@ import type {
 } from '@/lib/types';
 
 const STATUS_LABELS: Record<RiderPayoutStatus, string> = {
+  requested: 'Awaiting approval',
   processing: 'Processing',
   'awaiting-otp': 'Awaiting OTP',
   success: 'Paid',
   failed: 'Failed',
   reversed: 'Reversed',
+  rejected: 'Rejected',
+  cancelled: 'Cancelled',
 };
 
-const STATUS_VARIANTS: Record<RiderPayoutStatus, 'positive' | 'warning' | 'info' | 'destructive'> = {
+const STATUS_VARIANTS: Record<RiderPayoutStatus, 'positive' | 'warning' | 'info' | 'destructive' | 'secondary'> = {
+  requested: 'warning',
   processing: 'info',
   'awaiting-otp': 'warning',
   success: 'positive',
   failed: 'destructive',
   reversed: 'destructive',
+  rejected: 'secondary',
+  cancelled: 'secondary',
 };
 
 const TRIGGER_LABELS: Record<RiderPayoutTrigger, string> = {
+  'rider-request': 'Courier request',
   scheduled: 'Daily run',
   'manual-run': 'Manual run',
   'manual-rider': 'Paid by staff',

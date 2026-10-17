@@ -45,6 +45,7 @@ const LIMIT = 20;
 
 const FILTERS = [
   { key: 'all', label: 'All' },
+  { key: 'requests', label: 'Requests', statuses: 'requested' },
   { key: 'success', label: 'Paid', statuses: 'success' },
   { key: 'in-flight', label: 'In flight', statuses: 'processing,awaiting-otp' },
   { key: 'failed', label: 'Failed', statuses: 'failed' },
@@ -60,6 +61,7 @@ const sumOf = (record: Record<string, number>, statuses: string) =>
   statuses.split(',').reduce((sum, s) => sum + (record[s] ?? 0), 0);
 
 const transfers = (n: number) => `${n} ${n === 1 ? 'transfer' : 'transfers'}`;
+const requests = (n: number) => `${n} ${n === 1 ? 'withdrawal request' : 'withdrawal requests'}`;
 
 function filterCount(counts: Record<string, number>, key: string) {
   const filter = FILTERS.find((f) => f.key === key);
@@ -117,6 +119,11 @@ export default async function PayoutsPage({
   const running = runs.some((run) => run.status === 'running');
 
   const chips = [
+    {
+      label: 'Requested',
+      value: naira(amounts.requested),
+      sub: counts.requested ? `${requests(counts.requested)} to review` : 'Nothing to review',
+    },
     { label: 'Paid out', value: naira(amounts.success), sub: transfers(counts.success ?? 0) },
     {
       label: 'In flight',
@@ -167,6 +174,12 @@ export default async function PayoutsPage({
       />
 
       <StatStrip stats={chips.map((chip) => ({ label: chip.label, value: chip.value, meta: chip.sub }))} />
+
+      {(counts.requested ?? 0) > 0 && activeFilter !== 'requests' && (
+        <InlineNotice action={<Link href={hrefWith({ filter: 'requests', skip: undefined })}>Review requests</Link>}>
+          {requests(counts.requested ?? 0)} waiting for approval. Nothing is sent until someone approves it.
+        </InlineNotice>
+      )}
 
       {(counts.failed ?? 0) > 0 && activeFilter !== 'failed' && (
         <InlineNotice action={<Link href={hrefWith({ filter: 'failed', skip: undefined })}>Show failed</Link>}>
@@ -311,7 +324,7 @@ export default async function PayoutsPage({
             minAmount: settings.payoutMinAmount,
           }}
           canEdit={canEditSettings}
-          description="Once a day, every courier owed at least the minimum is sent their whole balance by Paystack transfer. Transfer OTP must be off in the Paystack dashboard, and the Paystack balance funded, or transfers will wait or fail."
+          description="Once a day, every courier owed at least the minimum is sent their whole balance by Paystack transfer. Couriers can also ask to withdraw from the app at any time — at least the same minimum — and those requests wait under Requests for approval. Transfer OTP must be off in the Paystack dashboard, and the Paystack balance funded, or transfers will wait or fail."
           save={updatePayoutSettings}
         />
       )}

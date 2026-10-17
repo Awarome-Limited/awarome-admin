@@ -931,8 +931,17 @@ export interface AdminBatchDetail
   activity: AdminActivityLog[];
 }
 
-export type RiderPayoutStatus = 'processing' | 'awaiting-otp' | 'success' | 'failed' | 'reversed';
+export type RiderPayoutStatus =
+  | 'requested'
+  | 'processing'
+  | 'awaiting-otp'
+  | 'success'
+  | 'failed'
+  | 'reversed'
+  | 'rejected'
+  | 'cancelled';
 export type RiderPayoutTrigger =
+  | 'rider-request'
   | 'scheduled'
   | 'manual-run'
   | 'manual-rider'
@@ -959,7 +968,7 @@ export interface RiderPayoutBankAccount {
 export interface RiderPayoutEvent {
   status: RiderPayoutStatus;
   at: string;
-  source: 'system' | 'paystack' | 'webhook' | 'verify';
+  source: 'system' | 'paystack' | 'webhook' | 'verify' | 'staff' | 'rider';
   note?: string;
 }
 
@@ -992,6 +1001,10 @@ export interface AdminRiderPayout {
     | null;
   trigger: RiderPayoutTrigger;
   initiatedBy?: PayoutStaff | string | null;
+  /** Courier requests: who approved or rejected it, and the reason the courier was given. */
+  reviewedBy?: PayoutStaff | string | null;
+  reviewedAt?: string;
+  reviewNote?: string;
   bankReference?: string;
   note?: string;
   failureReason?: string;
