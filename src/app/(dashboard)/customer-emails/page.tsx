@@ -9,7 +9,8 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { formatDate } from '@/lib/format';
+import { formatDate, humanize } from '@/lib/format';
+import { EmptyRow, ListCard, PageHeader, PageStack } from '@/components/page';
 import { getEmailPreset, templateIdFromKey } from '@/lib/email-presets';
 import { getEmailTemplates } from './actions';
 import { CustomerEmailComposer } from './_components/customer-email-composer';
@@ -44,88 +45,66 @@ export default async function CustomerEmailsPage() {
   ]);
 
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-[23px] font-bold tracking-tight text-foreground">
-          Customer emails
-        </h1>
-        <p className="mt-1 text-[14px] text-muted-foreground">
-          Send a one-off email when something has gone wrong — a batch that
-          didn’t fill, a late order, a refund that needs explaining.
-        </p>
-      </div>
+    <PageStack>
+      <PageHeader
+        title="Customer emails"
+        subtitle="Send a one-off email when something has gone wrong: a batch that didn’t fill, a late order, a refund that needs explaining."
+      />
 
       <CustomerEmailComposer initialTemplates={templates} />
 
-      <div className="pt-1">
-        <h2 className="text-[17px] font-bold tracking-tight text-foreground">
-          Recently sent
-        </h2>
-        <p className="mt-1 text-[13px] text-muted-foreground">
-          Every send is recorded in Activity Logs under “customer-email-sent”.
-        </p>
-      </div>
+      <ListCard title="Recently sent" description="Every send is also recorded in Activity logs.">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Subject</TableHead>
+              <TableHead>Template</TableHead>
+              <TableHead>Recipients</TableHead>
+              <TableHead>Sent by</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {recent?.data.map((log) => {
+              const recipients = recipientList(log);
+              const presetId = metaString(log, 'presetId');
+              const savedId = templateIdFromKey(presetId);
+              const label = savedId
+                ? (templates.find((template) => template._id === savedId)?.name ?? 'Saved template')
+                : (getEmailPreset(presetId)?.label ?? (presetId ? humanize(presetId) : 'Custom'));
 
-      <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Subject</TableHead>
-                <TableHead>Preset</TableHead>
-                <TableHead>Recipients</TableHead>
-                <TableHead>Sent by</TableHead>
-                <TableHead>When</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {recent?.data.map((log) => {
-                const recipients = recipientList(log);
-                const presetId = metaString(log, 'presetId');
-                const savedId = templateIdFromKey(presetId);
-                const label = savedId
-                  ? (templates.find((template) => template._id === savedId)?.name ??
-                    'Saved template')
-                  : (getEmailPreset(presetId)?.label ?? (presetId || 'custom'));
-                const known = savedId
-                  ? templates.some((template) => template._id === savedId)
-                  : !!getEmailPreset(presetId);
-
-                return (
-                  <TableRow key={log._id}>
-                    <TableCell className="max-w-[320px]">
-                      <span className="block truncate font-semibold text-foreground">
-                        {metaString(log, 'subject') || log.description}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={known ? 'info' : 'outline'}>{label}</Badge>
-                    </TableCell>
-                    <TableCell className="max-w-[280px]">
-                      <span className="block truncate text-muted-foreground">
-                        {recipients.length === 0
-                          ? '—'
-                          : recipients.length === 1
-                            ? recipients[0]
-                            : `${recipients[0]} +${recipients.length - 1} more`}
-                      </span>
-                    </TableCell>
-                    <TableCell>{senderName(log.staff)}</TableCell>
-                    <TableCell>{formatDate(log.createdAt)}</TableCell>
-                  </TableRow>
-                );
-              })}
-              {(!recent || recent.data.length === 0) && (
-                <TableRow>
-                  <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-                    {recent ? 'No emails sent yet.' : 'Could not load recent sends.'}
+              return (
+                <TableRow key={log._id}>
+                  <TableCell className="max-w-[340px]">
+                    <span className="block truncate font-medium">{metaString(log, 'subject') || log.description}</span>
+                    <span className="block text-[12.5px] whitespace-nowrap text-muted-foreground tabular-nums">
+                      {formatDate(log.createdAt)}
+                    </span>
                   </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{label}</Badge>
+                  </TableCell>
+                  <TableCell className="max-w-[280px]">
+                    <span className="block truncate text-foreground-secondary">
+                      {recipients.length === 0
+                        ? '—'
+                        : recipients.length === 1
+                          ? recipients[0]
+                          : `${recipients[0]} and ${recipients.length - 1} more`}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-foreground-secondary">{senderName(log.staff)}</TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-    </div>
+              );
+            })}
+            {(!recent || recent.data.length === 0) && (
+              <EmptyRow
+                colSpan={4}
+                title={recent ? 'No emails sent yet' : 'Couldn’t load recent sends'}
+              />
+            )}
+          </TableBody>
+        </Table>
+      </ListCard>
+    </PageStack>
   );
 }

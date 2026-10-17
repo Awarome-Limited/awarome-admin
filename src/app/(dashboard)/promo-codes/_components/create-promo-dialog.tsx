@@ -17,7 +17,7 @@ import {
 import { createPromoCode, PromoCodePayload } from '../actions';
 
 const selectClass =
-  'h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50';
+  'field pr-9';
 
 export function CreatePromoDialog() {
   const [open, setOpen] = useState(false);
@@ -72,7 +72,7 @@ export function CreatePromoDialog() {
         <form action={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <Label htmlFor="code">Promo code</Label>
-            <Input id="code" name="code" placeholder="e.g. WELCOME15" className="font-mono uppercase" required />
+            <Input id="code" name="code" placeholder="e.g. WELCOME15" className="tabular-nums uppercase" required />
           </div>
           <div className="flex flex-col gap-2">
             <Label>Discount type</Label>

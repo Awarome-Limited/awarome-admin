@@ -1,9 +1,20 @@
 'use client';
 
 import { useTransition } from 'react';
-import { Switch } from '@/components/ui/switch';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
-export function PromoCodeActiveToggle({
+/** Whether a code can be redeemed. A word in lists, a word plus a button on the detail page. */
+export function PromoStatusPill({ isActive }: { isActive: boolean }) {
+  return (
+    <Badge variant={isActive ? 'positive' : 'secondary'} dot={isActive}>
+      {isActive ? 'Active' : 'Off'}
+    </Badge>
+  );
+}
+
+export function PromoCodeActiveControl({
   isActive,
   action,
 }: {
@@ -13,19 +24,25 @@ export function PromoCodeActiveToggle({
   const [isPending, startTransition] = useTransition();
 
   return (
-    <div className="flex items-center gap-2">
-      <Switch
-        checked={isActive}
+    <div className="flex flex-wrap items-center gap-2.5">
+      <PromoStatusPill isActive={isActive} />
+      <Button
+        variant={isActive ? 'destructive' : 'outline'}
+        size="sm"
         disabled={isPending}
-        onCheckedChange={() => {
-          startTransition(() => {
-            action();
-          });
-        }}
-      />
-      <span className="text-sm text-muted-foreground">
-        {isActive ? 'Active' : 'Inactive'}
-      </span>
+        onClick={() =>
+          startTransition(async () => {
+            try {
+              await action();
+              toast.success(isActive ? 'Turned off' : 'Turned on');
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : 'Action failed. Please try again.');
+            }
+          })
+        }
+      >
+        {isPending ? 'Saving…' : isActive ? 'Turn off' : 'Turn on'}
+      </Button>
     </div>
   );
 }

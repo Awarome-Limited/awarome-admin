@@ -16,9 +16,9 @@ import {
 import { adjustRiderBalance } from '../../../payouts/actions';
 
 const inputClass =
-  'h-9 rounded-[9px] border border-border-strong bg-card px-3 text-[13px] font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-ring';
+  'field';
 
-const naira = (n: number) => `₦${Math.abs(n).toLocaleString('en-NG')}`;
+const naira = (n: number) => `₦ ${Math.abs(n).toLocaleString('en-NG')}`;
 
 /**
  * Credit or debit a courier's wallet by hand, with a reason that stays on the
@@ -97,7 +97,7 @@ export function AdjustBalanceDialog({ riderId, owed }: { riderId: string; owed: 
                 <button
                   type="button"
                   onClick={() => setAmountValue(String(owed))}
-                  className="text-[12.5px] font-semibold text-primary hover:underline"
+                  className="text-[12.5px] font-semibold text-primary hover:text-warning"
                 >
                   Clear all {naira(owed)}
                 </button>

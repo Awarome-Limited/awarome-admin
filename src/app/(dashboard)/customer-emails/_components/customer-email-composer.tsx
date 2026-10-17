@@ -26,7 +26,7 @@ import { SaveTemplateDialog } from './save-template-dialog';
 const MAX_BODY = 5000;
 
 const inputClass =
-  'w-full rounded-[10px] border border-input bg-background px-[14px] py-[11px] text-[14px] text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50';
+  'field w-full';
 
 export function CustomerEmailComposer({
   initialTemplates,
@@ -178,9 +178,9 @@ export function CustomerEmailComposer({
         onDeleted={handleTemplateDeleted}
       />
 
-      <div className="flex flex-col gap-[18px] rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]">
+      <div className="flex flex-col gap-[18px] rounded-[10px] border border-border bg-card p-[22px_24px]">
         <div className="flex items-center justify-between gap-3">
-          <span className="text-[15px] font-semibold text-foreground">Compose</span>
+          <span className="font-heading text-[17px] font-bold tracking-[-0.03em] text-foreground">Compose</span>
           <button
             type="button"
             onClick={() => setSaveOpen(true)}
@@ -190,7 +190,7 @@ export function CustomerEmailComposer({
                 ? 'Save this copy as a reusable template'
                 : 'Write a subject and message first'
             }
-            className="inline-flex items-center gap-1.5 rounded-[9px] border border-border-strong bg-card px-3 py-[7px] text-[12.5px] font-semibold text-foreground-secondary transition-colors hover:bg-muted disabled:opacity-40 disabled:hover:bg-card"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-[7px] text-[12.5px] font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-40 disabled:hover:bg-card"
           >
             <BookmarkPlus size={14} />
             {openTemplate ? 'Save template' : 'Save as template'}
@@ -200,7 +200,7 @@ export function CustomerEmailComposer({
         <RecipientPicker recipients={recipients} onChange={setRecipients} />
 
         <label className="flex flex-col gap-[7px]">
-          <span className="text-[13px] font-medium text-foreground-secondary">
+          <span className="text-[13.5px] font-medium text-foreground">
             Subject <span className="text-destructive">*</span>
           </span>
           <input
@@ -214,7 +214,7 @@ export function CustomerEmailComposer({
 
         <label className="flex flex-col gap-[7px]">
           <div className="flex items-center justify-between">
-            <span className="text-[13px] font-medium text-foreground-secondary">
+            <span className="text-[13.5px] font-medium text-foreground">
               Message <span className="text-destructive">*</span>
             </span>
             <span className="tabular-nums text-[11.5px] text-muted-foreground">
@@ -229,7 +229,7 @@ export function CustomerEmailComposer({
             }
             maxLength={MAX_BODY}
             rows={16}
-            className="w-full resize-y rounded-[10px] border border-input bg-background px-[14px] py-3 text-[14px] leading-[1.6] text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+            className="field-area w-full resize-y"
             style={{ minHeight: '260px' }}
           />
           <span className="text-[11.5px] text-muted-foreground">
@@ -240,7 +240,7 @@ export function CustomerEmailComposer({
         </label>
 
         {placeholders.length > 0 && (
-          <div className="flex flex-col gap-3 rounded-[10px] border border-border bg-muted/40 p-[14px_16px]">
+          <div className="flex flex-col gap-3 rounded-[10px] border border-border bg-muted p-[14px_16px]">
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-[13px] font-semibold text-foreground">
                 Details to fill in
@@ -263,7 +263,7 @@ export function CustomerEmailComposer({
                       setFills((prev) => ({ ...prev, [key]: event.target.value }))
                     }
                     placeholder={`{{${key}}}`}
-                    className="w-full rounded-[9px] border border-input bg-background px-3 py-2 text-[13px] text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+                    className="field w-full"
                   />
                 </label>
               ))}
@@ -279,7 +279,7 @@ export function CustomerEmailComposer({
               onChange={(event) => setShowCta(event.target.checked)}
               className="size-[15px] accent-[var(--primary)]"
             />
-            <span className="text-[13px] font-medium text-foreground-secondary">
+            <span className="text-[13.5px] font-medium text-foreground">
               Add a button
             </span>
           </label>
@@ -303,7 +303,7 @@ export function CustomerEmailComposer({
         </div>
 
         {result && (
-          <div className="flex flex-col gap-1.5 rounded-[10px] border border-border bg-muted/40 px-4 py-3 text-[13px]">
+          <div className="flex flex-col gap-1.5 rounded-[10px] border border-border bg-muted px-4 py-3 text-[13px]">
             <span>
               <span className="font-medium text-foreground">Last send: </span>
               <span className="text-muted-foreground">
@@ -328,7 +328,7 @@ export function CustomerEmailComposer({
             type="button"
             onClick={handleSend}
             disabled={isPending}
-            className="inline-flex items-center gap-2 whitespace-nowrap rounded-[10px] bg-primary px-5 py-[11px] text-[13.5px] font-semibold text-primary-foreground shadow-[var(--shadow-card)] transition-all hover:brightness-110 disabled:opacity-50"
+            className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-primary px-5 py-[11px] text-[13.5px] font-semibold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
           >
             <svg
               width="15"

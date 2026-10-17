@@ -12,10 +12,21 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { formatDate } from '@/lib/format';
-import { cn } from '@/lib/utils';
+import { formatDate, formatPhone, humanize } from '@/lib/format';
+import { SegmentedLinks } from '@/components/segmented';
+import {
+  EmptyRow,
+  InlineNotice,
+  ListCard,
+  PageHeader,
+  PageStack,
+  RowChevron,
+  RowLink,
+  ToolbarEnd,
+} from '@/components/page';
 import type { AdminBatchListItem } from '@/lib/types';
 import { batchStatusLabel, batchStatusVariant, riderDisplayName } from './batch-format';
+import { StatStrip } from '@/components/stat-strip';
 
 const LIMIT = 20;
 
@@ -91,178 +102,46 @@ export default async function BatchesPage({
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-[23px] font-bold tracking-tight text-foreground">Batches</h1>
-        <p className="mt-1 text-[14px] text-muted-foreground">
-          Every multi-drop run dispatch has formed — who is carrying it, and how far along each
-          drop is.
-        </p>
-      </div>
+    <PageStack>
+      <PageHeader
+        title="Batches"
+        subtitle="Every multi-drop run dispatch has formed: who is carrying it, and how far along each drop is."
+      />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {chips.map((chip) => (
-          <div
-            key={chip.label}
-            className="flex flex-col gap-1 rounded-[12px] border border-border bg-card p-[13px_16px] shadow-[var(--shadow-card)]"
-          >
-            <span className="text-[12px] font-medium text-muted-foreground">{chip.label}</span>
-            <span className="text-[20px] font-bold tabular-nums text-foreground">
-              {chip.value.toLocaleString()}
-            </span>
-          </div>
-        ))}
-      </div>
+      <StatStrip stats={chips.map((chip) => ({ label: chip.label, value: chip.value.toLocaleString() }))} />
 
       {params.rider && (
-        <div className="flex w-fit items-center gap-2 rounded-[9px] border border-border bg-card px-3 py-1.5 text-[13px] text-foreground-secondary">
-          Showing one courier&apos;s batches
-          <Link href={hrefWith({ rider: undefined })} className="font-semibold text-primary hover:underline">
-            Clear
-          </Link>
-        </div>
+        <InlineNotice tone="info" action={<Link href={hrefWith({ rider: undefined })}>Show all couriers</Link>}>
+          Showing one courier’s batches.
+        </InlineNotice>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {FILTERS.map((f) => {
-            const active = activeFilter === f.key;
-            return (
-              <Link
-                key={f.key}
-                href={hrefWith({ filter: f.key, skip: undefined })}
-                className={cn(
-                  'rounded-[9px] border px-3.5 py-[7px] text-[13px] font-semibold transition-colors',
-                  active
-                    ? 'border-transparent bg-brand-tint text-primary'
-                    : 'border-border-strong bg-card text-foreground-secondary hover:bg-muted'
-                )}
-              >
-                {f.label}
-                <span className="ml-1.5 tabular-nums opacity-70">{filterCount(counts, f.key)}</span>
-              </Link>
-            );
-          })}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-[9px] border border-border-strong bg-card p-0.5">
-            {['', ...VEHICLES].map((v) => (
-              <Link
-                key={v || 'any'}
-                href={hrefWith({ vehicle: v || undefined, skip: undefined })}
-                className={cn(
-                  'rounded-[7px] px-2.5 py-1 text-[12.5px] font-semibold capitalize',
-                  vehicle === v
-                    ? 'bg-brand-tint text-primary'
-                    : 'text-foreground-secondary hover:bg-muted'
-                )}
-              >
-                {v || 'Any vehicle'}
-              </Link>
-            ))}
-          </div>
-          <SearchBox placeholder="Search by batch ID…" />
-        </div>
-      </div>
-
-      <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Batch</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Courier</TableHead>
-                <TableHead>Vehicle</TableHead>
-                <TableHead>Drops</TableHead>
-                <TableHead className="text-right">Fare</TableHead>
-                <TableHead>Window</TableHead>
-                <TableHead>Formed</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {result.data.map((batch) => {
-                const { stops, delivered, failed, fare } = batch.summary;
-                const rider = batch.rider;
-                return (
-                  <TableRow key={batch._id}>
-                    <TableCell>
-                      <Link
-                        href={`/batches/${encodeURIComponent(batch.batchId)}`}
-                        className="rounded bg-chip px-2 py-0.5 font-mono text-xs hover:underline"
-                      >
-                        {batch.batchId}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={batchStatusVariant(batch.status)} dot>
-                        {batchStatusLabel(batch.status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {rider ? (
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {riderDisplayName(rider)}
-                            {rider.isInHouse && (
-                              <span className="ml-1.5 rounded bg-chip px-1.5 py-0.5 text-[10.5px] font-semibold text-foreground-secondary">
-                                In-house
-                              </span>
-                            )}
-                          </span>
-                          <span className="text-[12px] text-muted-foreground">{rider.phone || '—'}</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">
-                          {batch.declinedCount
-                            ? `None yet · ${batch.declinedCount} declined`
-                            : 'None yet'}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      <span className="capitalize">{batch.vehicleType}</span>
-                      <span className="text-[12px]"> · {batch.assignmentMode}</span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-positive"
-                            style={{ width: `${stops ? (delivered / stops) * 100 : 0}%` }}
-                          />
-                        </div>
-                        <span className="tabular-nums text-[12.5px]">
-                          {delivered}/{stops}
-                        </span>
-                        {failed > 0 && (
-                          <span className="text-[12px] text-destructive">{failed} failed</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right font-semibold tabular-nums">
-                      ₦{fare.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="capitalize text-muted-foreground">
-                      {batch.window || 'Open'}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatDate(batch.createdAt)}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {result.data.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
-                    No batches found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="border-t border-border px-4 py-3">
+      <ListCard
+        toolbar={
+          <>
+            <SegmentedLinks
+              active={activeFilter}
+              items={FILTERS.map((f) => ({
+                key: f.key,
+                label: f.label,
+                href: hrefWith({ filter: f.key, skip: undefined }),
+                count: filterCount(counts, f.key),
+              }))}
+            />
+            <SegmentedLinks
+              active={vehicle || 'any'}
+              items={['', ...VEHICLES].map((v) => ({
+                key: v || 'any',
+                label: v ? humanize(v) : 'Any vehicle',
+                href: hrefWith({ vehicle: v || undefined, skip: undefined }),
+              }))}
+            />
+            <ToolbarEnd>
+              <SearchBox placeholder="Batch ID" />
+            </ToolbarEnd>
+          </>
+        }
+        footer={
           <PaginationControls
             skip={skip}
             limit={LIMIT}
@@ -270,8 +149,83 @@ export default async function BatchesPage({
             basePath="/batches"
             searchParams={params}
           />
-        </div>
-      </div>
-    </div>
+        }
+      >
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Batch</TableHead>
+              <TableHead>Stage</TableHead>
+              <TableHead>Courier</TableHead>
+              <TableHead>Vehicle</TableHead>
+              <TableHead>Drops</TableHead>
+              <TableHead className="text-right">Fare</TableHead>
+              <TableHead className="w-12" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {result.data.map((batch) => {
+              const { stops, delivered, failed, fare } = batch.summary;
+              const rider = batch.rider;
+              return (
+                <TableRow key={batch._id} className="relative">
+                  <TableCell className="tabular-nums">
+                    <RowLink href={`/batches/${encodeURIComponent(batch.batchId)}`}>{batch.batchId}</RowLink>
+                    <div className="text-[12.5px] whitespace-nowrap text-muted-foreground">
+                      {formatDate(batch.createdAt)} · {batch.window ? humanize(batch.window) : 'Open window'}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={batchStatusVariant(batch.status)} dot>
+                      {batchStatusLabel(batch.status)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {rider ? (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <span>{riderDisplayName(rider)}</span>
+                          {rider.isInHouse && <Badge variant="secondary">In-house</Badge>}
+                        </div>
+                        <div className="text-[12.5px] text-muted-foreground tabular-nums">{formatPhone(rider.phone)}</div>
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        {batch.declinedCount ? `None yet · ${batch.declinedCount} declined` : 'None yet'}
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div>{humanize(batch.vehicleType)}</div>
+                    <div className="text-[12.5px] text-muted-foreground">{humanize(batch.assignmentMode)}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-positive"
+                          style={{ width: `${stops ? (delivered / stops) * 100 : 0}%` }}
+                        />
+                      </div>
+                      <span className="text-[13px] tabular-nums">
+                        {delivered} of {stops}
+                      </span>
+                      {failed > 0 && <span className="text-[12.5px] text-destructive">{failed} failed</span>}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right font-medium tabular-nums">₦ {fare.toLocaleString()}</TableCell>
+                  <TableCell>
+                    <RowChevron />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+            {result.data.length === 0 && (
+              <EmptyRow colSpan={7} title="No batches match" body="Clear the search, vehicle or tab." />
+            )}
+          </TableBody>
+        </Table>
+      </ListCard>
+    </PageStack>
   );
 }

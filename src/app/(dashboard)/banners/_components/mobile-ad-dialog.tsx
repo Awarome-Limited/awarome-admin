@@ -94,7 +94,7 @@ export function MobileAdDialog() {
               id="vendor"
               name="vendor"
               placeholder="24-character vendor id"
-              className="font-mono"
+              className="tabular-nums"
               required
             />
           </div>

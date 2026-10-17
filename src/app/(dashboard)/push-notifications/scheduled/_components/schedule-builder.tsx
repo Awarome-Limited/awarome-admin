@@ -290,7 +290,7 @@ export function ScheduleBuilder({
   return (
     <div className="flex flex-col gap-4">
       {/* CSV toolbar */}
-      <div className="rounded-[14px] border border-border bg-card p-[18px_20px] shadow-[var(--shadow-card)]">
+      <div className="rounded-[10px] border border-border bg-card p-[18px_20px]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="text-[14.5px] font-semibold text-foreground">Bulk add from a CSV</div>
@@ -304,7 +304,7 @@ export function ScheduleBuilder({
               onClick={() =>
                 downloadCsv(buildTemplateCsv(lists), 'scheduled-push-template.csv')
               }
-              className="inline-flex items-center gap-1.5 rounded-[9px] border border-border-strong bg-card px-3.5 py-[7px] text-[13px] font-semibold text-foreground-secondary transition-colors hover:bg-muted"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-[7px] text-[13px] font-medium text-foreground transition-colors hover:bg-muted"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -317,7 +317,7 @@ export function ScheduleBuilder({
               type="button"
               onClick={() => fileInput.current?.click()}
               disabled={isPending}
-              className="inline-flex items-center gap-1.5 rounded-[9px] bg-primary px-3.5 py-[7px] text-[13px] font-semibold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-[7px] text-[13px] font-semibold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -348,7 +348,7 @@ export function ScheduleBuilder({
           <dl className="mt-2.5 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5">
             {CSV_HELP.map(([column, help]) => (
               <div key={column} className="contents">
-                <dt className="font-mono text-foreground">{column}</dt>
+                <dt className="tabular-nums text-foreground">{column}</dt>
                 <dd className="text-muted-foreground">{help}</dd>
               </div>
             ))}
@@ -377,7 +377,7 @@ export function ScheduleBuilder({
             id={`push-row-${row.key}`}
             aria-label={`Push ${index + 1}`}
             className={cn(
-              'rounded-[14px] border bg-card shadow-[var(--shadow-card)]',
+              'rounded-[10px] border bg-card',
               invalid || serverErrors[row.key] ? 'border-destructive/50' : 'border-border'
             )}
           >
@@ -456,7 +456,7 @@ export function ScheduleBuilder({
         type="button"
         onClick={addRow}
         disabled={isPending || rows.length >= MAX_ROWS}
-        className="flex items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-dashed border-input bg-background py-4 text-[13.5px] font-semibold text-primary transition-colors hover:border-primary hover:bg-brand-tint disabled:opacity-50"
+        className="flex items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-input bg-background py-4 text-[13.5px] font-semibold text-primary transition-colors hover:border-primary hover:bg-brand-tint disabled:opacity-50"
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M12 5v14" />
@@ -466,7 +466,7 @@ export function ScheduleBuilder({
       </button>
 
       {/* Summary + submit */}
-      <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-border bg-card/95 px-5 py-3.5 shadow-[0_8px_24px_rgba(20,22,42,0.12)] backdrop-blur">
+      <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-border bg-card/95 px-5 py-3.5 shadow-[0_8px_24px_rgba(20,22,42,0.12)] backdrop-blur">
         <div className="min-w-0 text-[13px]">
           <div className="font-semibold text-foreground">
             {pushes(rows.length)}
@@ -501,7 +501,7 @@ export function ScheduleBuilder({
             type="button"
             onClick={requestSchedule}
             disabled={isPending}
-            className="inline-flex items-center gap-2 whitespace-nowrap rounded-[10px] bg-primary px-5 py-[10px] text-[13.5px] font-semibold text-primary-foreground shadow-[var(--shadow-card)] transition-all hover:brightness-110 disabled:opacity-50"
+            className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-primary px-5 py-[10px] text-[13.5px] font-semibold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
           >
             {isPending ? 'Scheduling…' : `Schedule ${sends(sendCount)}`}
           </button>

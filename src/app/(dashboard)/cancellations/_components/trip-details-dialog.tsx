@@ -34,7 +34,7 @@ export interface TripDetails {
 function Party({ party }: { party: TripParty }) {
   return (
     <div className="flex flex-col gap-0.5 rounded-[10px] border border-border p-3">
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <span className="text-[11.5px] font-medium uppercase tracking-[0.06em]r text-muted-foreground">
         {party.role}
       </span>
       <span className="text-[14px] font-semibold text-foreground">
@@ -44,7 +44,7 @@ function Party({ party }: { party: TripParty }) {
       {party.phone && (
         <a
           href={`tel:${party.phone}`}
-          className="text-[13px] text-primary hover:underline"
+          className="text-[13px] text-primary hover:text-warning"
         >
           {party.phone}
         </a>
@@ -85,7 +85,7 @@ export function TripDetailsDialog({ details }: { details: TripDetails }) {
 
         <div className="flex flex-col gap-4">
           <div className="rounded-[10px] border border-destructive/30 bg-destructive/5 p-3">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-destructive">
+            <div className="text-[11.5px] font-medium uppercase tracking-[0.06em]r text-destructive">
               Rider&apos;s reason
             </div>
             <div className="mt-1 text-[14px] font-semibold text-foreground">
@@ -106,7 +106,7 @@ export function TripDetailsDialog({ details }: { details: TripDetails }) {
 
           <div className="flex flex-col gap-3 rounded-[10px] border border-border p-3">
             <div>
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="text-[11.5px] font-medium uppercase tracking-[0.06em]r text-muted-foreground">
                 Pickup
               </div>
               <div className="mt-0.5 text-[13.5px] text-foreground">
@@ -119,7 +119,7 @@ export function TripDetailsDialog({ details }: { details: TripDetails }) {
               )}
             </div>
             <div>
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="text-[11.5px] font-medium uppercase tracking-[0.06em]r text-muted-foreground">
                 Drop-off
               </div>
               <div className="mt-0.5 text-[13.5px] text-foreground">
@@ -136,7 +136,7 @@ export function TripDetailsDialog({ details }: { details: TripDetails }) {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {details.facts.map((fact) => (
               <div key={fact.label} className="flex flex-col gap-0.5">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <span className="text-[11.5px] font-medium uppercase tracking-[0.06em]r text-muted-foreground">
                   {fact.label}
                 </span>
                 <span className="text-[13.5px] font-semibold tabular-nums text-foreground">

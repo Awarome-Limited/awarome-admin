@@ -48,7 +48,7 @@ export function ExportButton() {
     <button
       onClick={handleExport}
       disabled={isPending}
-      className="inline-flex items-center gap-1.5 rounded-[9px] border border-border-strong bg-card px-3.5 py-[7px] text-[13px] font-semibold text-foreground-secondary transition-colors hover:bg-muted disabled:opacity-50"
+      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-[7px] text-[13px] font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
     >
       {isPending ? (
         'Exporting…'

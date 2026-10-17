@@ -6,8 +6,16 @@ import { hasPermission, PermissionAction, PermissionModule } from '@/lib/permiss
 import type { AdminBulkDelivery, AdminRider, BulkDispatchMode } from '@/lib/types';
 import { ApiErrorCard } from '@/components/api-error-card';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatDate, statusBadgeVariant } from '@/lib/format';
+import { formatDate, formatPhone, humanize, statusBadgeVariant } from '@/lib/format';
+import {
+  DetailHeader,
+  InlineNotice,
+  PageStack,
+  Panel,
+  StatCards,
+  SummaryRows,
+  type StatCardData,
+} from '@/components/page';
 import { BulkDrops } from './_components/bulk-drops';
 import { EditSenderDialog } from './_components/edit-dialogs';
 
@@ -17,13 +25,13 @@ const RIDER_LIMIT = 200;
 const DEFAULT_TERMS = { minDropsForFlat: 10, flatRate: 2500, farRate: 3000, farDistanceKm: 25 };
 
 const DISPATCH_LABELS: Record<BulkDispatchMode, string> = {
-  runs: 'split across riders',
-  'single-trip': 'one trip, offered to riders',
-  rider: 'one trip, assigned to a rider',
-  pool: 'normal batching',
+  runs: 'Split across riders',
+  'single-trip': 'One trip, offered to riders',
+  rider: 'One trip, assigned to a rider',
+  pool: 'Normal batching',
 };
 
-const naira = (amount: number) => `₦${Math.round(amount).toLocaleString('en-NG')}`;
+const naira = (amount: number) => `₦ ${Math.round(amount).toLocaleString('en-NG')}`;
 
 function personName(person?: { firstName?: string; lastName?: string; email?: string } | string) {
   if (!person || typeof person === 'string') return null;
@@ -67,169 +75,138 @@ export default async function BulkDeliveryDetailPage({
   const customer = bulk.user && typeof bulk.user !== 'string' ? bulk.user : null;
   const terms = bulk.pricingTerms;
 
-  const tiles = [
+  const live = summary.drops - summary.cancelled;
+  const stats: StatCardData[] = [
     {
       label: 'Delivered',
-      value: `${summary.delivered}/${summary.drops - summary.cancelled}`,
-      hint: summary.cancelled ? `${summary.cancelled} cancelled` : `${summary.inProgress} in progress`,
+      value: `${summary.delivered} of ${live}`,
+      progress: live > 0 ? summary.delivered / live : 0,
+      meta: summary.cancelled ? `${summary.cancelled} cancelled` : `${summary.inProgress} in progress`,
     },
-    { label: 'Total fees', value: naira(summary.totalFees), hint: `${summary.drops} drops` },
+    { label: 'Total fees', value: naira(summary.totalFees), meta: `${summary.drops} drops` },
     {
       label: 'Vendor owes',
       value: naira(summary.vendor.outstanding),
-      hint: summary.vendor.drops
+      meta: summary.vendor.drops
         ? `${naira(summary.vendor.dueNow)} due now · ${naira(summary.vendor.paid)} paid`
         : 'No postpaid drops',
-      warn: summary.vendor.dueNow > 0,
     },
     {
       label: 'Receivers paid',
       value: naira(summary.receiver.collected),
-      hint: summary.receiver.drops
+      meta: summary.receiver.drops
         ? `${naira(summary.receiver.outstanding)} still to collect`
         : 'No receiver-pays drops',
     },
   ];
 
   return (
-    <div className="flex flex-col gap-4">
-      <Link
-        href="/bulk-deliveries"
-        className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-border-strong bg-card px-3 py-1.5 text-[13px] font-semibold text-foreground-secondary hover:bg-muted"
-      >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5 M12 19l-7-7 7-7"/></svg>
-        Back to bulk deliveries
-      </Link>
-
-      <div>
-        <div className="flex flex-wrap items-center gap-2.5">
-          <h1 className="rounded bg-chip px-2 py-0.5 font-mono text-lg font-semibold">{bulk.bulkId}</h1>
-          <Badge variant={bulk.pricingMode === 'flat' ? 'default' : 'outline'}>
+    <PageStack>
+      <DetailHeader
+        back={{ href: '/bulk-deliveries', label: 'All bulk deliveries' }}
+        title={<span className="tabular-nums">{bulk.bulkId}</span>}
+        status={
+          <Badge variant={bulk.pricingMode === 'flat' ? 'info' : 'secondary'}>
             {bulk.pricingMode === 'flat' ? 'Flat rate' : 'Standard pricing'}
           </Badge>
-        </div>
-        <p className="mt-1.5 text-[13px] text-muted-foreground">
-          {[
-            customer ? personName(customer) : null,
-            formatDate(bulk.createdAt),
-            personName(bulk.createdBy) ? `by ${personName(bulk.createdBy)}` : null,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-        </p>
-      </div>
+        }
+        meta={[
+          customer ? personName(customer) : null,
+          formatDate(bulk.createdAt),
+          personName(bulk.createdBy) ? `Booked by ${personName(bulk.createdBy)}` : null,
+        ]}
+      />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {tiles.map((tile) => (
-          <div
-            key={tile.label}
-            className="flex flex-col gap-1 rounded-[12px] border border-border bg-card p-[13px_16px] shadow-[var(--shadow-card)]"
-          >
-            <span className="text-[12px] font-medium text-muted-foreground">{tile.label}</span>
-            <span className={`text-[20px] font-bold tabular-nums ${tile.warn ? 'text-warning' : 'text-foreground'}`}>
-              {tile.value}
+      <StatCards stats={stats} />
+
+      {summary.vendor.dueNow > 0 && (
+        <InlineNotice>
+          The vendor owes {naira(summary.vendor.dueNow)} on delivered postpaid drops. Record it on Bulk receivables
+          once they pay.
+        </InlineNotice>
+      )}
+
+      <section className="grid items-start gap-4 lg:grid-cols-3">
+        <Panel title="Customer">
+          {customer ? (
+            <div className="flex flex-col gap-1 text-[14px]">
+              <Link href={`/users/${customer._id}`} className="font-medium text-primary hover:text-warning">
+                {personName(customer)}
+              </Link>
+              <span className="text-[13px] text-muted-foreground tabular-nums">
+                {[customer.phone && formatPhone(customer.phone), customer.email].filter(Boolean).join(' · ')}
+              </span>
+            </div>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </Panel>
+        <Panel title="Pickup" aside={canUpdate && <EditSenderDialog bulkId={bulk._id} sender={bulk.sender} />}>
+          <div className="flex flex-col gap-1 text-[14px]">
+            <span className="font-medium">{bulk.pickupAddress?.address || '—'}</span>
+            <span className="text-[13px] text-muted-foreground tabular-nums">
+              {[bulk.sender?.name, bulk.sender?.phone && formatPhone(bulk.sender.phone)].filter(Boolean).join(' · ')}
             </span>
-            <span className="text-[11.5px] text-muted-foreground">{tile.hint}</span>
           </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Customer</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-1 text-[13px]">
-            {customer ? (
-              <>
-                <Link href={`/users/${customer._id}`} className="font-semibold text-primary hover:underline">
-                  {personName(customer)}
-                </Link>
-                <span className="text-muted-foreground">
-                  {[customer.phone, customer.email].filter(Boolean).join(' · ')}
-                </span>
-              </>
-            ) : (
-              '—'
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2">
-            <CardTitle>Pickup</CardTitle>
-            {canUpdate && <EditSenderDialog bulkId={bulk._id} sender={bulk.sender} />}
-          </CardHeader>
-          <CardContent className="flex flex-col gap-1 text-[13px]">
-            <span className="font-semibold">{bulk.pickupAddress?.address || '—'}</span>
-            <span className="text-muted-foreground">
-              {[bulk.sender?.name, bulk.sender?.phone].filter(Boolean).join(' · ')}
-            </span>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Terms</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-1 text-[13px] text-muted-foreground">
-            {terms && bulk.pricingMode === 'flat' ? (
-              <span>
-                {naira(terms.flatRate)} per drop, {naira(terms.farRate)} from {terms.farDistanceKm} km
-              </span>
-            ) : (
-              <span>Normal app pricing (under {terms?.minDropsForFlat ?? 10} drops)</span>
-            )}
-            <span>
-              <span className="capitalize">{bulk.vehicleType || 'bike'}</span> ·{' '}
-              {bulk.dispatchMode ? DISPATCH_LABELS[bulk.dispatchMode] : 'batch dispatch'}
-            </span>
-            {bulk.runSize && (!bulk.dispatchMode || bulk.dispatchMode === 'runs') && (
-              <span>
-                {bulk.runSize.minDrops}–{bulk.runSize.maxDrops} drops per rider
-              </span>
-            )}
-            {bulk.note && <span>Note: {bulk.note}</span>}
-          </CardContent>
-        </Card>
-      </div>
+        </Panel>
+        <Panel title="Terms">
+          <SummaryRows
+            rows={[
+              {
+                label: 'Price',
+                value:
+                  terms && bulk.pricingMode === 'flat'
+                    ? `${naira(terms.flatRate)} a drop, ${naira(terms.farRate)} from ${terms.farDistanceKm} km`
+                    : `App pricing (under ${terms?.minDropsForFlat ?? 10} drops)`,
+              },
+              { label: 'Vehicle', value: humanize(bulk.vehicleType || 'bike') },
+              {
+                label: 'Dispatch',
+                value: bulk.dispatchMode ? DISPATCH_LABELS[bulk.dispatchMode] : 'Batch dispatch',
+              },
+              ...(bulk.runSize && (!bulk.dispatchMode || bulk.dispatchMode === 'runs')
+                ? [{ label: 'Run size', value: `${bulk.runSize.minDrops}–${bulk.runSize.maxDrops} drops a rider` }]
+                : []),
+            ]}
+          />
+          {bulk.note && <p className="text-[13px] text-foreground-secondary">Note: {bulk.note}</p>}
+        </Panel>
+      </section>
 
       {bulk.runs && bulk.runs.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Rider runs ({bulk.runs.length})</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+        <Panel title={`Rider runs (${bulk.runs.length})`}>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
             {bulk.runs.map((run) => (
               <Link
                 key={run.batchId}
                 href={`/batches/${run.batchId}`}
-                className="flex flex-col gap-1 rounded-[10px] border border-border p-3 text-[13px] hover:bg-muted"
+                className="flex flex-col gap-1.5 rounded-[8px] border border-border p-3.5 text-[13.5px] transition-colors hover:bg-muted"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-[11.5px] text-primary">
-                    {run.batchId.split('-').slice(0, 3).join('-')}
-                  </span>
+                  <span className="font-medium tabular-nums">{run.batchId.split('-').slice(0, 3).join('-')}</span>
                   <Badge variant={statusBadgeVariant(run.status)} dot>
-                    {run.status}
+                    {humanize(run.status)}
                   </Badge>
                 </div>
-                <span className="font-semibold">
+                <span>
                   {run.stops} {run.stops === 1 ? 'drop' : 'drops'}
                   {run.otherStops > 0 && (
-                    <span className="font-normal text-muted-foreground">
-                      {' '}· {run.bulkStops} from this bulk, {run.otherStops} from other customers
+                    <span className="text-muted-foreground">
+                      {' '}
+                      · {run.bulkStops} from this bulk, {run.otherStops} from other customers
                     </span>
                   )}
                 </span>
-                <span className="text-[12px] text-muted-foreground">
+                <span className="text-[12.5px] text-muted-foreground">
                   {personName(run.rider ?? undefined) ?? 'Waiting for a rider'}
                 </span>
               </Link>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </Panel>
       )}
 
-      <Card className="py-0">
+      <section className="overflow-hidden rounded-[10px] border border-border bg-card">
         <BulkDrops
           bulkId={bulk._id}
           drops={bulk.deliveries ?? []}
@@ -243,7 +220,7 @@ export default async function BulkDeliveryDetailPage({
             terms: { ...DEFAULT_TERMS, ...bulk.pricingTerms },
           }}
         />
-      </Card>
-    </div>
+      </section>
+    </PageStack>
   );
 }

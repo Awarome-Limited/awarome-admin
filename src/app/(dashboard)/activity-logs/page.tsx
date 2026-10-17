@@ -13,9 +13,11 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { formatDate } from '@/lib/format';
-import { cn } from '@/lib/utils';
+import { formatDate, humanize } from '@/lib/format';
+import { SegmentedLinks } from '@/components/segmented';
+import { EmptyRow, ListCard, PageHeader, PageStack, ToolbarEnd } from '@/components/page';
 import { LOG_CATEGORIES, LOG_LEVELS } from '@/lib/activity-log-enums';
+import { StatStrip } from '@/components/stat-strip';
 
 const LIMIT = 30;
 
@@ -97,113 +99,38 @@ export default async function ActivityLogsPage({
     { label: 'Errors', value: errorCount.toLocaleString() },
   ];
 
+  const tabHref = (key: string) => {
+    const p = new URLSearchParams();
+    if (search) p.set('search', search);
+    if (category) p.set('category', category);
+    if (params.from) p.set('from', params.from);
+    if (params.to) p.set('to', params.to);
+    if (key !== 'all') p.set('filter', key);
+    const q = p.toString();
+    return `/activity-logs${q ? `?${q}` : ''}`;
+  };
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[23px] font-bold tracking-tight text-foreground">Activity logs</h1>
-          <p className="mt-1 text-[14px] text-muted-foreground">
-            Audit trail of all admin actions on the platform
-          </p>
-        </div>
-      </div>
+    <PageStack>
+      <PageHeader title="Activity logs" subtitle="An audit trail of every admin action on the platform." />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {chips.map((chip) => (
-          <div
-            key={chip.label}
-            className="flex flex-col gap-1 rounded-[12px] border border-border bg-card p-[13px_16px] shadow-[var(--shadow-card)]"
-          >
-            <span className="text-[12px] font-medium text-muted-foreground">{chip.label}</span>
-            <span className="text-[20px] font-bold tabular-nums text-foreground">{chip.value}</span>
-          </div>
-        ))}
-      </div>
+      <StatStrip stats={chips} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {LEVEL_FILTERS.map((f) => {
-            const active = activeFilter === f.key;
-            const href = (() => {
-              const p = new URLSearchParams();
-              if (search) p.set('search', search);
-              if (category) p.set('category', category);
-              if (params.from) p.set('from', params.from);
-              if (params.to) p.set('to', params.to);
-              if (f.key !== 'all') p.set('filter', f.key);
-              const s = p.toString();
-              return `/activity-logs${s ? `?${s}` : ''}`;
-            })();
-            return (
-              <Link
-                key={f.key}
-                href={href}
-                className={cn(
-                  'rounded-[9px] border px-3.5 py-[7px] text-[13px] font-semibold transition-colors',
-                  active
-                    ? 'border-transparent bg-brand-tint text-primary'
-                    : 'border-border-strong bg-card text-foreground-secondary hover:bg-muted'
-                )}
-              >
-                {f.label}
-              </Link>
-            );
-          })}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <CategorySelect value={category} search={search} activeFilter={activeFilter} params={params} />
-          <DateRangeInputs params={params} search={search} activeFilter={activeFilter} category={category} />
-          <SearchBox placeholder="Search actions…" />
-        </div>
-      </div>
-
-      <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Level</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Staff</TableHead>
-                <TableHead>Date</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {result.data.map((log) => (
-                <TableRow key={log._id}>
-                  <TableCell>
-                    <Badge variant={levelVariant(log.level)} dot>{log.level}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <span className="rounded bg-chip px-2 py-0.5 text-xs font-medium text-foreground-secondary">
-                      {log.category}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-mono text-xs text-primary">{log.action}</span>
-                  </TableCell>
-                  <TableCell className="max-w-[280px] truncate text-muted-foreground">
-                    {log.description}
-                  </TableCell>
-                  <TableCell className="font-medium">{actorName(log.staff)}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDate(log.createdAt).split(',')[0]}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {result.data.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                    No activity logs found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="border-t border-border px-4 py-3">
+      <ListCard
+        toolbar={
+          <>
+            <SegmentedLinks
+              active={activeFilter}
+              items={LEVEL_FILTERS.map((f) => ({ key: f.key, label: f.label, href: tabHref(f.key) }))}
+            />
+            <CategorySelect value={category} search={search} activeFilter={activeFilter} params={params} />
+            <DateRangeInputs params={params} search={search} activeFilter={activeFilter} category={category} />
+            <ToolbarEnd>
+              <SearchBox placeholder="Search actions" />
+            </ToolbarEnd>
+          </>
+        }
+        footer={
           <PaginationControls
             skip={skip}
             limit={LIMIT}
@@ -211,9 +138,42 @@ export default async function ActivityLogsPage({
             basePath="/activity-logs"
             searchParams={params}
           />
-        </div>
-      </div>
-    </div>
+        }
+      >
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Action</TableHead>
+              <TableHead>Level</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead>Staff</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {result.data.map((log) => (
+              <TableRow key={log._id}>
+                <TableCell>
+                  <div className="font-medium">{humanize(log.action)}</div>
+                  <div className="text-[12.5px] whitespace-nowrap text-muted-foreground tabular-nums">
+                    {humanize(log.category)} · {formatDate(log.createdAt)}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={levelVariant(log.level)} dot>
+                    {humanize(log.level)}
+                  </Badge>
+                </TableCell>
+                <TableCell className="max-w-[360px] truncate text-foreground-secondary">{log.description}</TableCell>
+                <TableCell>{actorName(log.staff)}</TableCell>
+              </TableRow>
+            ))}
+            {result.data.length === 0 && (
+              <EmptyRow colSpan={4} title="No activity matches" body="Clear the search, category, dates or tab." />
+            )}
+          </TableBody>
+        </Table>
+      </ListCard>
+    </PageStack>
   );
 }
 
@@ -234,19 +194,17 @@ function CategorySelect({
       {activeFilter !== 'all' && <input type="hidden" name="filter" value={activeFilter} />}
       {params.from && <input type="hidden" name="from" value={params.from} />}
       {params.to && <input type="hidden" name="to" value={params.to} />}
-      <select
-        name="category"
-        defaultValue={value}
-        className="h-[34px] rounded-[9px] border border-border-strong bg-card px-3 text-[13px] font-semibold text-foreground-secondary outline-none"
-      >
+      <select name="category" aria-label="Category" defaultValue={value} className="toolbar-select">
         <option value="">All categories</option>
         {LOG_CATEGORIES.map((c) => (
-          <option key={c} value={c}>{c}</option>
+          <option key={c} value={c}>
+            {humanize(c)}
+          </option>
         ))}
       </select>
       <button
         type="submit"
-        className="h-[34px] rounded-[9px] border border-border-strong bg-card px-3 text-[13px] font-semibold text-foreground-secondary hover:bg-muted"
+        className="h-[38px] rounded-full border border-border bg-card px-3.5 text-[13.5px] font-medium text-foreground hover:bg-muted"
       >
         Go
       </button>
@@ -273,19 +231,21 @@ function DateRangeInputs({
       <input
         type="date"
         name="from"
+        aria-label="From"
         defaultValue={params.from ?? ''}
-        className="h-[34px] rounded-[9px] border border-border-strong bg-card px-2.5 text-[13px] text-foreground-secondary outline-none"
+        className="toolbar-select pr-3.5 tabular-nums"
       />
       <span className="text-[13px] text-muted-foreground">–</span>
       <input
         type="date"
         name="to"
+        aria-label="To"
         defaultValue={params.to ?? ''}
-        className="h-[34px] rounded-[9px] border border-border-strong bg-card px-2.5 text-[13px] text-foreground-secondary outline-none"
+        className="toolbar-select pr-3.5 tabular-nums"
       />
       <button
         type="submit"
-        className="h-[34px] rounded-[9px] border border-border-strong bg-card px-3 text-[13px] font-semibold text-foreground-secondary hover:bg-muted"
+        className="h-[38px] rounded-full border border-border bg-card px-3.5 text-[13.5px] font-medium text-foreground hover:bg-muted"
       >
         Go
       </button>

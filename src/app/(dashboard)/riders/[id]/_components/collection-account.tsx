@@ -70,7 +70,7 @@ export function RiderCollectionAccountCard({
   return (
     <div className="flex flex-col gap-2 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="font-mono text-[15px] font-semibold tabular-nums">
+        <span className="tabular-nums text-[15px] font-semibold tabular-nums">
           {account.accountNumber ?? '—'}
         </span>
         <Badge variant={status.variant} dot>
@@ -88,7 +88,7 @@ export function RiderCollectionAccountCard({
           {account.customer ? (
             <>
               This is still their{' '}
-              <Link href={`/users/${account.customer}`} className="font-semibold text-primary hover:underline">
+              <Link href={`/users/${account.customer}`} className="font-semibold text-primary hover:text-warning">
                 customer account
               </Link>
               , from before riders had their own. Move them to their own rider account so top-ups reach
@@ -102,7 +102,7 @@ export function RiderCollectionAccountCard({
       {stillOpen.map((p) => (
         <span key={p.accountNumber} className="text-[12.5px] text-muted-foreground">
           Previous account {p.bank ? `${p.bank} ` : ''}
-          <span className="font-mono">{p.accountNumber}</span> still takes payments until{' '}
+          <span className="tabular-nums">{p.accountNumber}</span> still takes payments until{' '}
           {new Date(p.closesAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}.
         </span>
       ))}

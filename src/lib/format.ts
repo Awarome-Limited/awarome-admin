@@ -1,8 +1,10 @@
+/** "17 Oct 2026, 06:58" in Lagos time; the header's clock chip says so once for every page. */
 export function formatDate(value?: string | Date | null) {
   if (!value) return '—';
   return new Date(value).toLocaleString('en-GB', {
     dateStyle: 'medium',
     timeStyle: 'short',
+    timeZone: 'Africa/Lagos',
   });
 }
 
@@ -29,7 +31,8 @@ const POSITIVE_STATUS_HINTS = [
   'success',
   'subscribed',
 ];
-const WARNING_STATUS_HINTS = [
+// In-progress stages read as indigo stage pills; orange is kept for real warnings.
+const STAGE_STATUS_HINTS = [
   'pending',
   'processing',
   'assigned',
@@ -55,9 +58,9 @@ export function statusBadgeVariant(
 ): 'default' | 'secondary' | 'destructive' | 'outline' | 'positive' | 'warning' | 'info' {
   if (!status) return 'outline';
   const value = status.toLowerCase();
-  if (BRAND_STATUS_HINTS.some((hint) => value.includes(hint))) return 'default';
+  if (BRAND_STATUS_HINTS.some((hint) => value.includes(hint))) return 'info';
   if (POSITIVE_STATUS_HINTS.some((hint) => value.includes(hint))) return 'positive';
-  if (WARNING_STATUS_HINTS.some((hint) => value.includes(hint))) return 'warning';
+  if (STAGE_STATUS_HINTS.some((hint) => value.includes(hint))) return 'info';
   if (NEGATIVE_STATUS_HINTS.some((hint) => value.includes(hint))) return 'destructive';
   return 'secondary';
 }
@@ -65,7 +68,7 @@ export function statusBadgeVariant(
 // Wallet/transaction balances are stored in kobo on the BE.
 export function formatNaira(kobo?: number) {
   if (kobo === undefined || kobo === null) return '—';
-  return `₦${(kobo / 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  return `₦ ${(kobo / 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 }
 
 /**
@@ -111,4 +114,33 @@ export function toDisplayTime(value?: string): string {
   return minutes === 0
     ? `${hours12}${meridiem}`
     : `${hours12}:${String(minutes).padStart(2, '0')}${meridiem}`;
+}
+
+/** "+234 704 642 7837" from any of 07046427837, 2347046427837, +234 704…; anything else as given. */
+export function formatPhone(value?: string | null) {
+  if (!value) return '—';
+  const digits = value.replace(/\D/g, '');
+  const local =
+    digits.length === 13 && digits.startsWith('234')
+      ? digits.slice(3)
+      : digits.length === 11 && digits.startsWith('0')
+        ? digits.slice(1)
+        : null;
+  if (!local) return value;
+  return `+234 ${local.slice(0, 3)} ${local.slice(3, 6)} ${local.slice(6)}`;
+}
+
+/**
+ * One spelling per value for codes shown as words: "social-media",
+ * "Social Media" and "social_media" all read "Social media"; "vendorAgent"
+ * reads "Vendor agent". Sentence case, per the admin's copy rules.
+ */
+export function humanize(value?: string | null) {
+  if (!value) return '—';
+  const words = value
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/[-_]+/g, ' ')
+    .trim()
+    .toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }

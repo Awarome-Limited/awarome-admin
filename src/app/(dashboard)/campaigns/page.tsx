@@ -1,9 +1,21 @@
 import Link from 'next/link';
-import { SubmitButton } from '@/components/submit-button';
 import { authedFetch, ApiError, SingleResponse } from '@/lib/api-client';
 import { ApiErrorCard } from '@/components/api-error-card';
 import { buttonVariants } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { StatStrip } from '@/components/stat-strip';
+import { SettingsForm } from '@/components/settings-form';
+import {
+  EmptyState,
+  Field,
+  FieldGrid,
+  PageHeader,
+  PageStack,
+  Panel,
+  SettingsLayout,
+} from '@/components/page';
+import { humanize } from '@/lib/format';
 import { updateCampaignConfig } from './actions';
 
 interface CampaignRegistryStep {
@@ -215,205 +227,191 @@ export default async function CampaignsPage() {
 
   const maxDaily = Math.max(1, ...stats.sentPerDay.map((d) => d.count));
 
-  return (
-    <>
-      <form action={handleSave}>
-        <div className="flex flex-wrap items-start justify-between gap-4 pb-[18px]">
-          <div>
-            <h1 className="text-[23px] font-bold tracking-tight text-foreground">Campaigns</h1>
-            <p className="mt-1 text-[14px] text-muted-foreground">
-              Automated lifecycle nudges — push, email and in-app. Changes apply within 30
-              seconds — no redeploy needed.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/campaigns/messages"
-              className={buttonVariants({ variant: 'outline' })}
-            >
-              Send log
-            </Link>
-            <SubmitButton />
-          </div>
-        </div>
+  const totalSent = stats.sentPerDay.reduce((sum, d) => sum + d.count, 0);
+  const totalConversions = [...statRows.values()].reduce((sum, r) => sum + r.conversions, 0);
+  const totalRevenue = [...statRows.values()].reduce((sum, r) => sum + r.revenue, 0);
+  const enabledCount = registry.filter(
+    (c) => config.campaigns[c.id]?.enabled ?? c.enabledByDefault
+  ).length;
 
-        <div className="flex flex-col gap-4" style={{ maxWidth: 900 }}>
-          <div className="rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]">
-            <div className="text-[15px] font-semibold text-foreground">Guardrails</div>
-            <div className="mb-[18px] mt-1 text-[13px] text-muted-foreground">
-              Apply to every campaign. Messages inside quiet hours or over the daily cap are
-              deferred to the next window, never dropped silently.
-            </div>
-            <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+  return (
+    <PageStack>
+      <PageHeader
+        title="Campaigns"
+        subtitle="Automated lifecycle nudges by push, email and in-app. Changes apply within 30 seconds, no redeploy needed."
+        actions={
+          <Link href="/campaigns/messages" className={buttonVariants({ variant: 'outline' })}>
+            Send log
+          </Link>
+        }
+      />
+
+      <StatStrip
+        stats={[
+          { label: 'Campaigns on', value: `${enabledCount} of ${registry.length}` },
+          { label: 'Sent, last 30 days', value: totalSent.toLocaleString() },
+          { label: 'Conversions', value: totalConversions.toLocaleString(), meta: 'Paid within 24h of a nudge' },
+          { label: 'Revenue credited', value: `₦ ${totalRevenue.toLocaleString()}` },
+        ]}
+      />
+
+      <SettingsForm action={handleSave} label="Unsaved campaign changes">
+        <SettingsLayout
+          aside={
+            <>
+              <Panel title="Sends" description="Messages that actually went out in the last 30 days, per day.">
+                {stats.sentPerDay.length === 0 ? (
+                  <p className="text-[13.5px] text-muted-foreground">Nothing sent yet.</p>
+                ) : (
+                  <div className="flex h-[110px] items-end gap-[2px]">
+                    {stats.sentPerDay.map((d) => (
+                      <div
+                        key={d.day}
+                        title={`${d.day}: ${d.count}`}
+                        className="flex-1 rounded-t-[3px] bg-primary"
+                        style={{ height: `${Math.max(4, (d.count / maxDaily) * 100)}%` }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </Panel>
+              <div className="rounded-[8px] bg-hi-soft px-3.5 py-3 text-[13px] leading-[1.5]">
+                At most {config.maxMarketingPerDay} marketing {config.maxMarketingPerDay === 1 ? 'message' : 'messages'} a
+                customer a day, and nothing between {String(config.quietStartHour).padStart(2, '0')}:00 and{' '}
+                {String(config.quietEndHour).padStart(2, '0')}:00.
+              </div>
+            </>
+          }
+        >
+          <Panel
+            title="Guardrails"
+            description="Apply to every campaign. Messages inside quiet hours or over the daily cap are deferred to the next window, never dropped."
+          >
+            <FieldGrid>
               {[
-                {
-                  label: 'Max marketing messages / day',
-                  name: 'maxMarketingPerDay',
-                  unit: '#',
-                  value: config.maxMarketingPerDay,
-                },
-                {
-                  label: 'Quiet hours start (Lagos)',
-                  name: 'quietStartHour',
-                  unit: 'hr',
-                  value: config.quietStartHour,
-                },
-                {
-                  label: 'Quiet hours end (Lagos)',
-                  name: 'quietEndHour',
-                  unit: 'hr',
-                  value: config.quietEndHour,
-                },
-                {
-                  label: 'Win-back max lookback',
-                  name: 'winbackMaxLookbackDays',
-                  unit: 'days',
-                  value: config.winbackMaxLookbackDays,
-                },
+                { label: 'Max marketing messages a day', name: 'maxMarketingPerDay', unit: '#', value: config.maxMarketingPerDay },
+                { label: 'Quiet hours start', name: 'quietStartHour', unit: 'hr', value: config.quietStartHour },
+                { label: 'Quiet hours end', name: 'quietEndHour', unit: 'hr', value: config.quietEndHour },
+                { label: 'Win-back lookback', name: 'winbackMaxLookbackDays', unit: 'days', value: config.winbackMaxLookbackDays },
               ].map((field) => (
-                <div key={field.name} className="flex flex-col gap-[7px]">
-                  <span className="text-[13px] font-medium text-foreground-secondary">
-                    {field.label}
-                  </span>
-                  <div className="flex items-center gap-2 rounded-[10px] border border-input bg-muted px-[13px] py-[10px]">
-                    <span className="text-[13px] font-semibold text-muted-foreground">
-                      {field.unit}
-                    </span>
+                <Field key={field.name} label={field.label} htmlFor={field.name}>
+                  <div className="field-wrap">
+                    <span>{field.unit}</span>
                     <input
+                      id={field.name}
                       name={field.name}
                       type="number"
                       step="any"
                       defaultValue={field.value}
-                      className="w-full border-none bg-transparent text-[14px] font-semibold tabular-nums text-foreground outline-none"
+                      className="w-full border-0 bg-transparent text-foreground tabular-nums outline-none"
                     />
                   </div>
-                </div>
+                </Field>
               ))}
-            </div>
-          </div>
+            </FieldGrid>
+          </Panel>
 
           {registry.map((campaign) => {
-            const copy = CAMPAIGN_COPY[campaign.id] ?? {
-              title: campaign.id,
-              sub: '',
-            };
+            const copy = CAMPAIGN_COPY[campaign.id] ?? { title: humanize(campaign.id), sub: '' };
             const toggle = config.campaigns[campaign.id];
             return (
-              <div
+              <Panel
                 key={campaign.id}
-                className="rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="text-[15px] font-semibold text-foreground">{copy.title}</div>
-                    <div className="mb-[18px] mt-1 text-[13px] text-muted-foreground">{copy.sub}</div>
-                  </div>
-                  <label className="flex shrink-0 cursor-pointer items-center gap-2 text-[13px] font-medium text-foreground-secondary">
+                title={copy.title}
+                description={copy.sub}
+                aside={
+                  <label className="flex shrink-0 cursor-pointer items-center gap-2 text-[13.5px] font-medium">
                     <input
                       type="checkbox"
                       name={`enabled-${campaign.id}`}
                       defaultChecked={toggle?.enabled ?? campaign.enabledByDefault}
                       className="size-4 accent-primary"
                     />
-                    Enabled
+                    On
                   </label>
-                </div>
-                <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+                }
+              >
+                <FieldGrid>
                   {campaign.steps.map((step) => {
-                    const effectiveMs =
-                      toggle?.stepDelays?.[step.id] ?? step.defaultDelayMs;
+                    const effectiveMs = toggle?.stepDelays?.[step.id] ?? step.defaultDelayMs;
                     return (
-                      <div key={step.id} className="flex flex-col gap-[7px]">
-                        <span className="text-[13px] font-medium text-foreground-secondary">
-                          {STEP_LABELS[step.id] ?? step.id}
-                          <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">
-                            {step.channels.join(' · ')}
-                          </span>
-                        </span>
-                        <div className="flex items-center gap-2 rounded-[10px] border border-input bg-muted px-[13px] py-[10px]">
-                          <span className="text-[13px] font-semibold text-muted-foreground">min</span>
+                      <Field
+                        key={step.id}
+                        label={STEP_LABELS[step.id] ?? humanize(step.id)}
+                        htmlFor={`delay-${campaign.id}-${step.id}`}
+                        help={step.channels.map(humanize).join(' · ')}
+                      >
+                        <div className="field-wrap">
+                          <span>min</span>
                           <input
+                            id={`delay-${campaign.id}-${step.id}`}
                             name={`delay-${campaign.id}-${step.id}`}
                             type="number"
                             min={0}
                             step="any"
                             defaultValue={Math.round(effectiveMs / 60000)}
-                            className="w-full border-none bg-transparent text-[14px] font-semibold tabular-nums text-foreground outline-none"
+                            className="w-full border-0 bg-transparent text-foreground tabular-nums outline-none"
                           />
                         </div>
-                      </div>
+                      </Field>
                     );
                   })}
-                </div>
-              </div>
+                </FieldGrid>
+              </Panel>
             );
           })}
-        </div>
-      </form>
+        </SettingsLayout>
+      </SettingsForm>
 
-      <div className="mt-8 flex flex-col gap-4" style={{ maxWidth: 900 }}>
-        <div className="rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]">
-          <div className="text-[15px] font-semibold text-foreground">Sends — last 30 days</div>
-          <div className="mb-[18px] mt-1 text-[13px] text-muted-foreground">
-            Messages that actually went out (sent or partial), per day.
+      <Panel
+        flush
+        title="Outcomes by step"
+        description="Every claim ends in exactly one of these states. Skips are healthy: the customer left the journey before the nudge fired. Conversions are last-touch: a payment within 24 hours of a nudge credits that nudge."
+      >
+        {statRows.size === 0 ? (
+          <EmptyState title="No campaign activity yet" />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Step</TableHead>
+                  <TableHead>Outcomes</TableHead>
+                  <TableHead className="text-right">Clicks</TableHead>
+                  <TableHead className="text-right">Conversions</TableHead>
+                  <TableHead className="text-right">Revenue</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[...statRows.values()].map((row) => (
+                  <TableRow key={`${row.campaign}:${row.step}`}>
+                    <TableCell>
+                      <div className="font-medium">{STEP_LABELS[row.step] ?? humanize(row.step)}</div>
+                      <div className="text-[12.5px] text-muted-foreground">
+                        {CAMPAIGN_COPY[row.campaign]?.title ?? humanize(row.campaign)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="flex flex-wrap gap-1.5">
+                        {STATUS_ORDER.filter((st) => row.counts[st]).map((st) => (
+                          <Badge key={st} variant={statusVariant(st)}>
+                            {humanize(st)} {row.counts[st].toLocaleString()}
+                          </Badge>
+                        ))}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{row.clicks.toLocaleString()}</TableCell>
+                    <TableCell className="text-right tabular-nums">{row.conversions.toLocaleString()}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
+                      ₦ {row.revenue.toLocaleString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
-          {stats.sentPerDay.length === 0 ? (
-            <p className="text-[13px] text-muted-foreground">Nothing sent yet.</p>
-          ) : (
-            <div className="flex h-[120px] items-end gap-[3px]">
-              {stats.sentPerDay.map((d) => (
-                <div
-                  key={d.day}
-                  title={`${d.day}: ${d.count}`}
-                  className="flex-1 rounded-t-[3px] bg-primary/70"
-                  style={{ height: `${Math.max(4, (d.count / maxDaily) * 100)}%` }}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]">
-          <div className="text-[15px] font-semibold text-foreground">Outcomes by step</div>
-          <div className="mb-[18px] mt-1 text-[13px] text-muted-foreground">
-            Every claim ends in exactly one of these states. Skips are healthy — they mean the
-            user exited the journey before the nudge fired. Conversions are last-touch: a
-            payment within 24h of a nudge credits that nudge.
-          </div>
-          {statRows.size === 0 ? (
-            <p className="text-[13px] text-muted-foreground">No campaign activity yet.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {[...statRows.values()].map((row) => (
-                <div
-                  key={`${row.campaign}:${row.step}`}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-border/60 px-3 py-2"
-                >
-                  <span className="text-[13px] font-medium text-foreground">
-                    {(CAMPAIGN_COPY[row.campaign]?.title ?? row.campaign)}
-                    <span className="text-muted-foreground"> · {STEP_LABELS[row.step] ?? row.step}</span>
-                  </span>
-                  <span className="flex flex-wrap gap-1.5">
-                    {STATUS_ORDER.filter((s) => row.counts[s]).map((s) => (
-                      <Badge key={s} variant={statusVariant(s)}>
-                        {s} {row.counts[s]}
-                      </Badge>
-                    ))}
-                    {row.clicks > 0 && (
-                      <Badge variant="info">clicks {row.clicks}</Badge>
-                    )}
-                    {row.conversions > 0 && (
-                      <Badge variant="default">
-                        conv {row.conversions} · ₦{row.revenue.toLocaleString()}
-                      </Badge>
-                    )}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </>
+        )}
+      </Panel>
+    </PageStack>
   );
 }

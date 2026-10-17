@@ -4,19 +4,13 @@ import { AdminStaff } from '@/lib/types';
 import { getSession } from '@/lib/session';
 import { StaffRole } from '@/lib/permissions';
 import { ApiErrorCard } from '@/components/api-error-card';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { DetailRow } from '@/components/detail-row';
-import { SuspendToggle } from '@/components/suspend-toggle';
+import { AccountStatusControl, StatusPill } from '@/components/account-status';
+import { DetailHeader, FactList, PageStack, Panel } from '@/components/page';
+import { ROLE_DESCRIPTIONS, ROLE_LABELS } from '@/lib/staff-roles';
 import { ConfirmActionButton } from '@/components/confirm-action-button';
 import { AvatarInitials } from '@/components/avatar-initials';
 import { Badge } from '@/components/ui/badge';
-import { formatDate } from '@/lib/format';
+import { formatDate, humanize } from '@/lib/format';
 import { setStaffActive, deleteStaff } from '../actions';
 import { StaffEditForm } from './_components/staff-edit-form';
 
@@ -57,69 +51,74 @@ export default async function StaffDetailPage({
     redirect('/staff');
   }
 
+  const name = [staff.firstName, staff.lastName].filter(Boolean).join(' ');
+
   return (
-    <div className="flex max-w-2xl flex-col gap-4">
-      <div className="flex items-center gap-3.5">
-        <AvatarInitials name={`${staff.firstName} ${staff.lastName}`} size="lg" />
-        <h1 className="text-[22px] font-bold tracking-tight">
-          {staff.firstName} {staff.lastName}
-          {isSelf && (
-            <Badge variant="secondary" className="ml-2 align-middle">
-              you
-            </Badge>
-          )}
-        </h1>
-      </div>
+    <PageStack>
+      <DetailHeader
+        back={{ href: '/staff', label: 'All staff' }}
+        avatar={<AvatarInitials name={name || undefined} size="lg" />}
+        title={
+          <>
+            {name || 'No name yet'}
+            {isSelf && (
+              <Badge variant="secondary" className="ml-3 align-middle">
+                You
+              </Badge>
+            )}
+          </>
+        }
+        status={<StatusPill suspended={!staff.isActive} />}
+        meta={[ROLE_LABELS[staff.role as StaffRole] ?? humanize(staff.role), staff.email]}
+        actions={
+          !isSelf && (
+            <AccountStatusControl noun="staff member" suspended={!staff.isActive} action={handleSetActive} />
+          )
+        }
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Details</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3 text-sm">
-          <DetailRow label="Email" value={staff.email} />
-          <DetailRow label="Role" value={<Badge variant="outline">{staff.role}</Badge>} />
-          <DetailRow label="Last login" value={formatDate(staff.lastLoginAt)} />
-          <DetailRow label="Joined" value={formatDate(staff.createdAt)} />
-          <DetailRow
-            label="Status"
-            value={
-              isSelf ? (
-                <span className="text-muted-foreground">Active</span>
-              ) : (
-                <SuspendToggle
-                  suspended={!staff.isActive}
-                  action={handleSetActive}
+      <section className="grid items-start gap-4 lg:grid-cols-[minmax(260px,1fr)_minmax(0,2fr)]">
+        <div className="flex flex-col gap-4">
+          <Panel title="Profile">
+            <FactList
+              facts={[
+                { label: 'Email', value: staff.email },
+                { label: 'Role', value: ROLE_LABELS[staff.role as StaffRole] ?? humanize(staff.role) },
+                { label: 'What the role covers', value: ROLE_DESCRIPTIONS[staff.role as StaffRole] ?? '—' },
+                { label: 'Last sign-in', value: staff.lastLoginAt ? formatDate(staff.lastLoginAt) : 'Never' },
+                { label: 'Joined', value: formatDate(staff.createdAt) },
+              ]}
+            />
+          </Panel>
+
+          {!isSelf && (
+            <Panel
+              title="Delete staff member"
+              description="Soft-deletes the account and revokes their access. It stays recoverable in the database."
+            >
+              <div>
+                <ConfirmActionButton
+                  label="Delete staff member"
+                  title="Delete this staff member?"
+                  description="This soft-deletes the account and revokes their access. It stays recoverable in the database."
+                  action={handleDelete}
                 />
-              )
-            }
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Edit staff member</CardTitle>
-          <CardDescription>
-            {staff.role === StaffRole.SUPER_ADMIN
-              ? 'Super admins have full access regardless of the permission grants below.'
-              : "Grant access per module and action. The staff member can only do what's checked here."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <StaffEditForm staff={staff} />
-        </CardContent>
-      </Card>
-
-      {!isSelf && (
-        <div>
-          <ConfirmActionButton
-            label="Delete staff member"
-            title="Delete this staff member?"
-            description="This soft-deletes the account and revokes their access. It stays recoverable in the database."
-            action={handleDelete}
-          />
+              </div>
+            </Panel>
+          )}
         </div>
-      )}
-    </div>
+
+        <Panel
+          title="Role and permissions"
+          description={
+            staff.role === StaffRole.SUPER_ADMIN
+              ? 'Super admins have full access regardless of the permission grants below.'
+              : 'Grant access per module and action. They can only do what’s checked here.'
+          }
+        >
+          <StaffEditForm staff={staff} />
+        </Panel>
+      </section>
+    </PageStack>
   );
 }

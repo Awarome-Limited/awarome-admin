@@ -1,8 +1,9 @@
 'use client';
 
+import { InlineNotice, PageHeader, PageStack } from '@/components/page';
+import { SaveBar } from '@/components/save-bar';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import {
   DeliveryOptionsConfig,
@@ -93,6 +94,14 @@ export function DeliveryOptionsEditor({
     String(config.payOnDelivery?.maxOutstanding ?? 1)
   );
   const [isPending, startTransition] = useTransition();
+  // What the API last stored, to drive the floating save bar and Discard.
+  const snapshot = JSON.stringify({ rows, batchEnabled, maxOutstanding });
+  const [saved, setSaved] = useState(snapshot);
+  const dirty = snapshot !== saved;
+  function discard() {
+    const s = JSON.parse(saved);
+    setRows(s.rows); setBatchEnabled(s.batchEnabled); setMaxOutstanding(s.maxOutstanding);
+  }
 
   function updateRow(
     vehicleType: VehicleType,
@@ -144,6 +153,7 @@ export function DeliveryOptionsEditor({
             disabledMessage: row.disabledMessage?.trim() || undefined,
           })),
         });
+        setSaved(snapshot);
         toast.success('Delivery options saved.');
       } catch (err) {
         toast.error(
@@ -156,34 +166,20 @@ export function DeliveryOptionsEditor({
   const offCount = rows.filter((row) => !row.enabled).length;
 
   return (
-    <div>
-      <div className="flex flex-wrap items-start justify-between gap-4 pb-[18px]">
-        <div>
-          <h1 className="text-[23px] font-bold tracking-tight text-foreground">
-            Delivery options
-          </h1>
-          <p className="mt-1 text-[14px] text-muted-foreground">
-            Which vehicles we&apos;re running, and where. Applies to new quotes
-            and new checkouts only — jobs already paid for keep dispatching.
-            Changes apply within 15 seconds.
-          </p>
-        </div>
-        <Button type="button" onClick={handleSave} disabled={isPending}>
-          {isPending ? 'Saving…' : 'Save changes'}
-        </Button>
-      </div>
+    <PageStack>
+      <PageHeader title="Delivery options" subtitle={<>Which vehicles we&apos;re running, and where. Applies to new quotes and new checkouts only: jobs already paid for keep dispatching. Changes apply within 15 seconds.</>} />
 
-      <div className="flex flex-col gap-4" style={{ maxWidth: 860 }}>
+      <div className="flex flex-col gap-4" >
         {(offCount > 0 || !batchEnabled) && (
-          <div className="rounded-[14px] border border-amber-500/40 bg-amber-500/10 p-[16px_20px] text-[13px] font-semibold text-amber-700 dark:text-amber-400">
+<InlineNotice>
             {!batchEnabled && 'Batch delivery is switched off. '}
             {offCount > 0 &&
               `${offCount} vehicle${offCount > 1 ? 's are' : ' is'} switched off — customers are told why at checkout.`}
-          </div>
+          </InlineNotice>
         )}
 
-        <div className="rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]">
-          <div className="text-[15px] font-semibold text-foreground">
+        <div className="flex flex-col gap-[18px] rounded-[10px] border border-border bg-card px-6 py-[22px]">
+          <div className="font-heading text-[17px] font-bold tracking-[-0.03em] text-foreground">
             Batch delivery
           </div>
           <div className="mb-[18px] mt-1 text-[13px] text-muted-foreground">
@@ -197,8 +193,8 @@ export function DeliveryOptionsEditor({
           </label>
         </div>
 
-        <div className="rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]">
-          <div className="text-[15px] font-semibold text-foreground">
+        <div className="flex flex-col gap-[18px] rounded-[10px] border border-border bg-card px-6 py-[22px]">
+          <div className="font-heading text-[17px] font-bold tracking-[-0.03em] text-foreground">
             Pay on delivery
           </div>
           <div className="mb-[18px] mt-1 text-[13px] text-muted-foreground">
@@ -208,7 +204,7 @@ export function DeliveryOptionsEditor({
           <div className="flex flex-col gap-[7px]">
             <label
               htmlFor="pod-max-outstanding"
-              className="text-[12.5px] font-medium text-foreground-secondary"
+              className="text-[13.5px] font-medium text-foreground"
             >
               Unsettled pay-on-delivery runs allowed per customer
             </label>
@@ -220,7 +216,7 @@ export function DeliveryOptionsEditor({
               inputMode="numeric"
               value={maxOutstanding}
               onChange={(e) => setMaxOutstanding(e.target.value)}
-              className="w-[140px] rounded-[10px] border border-input bg-background px-[13px] py-[9px] text-[13.5px] text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+              className="field w-[140px]"
             />
             <span className="text-[11.5px] text-muted-foreground">
               {describeOutstandingLimit(maxOutstanding)}
@@ -228,8 +224,8 @@ export function DeliveryOptionsEditor({
           </div>
         </div>
 
-        <div className="rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]">
-          <div className="text-[15px] font-semibold text-foreground">
+        <div className="flex flex-col gap-[18px] rounded-[10px] border border-border bg-card px-6 py-[22px]">
+          <div className="font-heading text-[17px] font-bold tracking-[-0.03em] text-foreground">
             Vehicles
           </div>
           <div className="mb-[18px] mt-1 text-[13px] text-muted-foreground">
@@ -237,7 +233,7 @@ export function DeliveryOptionsEditor({
             option and its surface are all on.
           </div>
 
-          <div className="mb-4 rounded-[12px] border border-border bg-muted/40 p-[14px_16px] text-[12.5px] leading-[1.55] text-muted-foreground">
+          <div className="mb-4 rounded-[10px] border border-border bg-muted p-[14px_16px] text-[12.5px] leading-[1.55] text-muted-foreground">
             <strong className="font-semibold text-foreground-secondary">
               Marketplace works differently.
             </strong>{' '}
@@ -253,7 +249,7 @@ export function DeliveryOptionsEditor({
             {rows.map((row) => (
               <div
                 key={row.vehicleType}
-                className="rounded-[12px] border border-border bg-muted/40 p-[14px_16px]"
+                className="rounded-[10px] border border-border bg-muted p-[14px_16px]"
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <label className="flex min-w-[130px] items-center gap-3 text-[13px] font-semibold text-foreground">
@@ -281,7 +277,7 @@ export function DeliveryOptionsEditor({
                           (flag) => (
                             <label
                               key={flag.key}
-                              className="flex items-center gap-2 text-[12.5px] font-medium text-foreground-secondary"
+                              className="flex items-center gap-2 text-[13.5px] font-medium text-foreground"
                             >
                               <Switch
                                 checked={row[flag.key]}
@@ -302,7 +298,7 @@ export function DeliveryOptionsEditor({
                 </div>
 
                 <div className="mt-3 flex flex-col gap-[7px]">
-                  <span className="text-[12.5px] font-medium text-foreground-secondary">
+                  <span className="text-[13.5px] font-medium text-foreground">
                     Message shown to customers when this vehicle is off
                   </span>
                   <input
@@ -314,7 +310,7 @@ export function DeliveryOptionsEditor({
                     }
                     maxLength={300}
                     placeholder={`We've paused ${row.vehicleType} deliveries for now.`}
-                    className="w-full rounded-[10px] border border-input bg-background px-[13px] py-[9px] text-[13.5px] text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+                    className="field w-full"
                   />
                   <span className="text-[11.5px] text-muted-foreground">
                     Leave blank for the default. Use this to explain a specific
@@ -326,6 +322,7 @@ export function DeliveryOptionsEditor({
           </div>
         </div>
       </div>
-    </div>
+      <SaveBar dirty={dirty} saving={isPending} label="Unsaved delivery option changes" onDiscard={discard} onSave={handleSave} />
+    </PageStack>
   );
 }

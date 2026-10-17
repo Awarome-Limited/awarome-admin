@@ -1,5 +1,6 @@
 'use client';
 
+import { MapPinIcon } from 'lucide-react';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -117,21 +118,26 @@ export function AddressInput<A extends DeliveryAddress = DeliveryAddress>({
         aria-invalid={!resolved && query.trim().length > 0}
         title={resolved ? value.address : 'Pick a suggestion so the rider gets an exact location'}
         className={cn(
-          'w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-ring/50',
-          compact ? 'h-8' : 'h-9',
-          resolved
-            ? 'border-input focus-visible:border-ring'
-            : query.trim()
-              ? 'border-warning bg-warning/5 focus-visible:border-warning'
-              : 'border-input focus-visible:border-ring'
+          'field pr-24',
+          compact && 'h-9 px-2.5 text-[13.5px]',
+          !resolved && query.trim() && 'border-warning bg-warning-bg focus-visible:border-warning'
         )}
       />
-      <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground">
-        {isResolving ? 'Locating…' : isSearching ? 'Searching…' : resolved ? '📍' : ''}
+      <span className="pointer-events-none absolute top-1/2 right-3 flex -translate-y-1/2 items-center gap-1 text-[12px] text-muted-foreground">
+        {isResolving ? (
+          'Locating…'
+        ) : isSearching ? (
+          'Searching…'
+        ) : resolved ? (
+          <>
+            <MapPinIcon className="size-3.5 text-positive" />
+            Pinned
+          </>
+        ) : null}
       </span>
 
       {open && suggestions.length > 0 && (
-        <div className="absolute z-30 mt-1 max-h-[260px] w-full min-w-[280px] overflow-y-auto rounded-[10px] border border-border bg-card p-1 shadow-[0_8px_24px_rgba(20,22,42,0.14)]">
+        <div className="absolute z-30 mt-1 max-h-[260px] w-full min-w-[280px] overflow-y-auto rounded-[8px] border border-border bg-popover p-1 shadow-[0_12px_32px_rgba(18,4,96,0.14)]">
           {suggestions.map((place) => (
             <button
               key={place.placeId}
@@ -140,9 +146,9 @@ export function AddressInput<A extends DeliveryAddress = DeliveryAddress>({
               onClick={() => pick(place)}
               className="flex w-full flex-col rounded-[8px] px-2.5 py-2 text-left transition-colors hover:bg-muted"
             >
-              <span className="truncate text-[13px] font-semibold text-foreground">{place.primary}</span>
+              <span className="truncate text-[13.5px] font-medium text-foreground">{place.primary}</span>
               {place.secondary && (
-                <span className="truncate text-[12px] text-muted-foreground">{place.secondary}</span>
+                <span className="truncate text-[12.5px] text-muted-foreground">{place.secondary}</span>
               )}
             </button>
           ))}

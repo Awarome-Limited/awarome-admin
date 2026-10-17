@@ -53,7 +53,7 @@ export function LoginForm() {
           {state.error}
         </p>
       )}
-      <Button type="submit" disabled={pending} className="mt-2">
+      <Button type="submit" disabled={pending} size="lg" className="mt-2">
         {pending ? 'Signing in…' : 'Sign in'}
       </Button>
     </form>

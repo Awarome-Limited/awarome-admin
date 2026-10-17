@@ -23,7 +23,7 @@ import {
 } from '../actions';
 
 const selectClass =
-  'w-full cursor-pointer appearance-none rounded-[10px] border border-input bg-background py-[9px] pl-3 pr-9 text-[13.5px] text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50';
+  'field w-full cursor-pointer appearance-none pl-3 pr-9';
 
 export function SaveTemplateDialog({
   open,

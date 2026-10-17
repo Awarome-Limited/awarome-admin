@@ -1,8 +1,9 @@
 'use client';
 
+import { PageHeader, PageStack } from '@/components/page';
+import { SaveBar } from '@/components/save-bar';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { DeliveryZone, DeliveryZoneConfig } from '@/lib/types';
 import { updateDeliveryZones } from '../actions';
@@ -25,6 +26,14 @@ function toRows(zones: DeliveryZone[]): ZoneRow[] {
 export function ZonesEditor({ config }: { config: DeliveryZoneConfig }) {
   const [rows, setRows] = useState<ZoneRow[]>(toRows(config.zones));
   const [isPending, startTransition] = useTransition();
+  // What the API last stored, to drive the floating save bar and Discard.
+  const snapshot = JSON.stringify({ rows });
+  const [saved, setSaved] = useState(snapshot);
+  const dirty = snapshot !== saved;
+  function discard() {
+    const s = JSON.parse(saved);
+    setRows(s.rows);
+  }
 
   function updateRow(index: number, patch: Partial<ZoneRow>) {
     setRows((prev) =>
@@ -70,6 +79,7 @@ export function ZonesEditor({ config }: { config: DeliveryZoneConfig }) {
     startTransition(async () => {
       try {
         await updateDeliveryZones({ zones });
+        setSaved(snapshot);
         toast.success('Delivery zones saved.');
       } catch (err) {
         toast.error(
@@ -80,28 +90,15 @@ export function ZonesEditor({ config }: { config: DeliveryZoneConfig }) {
   }
 
   return (
-    <div>
-      <div className="flex flex-wrap items-start justify-between gap-4 pb-[18px]">
-        <div>
-          <h1 className="text-[23px] font-bold tracking-tight text-foreground">
-            Delivery zones
-          </h1>
-          <p className="mt-1 text-[14px] text-muted-foreground">
-            Batch delivery pickups are restricted to these zones. Instant
-            delivery is not. Changes apply immediately to new quotes.
-          </p>
-        </div>
-        <Button type="button" onClick={handleSave} disabled={isPending}>
-          {isPending ? 'Saving…' : 'Save changes'}
-        </Button>
-      </div>
+    <PageStack>
+      <PageHeader title="Delivery zones" subtitle={<>Batch delivery pickups are restricted to these zones. Instant delivery is not. Changes apply immediately to new quotes.</>} />
 
       <div
         className="flex flex-col gap-3"
-        style={{ maxWidth: 760 }}
+        
       >
         {rows.length === 0 && (
-          <div className="rounded-[14px] border border-dashed border-border bg-card p-[22px_24px] text-[13px] text-muted-foreground">
+          <div className="rounded-[10px] border border-dashed border-border bg-card p-[22px_24px] text-[13px] text-muted-foreground">
             No zones yet. Add one below — until then, batch delivery is
             unavailable everywhere.
           </div>
@@ -110,23 +107,23 @@ export function ZonesEditor({ config }: { config: DeliveryZoneConfig }) {
         {rows.map((row, index) => (
           <div
             key={index}
-            className="rounded-[14px] border border-border bg-card p-[18px_20px] shadow-[var(--shadow-card)]"
+            className="rounded-[10px] border border-border bg-card px-6 py-5"
           >
             <div className="flex items-start gap-4">
               <div className="flex flex-1 flex-col gap-3 sm:flex-row">
                 <div className="flex flex-1 flex-col gap-[7px]">
-                  <span className="text-[13px] font-medium text-foreground-secondary">
+                  <span className="text-[13.5px] font-medium text-foreground">
                     Zone name
                   </span>
                   <input
                     value={row.name}
                     onChange={(e) => updateRow(index, { name: e.target.value })}
                     placeholder="Wuse"
-                    className="w-full rounded-[10px] border border-input bg-muted px-[13px] py-[10px] text-[14px] font-semibold text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+                    className="field w-full font-semibold"
                   />
                 </div>
                 <div className="flex flex-[2] flex-col gap-[7px]">
-                  <span className="text-[13px] font-medium text-foreground-secondary">
+                  <span className="text-[13.5px] font-medium text-foreground">
                     Match keywords (comma-separated)
                   </span>
                   <input
@@ -135,13 +132,13 @@ export function ZonesEditor({ config }: { config: DeliveryZoneConfig }) {
                       updateRow(index, { keywords: e.target.value })
                     }
                     placeholder="wuse, wuse 2, wuse zone"
-                    className="w-full rounded-[10px] border border-input bg-muted px-[13px] py-[10px] text-[14px] text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+                    className="field w-full"
                   />
                 </div>
               </div>
             </div>
             <div className="mt-4 flex items-center justify-between">
-              <label className="flex items-center gap-2 text-[13px] font-medium text-foreground-secondary">
+              <label className="flex items-center gap-2 text-[13.5px] font-medium text-foreground">
                 <Switch
                   checked={row.active}
                   onCheckedChange={(active) => updateRow(index, { active })}
@@ -151,7 +148,7 @@ export function ZonesEditor({ config }: { config: DeliveryZoneConfig }) {
               <button
                 type="button"
                 onClick={() => removeRow(index)}
-                className="rounded-[9px] px-[12px] py-[7px] text-[13px] font-semibold text-destructive transition-colors hover:bg-destructive/10"
+                className="rounded-full px-[12px] py-[7px] text-[13px] font-semibold text-destructive transition-colors hover:bg-destructive/10"
               >
                 Remove
               </button>
@@ -167,6 +164,7 @@ export function ZonesEditor({ config }: { config: DeliveryZoneConfig }) {
           + Add zone
         </button>
       </div>
-    </div>
+      <SaveBar dirty={dirty} saving={isPending} label="Unsaved zone changes" onDiscard={discard} onSave={handleSave} />
+    </PageStack>
   );
 }

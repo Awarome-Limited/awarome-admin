@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
+import { Field, FieldGrid, Panel } from '@/components/page';
+import { SaveBar } from '@/components/save-bar';
 import { Switch } from '@/components/ui/switch';
 import type { PayoutSchedule } from '@/lib/types';
 import { formatLagosHour } from '../payout-format';
@@ -44,27 +45,30 @@ export function PayoutSettingsCard({
       else toast.error(result.error);
     });
 
+  const discard = () => {
+    setEnabled(settings.enabled);
+    setHour(settings.hourLagos);
+    setMinAmount(String(settings.minAmount));
+  };
+
   return (
-    <div className="rounded-[14px] border border-border bg-card p-[18px_22px] shadow-[var(--shadow-card)]">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="text-[15px] font-semibold text-foreground">Automatic daily payouts</div>
-          <p className="mt-1 max-w-xl text-[13px] text-muted-foreground">{description}</p>
-        </div>
-        <label className="flex items-center gap-2 text-[13px] font-semibold text-foreground-secondary">
+    <Panel
+      title="Automatic daily payouts"
+      description={description}
+      aside={
+        <label className="flex items-center gap-2 text-[13.5px] font-medium">
           <Switch checked={enabled} disabled={!canEdit || isPending} onCheckedChange={setEnabled} />
           {enabled ? 'On' : 'Off'}
         </label>
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-end gap-4">
-        <label className="flex flex-col gap-[7px]">
-          <span className="text-[13px] font-medium text-foreground-secondary">Run at (Lagos time)</span>
+      }
+    >
+      <FieldGrid>
+        <Field label="Run at" help="Lagos time.">
           <select
             value={hour}
             disabled={!canEdit || isPending}
             onChange={(e) => setHour(Number(e.target.value))}
-            className="h-[40px] rounded-[10px] border border-input bg-muted px-3 text-[14px] font-semibold tabular-nums text-foreground outline-none"
+            className="field pr-9 tabular-nums"
           >
             {HOURS.map((h) => (
               <option key={h} value={h}>
@@ -72,11 +76,10 @@ export function PayoutSettingsCard({
               </option>
             ))}
           </select>
-        </label>
-        <label className="flex flex-col gap-[7px]">
-          <span className="text-[13px] font-medium text-foreground-secondary">Minimum payout</span>
-          <div className="flex h-[40px] items-center gap-2 rounded-[10px] border border-input bg-muted px-[13px]">
-            <span className="text-[13px] font-semibold text-muted-foreground">₦</span>
+        </Field>
+        <Field label="Minimum payout" help="Smaller balances roll over to the next day.">
+          <div className="field-wrap">
+            <span>₦</span>
             <input
               type="number"
               min={100}
@@ -84,16 +87,19 @@ export function PayoutSettingsCard({
               value={minAmount}
               disabled={!canEdit || isPending}
               onChange={(e) => setMinAmount(e.target.value)}
-              className="w-28 border-none bg-transparent text-[14px] font-semibold tabular-nums text-foreground outline-none"
+              className="w-full border-0 bg-transparent text-foreground tabular-nums outline-none"
             />
           </div>
-        </label>
-        {canEdit && (
-          <Button size="sm" disabled={!dirty || isPending} onClick={save} className="h-[40px]">
-            {isPending ? 'Saving…' : 'Save settings'}
-          </Button>
-        )}
+        </Field>
+      </FieldGrid>
+      <div className="rounded-[8px] bg-hi-soft px-3.5 py-3 text-[13px] leading-[1.5]">
+        {enabled
+          ? `Every day at ${formatLagosHour(hour)}, anyone owed ₦ ${Number(minAmount || 0).toLocaleString()} or more is sent their whole balance.`
+          : 'Automatic payouts are off. Nobody is paid until someone runs payouts by hand.'}
       </div>
-    </div>
+      {canEdit && (
+        <SaveBar dirty={dirty} saving={isPending} label="Unsaved payout settings" onDiscard={discard} onSave={save} />
+      )}
+    </Panel>
   );
 }

@@ -29,13 +29,13 @@ export function EmailPreview({
     .filter(Boolean);
 
   return (
-    <div className="flex flex-col rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]">
-      <div className="mb-1.5 text-[15px] font-semibold text-foreground">Preview</div>
+    <div className="flex flex-col rounded-[10px] border border-border bg-card p-[22px_24px]">
+      <div className="mb-1.5 font-heading text-[17px] font-bold tracking-[-0.03em] text-foreground">Preview</div>
       <div className="mb-[18px] text-[12.5px] text-muted-foreground">
         Exactly what lands in the inbox.
       </div>
 
-      <div className="rounded-[12px] bg-[#f3f3f3] p-3.5">
+      <div className="rounded-[10px] bg-[#f3f3f3] p-3.5">
         <div className="mb-2.5 flex flex-col gap-0.5 px-1">
           <span className="text-[11px] font-semibold uppercase tracking-[.03em] text-[#8a8a95]">
             Subject

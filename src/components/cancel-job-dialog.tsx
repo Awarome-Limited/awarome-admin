@@ -104,7 +104,7 @@ export function CancelJobDialog({
               <Label htmlFor={`refund-${id}`}>Owe the customer a refund</Label>
               <span className="text-[12.5px] text-muted-foreground">
                 {isPaid
-                  ? `Adds ₦${amount.toLocaleString()} to the refunds queue, where the money is moved by hand.`
+                  ? `Adds ₦ ${amount.toLocaleString()} to the refunds queue, where the money is moved by hand.`
                   : 'Never paid for, so there is nothing to refund.'}
               </span>
             </div>

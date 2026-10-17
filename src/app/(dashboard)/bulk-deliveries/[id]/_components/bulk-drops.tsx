@@ -21,7 +21,7 @@ import type { AdminRider, BulkDeliveryDrop } from '@/lib/types';
 import { settleBulkVendor } from '../../actions';
 import { EditDropDialog, type BulkPricingContext } from './edit-dialogs';
 
-const naira = (amount: number) => `₦${Math.round(amount).toLocaleString('en-NG')}`;
+const naira = (amount: number) => `₦ ${Math.round(amount).toLocaleString('en-NG')}`;
 
 const OUTSTANDING = ['pending', 'awaiting-payment', 'processing'];
 
@@ -89,12 +89,12 @@ export function BulkDrops({
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
           <div className="flex flex-wrap items-center gap-2 text-[12.5px]">
             <span className="text-muted-foreground">Select:</span>
-            <button type="button" className="font-semibold text-primary hover:underline" onClick={() => selectWhere(isBatchable)}>
+            <button type="button" className="font-semibold text-primary hover:text-warning" onClick={() => selectWhere(isBatchable)}>
               Waiting for a rider
             </button>
             <button
               type="button"
-              className="font-semibold text-primary hover:underline"
+              className="font-semibold text-primary hover:text-warning"
               onClick={() => selectWhere((d) => vendorOwes(d) && d.riderStatus === 'delivered')}
             >
               Delivered & owed
@@ -171,7 +171,7 @@ export function BulkDrops({
                   <td className="px-2 py-2.5">
                     <div className="font-semibold text-foreground">{d.receiver?.name || '—'}</div>
                     <div className="text-[12px] text-muted-foreground">{d.receiver?.phone}</div>
-                    <Link href={`/deliveries/${d._id}`} className="font-mono text-[11px] text-primary hover:underline">
+                    <Link href={`/deliveries/${d._id}`} className="tabular-nums text-[11px] text-primary hover:text-warning">
                       {d.deliveryId}
                     </Link>
                   </td>
@@ -211,7 +211,7 @@ export function BulkDrops({
                   </td>
                   <td className="px-2 py-2.5 text-[12.5px]">
                     {d.batchId ? (
-                      <Link href={`/batches/${d.batchId}`} className="font-mono text-[11px] text-primary hover:underline">
+                      <Link href={`/batches/${d.batchId}`} className="tabular-nums text-[11px] text-primary hover:text-warning">
                         {d.batchId.split('-').slice(0, 3).join('-')}
                       </Link>
                     ) : (
@@ -317,7 +317,7 @@ function SettleDialog({ bulkId, drops }: { bulkId: string; drops: BulkDeliveryDr
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="e.g. GTB transfer 14:32, ref 0021…"
-            className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="field w-full"
           />
         </div>
         <DialogFooter>

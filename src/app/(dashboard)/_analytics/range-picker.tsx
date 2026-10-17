@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { segmentItem, segmentTrack } from '@/components/segmented';
+import { cn } from '@/lib/utils';
 import {
   RANGE_PRESETS,
   type DateRange,
@@ -9,8 +11,11 @@ import {
   lagosToday,
 } from './ranges';
 
+/** The four ranges people reach for; everything else lives in the "More" menu. */
+const QUICK: RangePresetKey[] = ['today', 'last7', 'last30', 'thisMonth'];
+
 const control =
-  'h-[34px] rounded-[9px] border border-border-strong bg-card px-3 text-[13px] text-foreground-secondary outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50';
+  'h-[38px] rounded-full border border-border bg-card px-3.5 text-[13.5px] text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50';
 
 export function RangePicker({ preset, range }: { preset: RangePresetKey; range: DateRange }) {
   const router = useRouter();
@@ -26,16 +31,32 @@ export function RangePicker({ preset, range }: { preset: RangePresetKey; range: 
   }
 
   const canApply = from && to && from <= to && to <= today;
+  const inMore = !QUICK.includes(selected);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2.5">
+      <div className={segmentTrack}>
+        {QUICK.map((key) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => choose(key)}
+            className={segmentItem(selected === key)}
+          >
+            {RANGE_PRESETS.find((p) => p.key === key)?.label}
+          </button>
+        ))}
+      </div>
       <select
-        aria-label="Date range"
-        value={selected}
+        aria-label="More date ranges"
+        value={inMore ? selected : ''}
         onChange={(e) => choose(e.target.value as RangePresetKey)}
-        className={`${control} font-semibold`}
+        className={cn(control, inMore && 'border-primary font-medium')}
       >
-        {RANGE_PRESETS.map((p) => (
+        <option value="" disabled>
+          More…
+        </option>
+        {RANGE_PRESETS.filter((p) => !QUICK.includes(p.key)).map((p) => (
           <option key={p.key} value={p.key}>
             {p.label}
           </option>
@@ -71,7 +92,7 @@ export function RangePicker({ preset, range }: { preset: RangePresetKey; range: 
           <button
             type="submit"
             disabled={!canApply}
-            className="h-[34px] rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+            className="h-[38px] rounded-full bg-primary px-4 text-[13.5px] font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
           >
             Apply
           </button>

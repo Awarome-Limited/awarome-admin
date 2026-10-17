@@ -1,7 +1,6 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/submit-button';
+import { SaveBar } from '@/components/save-bar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AdminProduct } from '@/lib/types';
@@ -11,7 +10,7 @@ import { updateProduct } from '../../actions';
 const DELIVERY_METHODS = ['bike', 'car', 'truck'] as const;
 
 const selectClass =
-  'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+  'field w-full pr-9';
 
 interface Category {
   _id: string;
@@ -42,7 +41,7 @@ export function ProductEditForm({
   product: AdminProduct;
   categories: Category[];
 }) {
-  const { values, set, submit, isPending } = useEditForm<FormState>(
+  const { values, set, submit, isPending, dirty, reset } = useEditForm<FormState>(
     {
       name: product.name ?? '',
       price: product.price != null ? String(product.price) : '',
@@ -78,9 +77,9 @@ export function ProductEditForm({
   return (
     <div
       id="edit-product"
-      className="rounded-[14px] border border-border bg-card p-[20px_22px] shadow-[var(--shadow-card)]"
+      className="flex flex-col gap-[18px] rounded-[10px] border border-border bg-card px-6 py-[22px]"
     >
-      <div className="mb-4 text-[15px] font-semibold text-foreground">Edit product</div>
+      <h3 className="text-[17px] leading-tight font-bold">Edit product</h3>
       <div className="flex flex-col gap-5">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2 sm:col-span-2">
@@ -163,22 +162,17 @@ export function ProductEditForm({
               rows={4}
               value={values.description}
               onChange={(e) => set({ description: e.target.value })}
-              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="field-area w-full"
             />
           </div>
         </div>
-        <div>
-          <Button type="button" onClick={() => submit()} disabled={isPending}>
-            {isPending ? (
-              <>
-                <Spinner />
-                Saving…
-              </>
-            ) : (
-              'Save changes'
-            )}
-          </Button>
-        </div>
+      <SaveBar
+        dirty={dirty}
+        saving={isPending}
+        label="Unsaved product changes"
+        onDiscard={reset}
+        onSave={() => submit()}
+      />
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   CheckIcon,
+  ClipboardPasteIcon,
   LayersIcon,
   PlusIcon,
   RouteIcon,
@@ -15,8 +16,11 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Field, FieldGrid, InlineNotice, ListCard, Panel } from '@/components/page';
+import { StatStrip } from '@/components/stat-strip';
+import { segmentItem, segmentTrack } from '@/components/segmented';
+import { formatPhone, humanize } from '@/lib/format';
 import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
@@ -57,8 +61,9 @@ const DEFAULT_TERMS: BulkPricingTerms = {
 
 const DRAFT_KEY = 'awarome:bulk-delivery-draft:v1';
 
-const inputClass =
-  'h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive';
+const inputClass = 'field';
+/** Denser inputs inside the drops table. */
+const cellInput = 'field h-9 px-2.5 text-[13.5px]';
 
 interface DropRow {
   id: string;
@@ -135,7 +140,7 @@ const emptyState = (): FormState => ({
   rows: [newRow()],
 });
 
-const naira = (amount: number) => `₦${Math.round(amount).toLocaleString('en-NG')}`;
+const naira = (amount: number) => `₦ ${Math.round(amount).toLocaleString('en-NG')}`;
 const pointKey = (a: DeliveryAddress) =>
   `${a.location.lat.toFixed(5)},${a.location.long.toFixed(5)}`;
 
@@ -436,538 +441,551 @@ export function BulkDeliveryForm({ riders }: { riders: AdminRider[] }) {
     });
   }
 
+  const bookLabel = `Book ${state.rows.length} ${state.rows.length === 1 ? 'delivery' : 'deliveries'}`;
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-7">
       {draft && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-warning/40 bg-warning-bg px-4 py-3 text-[13px]">
-          <span>
-            You have an unsaved bulk{draft.customer ? ` for ${draft.customer.name}` : ''} with{' '}
-            {draft.rows.length} {draft.rows.length === 1 ? 'drop' : 'drops'}.
-          </span>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              onClick={() => {
-                setState(migrateDraft(draft));
-                setDraft(null);
-                if (draft.customer) getCustomerPickups(draft.customer._id).then(setPickups);
-              }}
-            >
-              Restore
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                clearDraft();
-                setDraft(null);
-              }}
-            >
-              Discard
-            </Button>
-          </div>
-        </div>
+        <InlineNotice
+          tone="info"
+          action={
+            <span className="flex gap-3">
+              <button
+                type="button"
+                className="font-medium text-primary hover:text-warning"
+                onClick={() => {
+                  setState(migrateDraft(draft));
+                  setDraft(null);
+                  if (draft.customer) getCustomerPickups(draft.customer._id).then(setPickups);
+                }}
+              >
+                Restore
+              </button>
+              <button
+                type="button"
+                className="font-medium text-foreground-secondary hover:text-foreground"
+                onClick={() => {
+                  clearDraft();
+                  setDraft(null);
+                }}
+              >
+                Discard
+              </button>
+            </span>
+          }
+        >
+          You have an unsaved bulk{draft.customer ? ` for ${draft.customer.name}` : ''} with {draft.rows.length}{' '}
+          {draft.rows.length === 1 ? 'drop' : 'drops'}.
+        </InlineNotice>
       )}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Customer & pickup</CardTitle>
-            <CardDescription>The deliveries appear in this customer’s app to track.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3.5">
-            <div className="flex flex-col gap-1.5">
-              <Label>Customer</Label>
-              <CustomerPicker value={state.customer} onChange={chooseCustomer} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <div className="flex min-h-7 items-center justify-between gap-2">
-                <Label>Pickup address</Label>
-                <SavedAddressMenu
-                  options={pickups}
-                  value={state.pickup}
-                  onPick={(p) =>
-                    set({
-                      pickup: p.address,
-                      pickupQuery: p.address.address,
-                      ...(p.sender?.name ? { senderName: p.sender.name } : {}),
-                      ...(p.sender?.phone ? { senderPhone: p.sender.phone } : {}),
-                    })
-                  }
-                />
-              </div>
-              <AddressInput
+      <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+        <Panel title="Customer and pickup" description="The deliveries appear in this customer’s app to track.">
+          <Field label="Customer">
+            <CustomerPicker value={state.customer} onChange={chooseCustomer} />
+          </Field>
+          <div className="flex flex-col gap-2">
+            <div className="flex min-h-7 items-center justify-between gap-2">
+              <span className="text-[13.5px] font-medium">Pickup address</span>
+              <SavedAddressMenu
+                options={pickups}
                 value={state.pickup}
-                query={state.pickupQuery}
-                onChange={(pickup, pickupQuery) => set({ pickup, pickupQuery })}
-                placeholder={
-                  pickups.length ? 'Search, or choose from saved addresses' : 'Where the rider collects the packages'
+                onPick={(p) =>
+                  set({
+                    pickup: p.address,
+                    pickupQuery: p.address.address,
+                    ...(p.sender?.name ? { senderName: p.sender.name } : {}),
+                    ...(p.sender?.phone ? { senderPhone: p.sender.phone } : {}),
+                  })
                 }
               />
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="senderName">Sender name</Label>
-                <input
-                  id="senderName"
-                  value={state.senderName}
-                  onChange={(e) => set({ senderName: e.target.value })}
-                  className={inputClass}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="senderPhone">Sender phone</Label>
-                <input
-                  id="senderPhone"
-                  value={state.senderPhone}
-                  onChange={(e) => set({ senderPhone: e.target.value })}
-                  className={inputClass}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Pricing</CardTitle>
-            <CardDescription>
-              {flatMode
-                ? `${state.rows.length} drops — flat rate applies.`
-                : `Flat rate starts at ${state.terms.minDropsForFlat} drops. Until then each drop uses normal app pricing.`}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3.5">
-            <div className="grid grid-cols-2 gap-3">
-              <NumberField
-                label="Flat rate (₦)"
-                value={state.terms.flatRate}
-                onChange={(flatRate) => set({ terms: { ...state.terms, flatRate } })}
-              />
-              <NumberField
-                label="Far rate (₦)"
-                value={state.terms.farRate}
-                onChange={(farRate) => set({ terms: { ...state.terms, farRate } })}
-              />
-              <NumberField
-                label="Far from (km by road)"
-                value={state.terms.farDistanceKm}
-                onChange={(farDistanceKm) => set({ terms: { ...state.terms, farDistanceKm } })}
-              />
-              <NumberField
-                label="Flat rate from (drops)"
-                value={state.terms.minDropsForFlat}
-                onChange={(minDropsForFlat) =>
-                  set({ terms: { ...state.terms, minDropsForFlat: Math.max(1, minDropsForFlat) } })
-                }
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="vehicleType">Vehicle</Label>
-                <select
-                  id="vehicleType"
-                  value={state.vehicleType}
-                  onChange={(e) => set({ vehicleType: e.target.value, riderId: '' })}
-                  className={inputClass}
-                >
-                  <option value="bike">Bike</option>
-                  <option value="car">Car</option>
-                  <option value="truck">Truck</option>
-                </select>
-              </div>
-              <label className="flex items-end justify-between gap-3 pb-1.5 text-[13px]">
-                <span className="flex flex-col">
-                  <span className="font-medium text-foreground">Handover PIN</span>
-                  <span className="text-[11.5px] text-muted-foreground">Vendor relays a PIN per drop</span>
-                </span>
-                <Switch
-                  checked={state.requirePin}
-                  onCheckedChange={(requirePin) => set({ requirePin })}
-                />
-              </label>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="note">Note for every rider (optional)</Label>
+            <AddressInput
+              value={state.pickup}
+              query={state.pickupQuery}
+              onChange={(pickup, pickupQuery) => set({ pickup, pickupQuery })}
+              placeholder={pickups.length ? 'Search, or choose from saved addresses' : 'Where the rider collects the packages'}
+            />
+          </div>
+          <FieldGrid>
+            <Field label="Sender name" htmlFor="senderName" help="Who the rider meets at pickup.">
               <input
-                id="note"
-                value={state.note}
-                onChange={(e) => set({ note: e.target.value })}
-                placeholder="e.g. Fragile — call receiver on arrival"
+                id="senderName"
+                value={state.senderName}
+                onChange={(e) => set({ senderName: e.target.value })}
+                aria-invalid={showErrors && !state.senderName.trim()}
                 className={inputClass}
               />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </Field>
+            <Field label="Sender phone" htmlFor="senderPhone">
+              <input
+                id="senderPhone"
+                value={state.senderPhone}
+                onChange={(e) => set({ senderPhone: e.target.value })}
+                aria-invalid={showErrors && !state.senderPhone.trim()}
+                className={cn(inputClass, 'tabular-nums')}
+              />
+            </Field>
+          </FieldGrid>
+        </Panel>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Dispatch</CardTitle>
-          <CardDescription>How these {state.rows.length} drops reach riders once booked.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div role="radiogroup" aria-label="Dispatch" className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
-            {DISPATCH_OPTIONS.map((option) => {
-              const active = state.dispatchMode === option.value;
-              const Icon = option.icon;
-              return (
+        <Panel
+          title="Pricing"
+          description={
+            flatMode
+              ? `${state.rows.length} drops, so the flat rate applies.`
+              : `The flat rate starts at ${state.terms.minDropsForFlat} drops. Until then each drop uses normal app pricing.`
+          }
+          aside={<Badge variant={flatMode ? 'info' : 'secondary'}>{flatMode ? 'Flat rate' : 'App pricing'}</Badge>}
+        >
+          <FieldGrid>
+            <NumberField
+              label="Flat rate"
+              unit="₦"
+              value={state.terms.flatRate}
+              onChange={(flatRate) => set({ terms: { ...state.terms, flatRate } })}
+            />
+            <NumberField
+              label="Far rate"
+              unit="₦"
+              value={state.terms.farRate}
+              onChange={(farRate) => set({ terms: { ...state.terms, farRate } })}
+            />
+            <NumberField
+              label="Far from"
+              unit="km"
+              help="By road, from the pickup."
+              value={state.terms.farDistanceKm}
+              onChange={(farDistanceKm) => set({ terms: { ...state.terms, farDistanceKm } })}
+            />
+            <NumberField
+              label="Flat rate from"
+              unit="#"
+              help="Drops in the bulk."
+              value={state.terms.minDropsForFlat}
+              onChange={(minDropsForFlat) => set({ terms: { ...state.terms, minDropsForFlat: Math.max(1, minDropsForFlat) } })}
+            />
+          </FieldGrid>
+          <div className="flex flex-col gap-2">
+            <span className="text-[13.5px] font-medium">Vehicle</span>
+            <div className={segmentTrack}>
+              {(['bike', 'car', 'truck'] as const).map((v) => (
                 <button
-                  key={option.value}
+                  key={v}
                   type="button"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => set({ dispatchMode: option.value })}
+                  onClick={() => set({ vehicleType: v, riderId: '' })}
+                  className={segmentItem(state.vehicleType === v, 'sm')}
+                >
+                  {v[0].toUpperCase() + v.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <label className="flex items-start justify-between gap-4">
+            <span className="flex flex-col gap-1">
+              <span className="text-[13.5px] font-medium">Handover PIN</span>
+              <span className="text-[12.5px] text-muted-foreground">The vendor relays a PIN per drop to each receiver.</span>
+            </span>
+            <Switch checked={state.requirePin} onCheckedChange={(requirePin) => set({ requirePin })} />
+          </label>
+          <Field label="Note for every rider" htmlFor="note" help="Optional.">
+            <input
+              id="note"
+              value={state.note}
+              onChange={(e) => set({ note: e.target.value })}
+              placeholder="e.g. Fragile, call the receiver on arrival"
+              className={inputClass}
+            />
+          </Field>
+        </Panel>
+      </section>
+
+      <Panel title="Dispatch" description={`How these ${state.rows.length} drops reach riders once booked.`}>
+        <div role="radiogroup" aria-label="Dispatch" className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {DISPATCH_OPTIONS.map((option) => {
+            const active = state.dispatchMode === option.value;
+            const Icon = option.icon;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => set({ dispatchMode: option.value })}
+                className={cn(
+                  'flex gap-3 rounded-[8px] p-3.5 text-left transition-colors',
+                  active
+                    ? 'border-[1.5px] border-primary bg-brand-tint'
+                    : 'border border-border bg-card hover:border-muted-foreground'
+                )}
+              >
+                <span
                   className={cn(
-                    'relative flex gap-3 rounded-[12px] border p-3.5 text-left transition-colors',
-                    active
-                      ? 'border-primary bg-brand-tint ring-1 ring-primary'
-                      : 'border-border hover:border-border-strong hover:bg-muted/50'
+                    'flex size-9 shrink-0 items-center justify-center rounded-[8px]',
+                    active ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
                   )}
                 >
-                  <span
-                    className={cn(
-                      'flex size-9 shrink-0 items-center justify-center rounded-[10px]',
-                      active ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                    )}
-                  >
-                    <Icon className="size-[18px]" />
+                  <Icon className="size-[18px]" />
+                </span>
+                <span className="flex min-w-0 flex-col gap-1">
+                  <span className="text-[14px] font-medium">{option.title}</span>
+                  <span className={cn('text-[12.5px] leading-[1.5]', active ? 'text-foreground-secondary' : 'text-muted-foreground')}>
+                    {option.hint}
                   </span>
-                  <span className="flex min-w-0 flex-col gap-0.5 pr-4">
-                    <span className="text-[13px] font-semibold text-foreground">{option.title}</span>
-                    <span className="text-[12px] leading-snug text-muted-foreground">{option.hint}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="border-t border-border pt-[18px]">
+          {state.dispatchMode === 'runs' && (
+            <div className="flex flex-col gap-4">
+              <FieldGrid>
+                <NumberField
+                  label="Min drops per rider"
+                  unit="#"
+                  value={state.runSize?.minDrops ?? NaN}
+                  onChange={(minDrops) =>
+                    set({ runSize: { maxDrops: state.runSize?.maxDrops ?? 5, minDrops: Math.max(1, minDrops) } })
+                  }
+                />
+                <NumberField
+                  label="Max drops per rider"
+                  unit="#"
+                  value={state.runSize?.maxDrops ?? NaN}
+                  onChange={(maxDrops) =>
+                    set({ runSize: { minDrops: state.runSize?.minDrops ?? 1, maxDrops: Math.max(1, maxDrops) } })
+                  }
+                />
+              </FieldGrid>
+              <label className="flex items-start justify-between gap-4">
+                <span className="flex flex-col gap-1">
+                  <span className="text-[13.5px] font-medium">Fill spare seats with other customers’ drops</span>
+                  <span className="text-[12.5px] text-muted-foreground">
+                    Picked up nearby and dropped along a run. Never adds a rider.
                   </span>
-                  {active && <CheckIcon className="absolute top-3 right-3 size-4 text-primary" />}
-                </button>
-              );
-            })}
-          </div>
+                </span>
+                <Switch checked={state.fillFromPool} onCheckedChange={(fillFromPool) => set({ fillFromPool })} />
+              </label>
+              {state.runSize && <DispatchNote>{runsPreview(state.rows.length, state.runSize)}</DispatchNote>}
+            </div>
+          )}
+          {state.dispatchMode === 'single-trip' && (
+            <DispatchNote>
+              All {state.rows.length} drops go out as one run, offered to {state.vehicleType} riders near the pickup. The
+              first to accept takes the whole trip. Nobody else’s drops are added.
+            </DispatchNote>
+          )}
+          {state.dispatchMode === 'rider' && (
+            <RiderPicker
+              riders={riders}
+              vehicleType={state.vehicleType}
+              value={state.riderId}
+              onChange={(riderId) => set({ riderId })}
+              invalid={showErrors && !state.riderId}
+              drops={state.rows.length}
+            />
+          )}
+          {state.dispatchMode === 'pool' && (
+            <DispatchNote>
+              Nothing is sent yet. The drops wait in the batch pool and group with app orders heading the same way, as
+              normal batch deliveries do. You can still assign them from the bulk page.
+            </DispatchNote>
+          )}
+        </div>
+      </Panel>
 
-          <div className="rounded-[12px] border border-border bg-muted/30 p-3.5">
-            {state.dispatchMode === 'runs' && (
-              <div className="flex flex-col gap-3">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[repeat(2,minmax(0,160px))_1fr] sm:items-end">
-                  <NumberField
-                    label="Min drops per rider"
-                    value={state.runSize?.minDrops ?? NaN}
-                    onChange={(minDrops) =>
-                      set({ runSize: { maxDrops: state.runSize?.maxDrops ?? 5, minDrops: Math.max(1, minDrops) } })
-                    }
-                  />
-                  <NumberField
-                    label="Max drops per rider"
-                    value={state.runSize?.maxDrops ?? NaN}
-                    onChange={(maxDrops) =>
-                      set({ runSize: { minDrops: state.runSize?.minDrops ?? 1, maxDrops: Math.max(1, maxDrops) } })
-                    }
-                  />
-                  <label className="flex items-center justify-between gap-3 text-[13px] sm:pl-3">
-                    <span className="flex flex-col">
-                      <span className="font-medium text-foreground">Fill spare seats with other customers’ drops</span>
-                      <span className="text-[11.5px] text-muted-foreground">
-                        Picked up nearby and dropped along a run. Never adds a rider.
-                      </span>
-                    </span>
-                    <Switch
-                      checked={state.fillFromPool}
-                      onCheckedChange={(fillFromPool) => set({ fillFromPool })}
-                    />
-                  </label>
-                </div>
-                {state.runSize && <DispatchNote>{runsPreview(state.rows.length, state.runSize)}</DispatchNote>}
-              </div>
-            )}
-            {state.dispatchMode === 'single-trip' && (
-              <DispatchNote>
-                All {state.rows.length} drops go out as one run, offered to {state.vehicleType} riders near the
-                pickup. The first to accept takes the whole trip. Nobody else’s drops are added.
-              </DispatchNote>
-            )}
-            {state.dispatchMode === 'rider' && (
-              <RiderPicker
-                riders={riders}
-                vehicleType={state.vehicleType}
-                value={state.riderId}
-                onChange={(riderId) => set({ riderId })}
-                invalid={showErrors && !state.riderId}
-                drops={state.rows.length}
-              />
-            )}
-            {state.dispatchMode === 'pool' && (
-              <DispatchNote>
-                Nothing is sent yet. The drops wait in the batch pool and group with app orders heading the
-                same way, as normal batch deliveries do. You can still assign them from the bulk page.
-              </DispatchNote>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
-          <div>
-            <CardTitle>Drops ({state.rows.length})</CardTitle>
-            <CardDescription>
-              {isQuoting
-                ? 'Working out distances…'
-                : quoteError
-                  ? <span className="text-destructive">{quoteError}</span>
-                  : 'Pick each address from the suggestions so riders get an exact pin.'}
-            </CardDescription>
-          </div>
-          <div className="flex flex-wrap gap-2">
+      <ListCard
+        title={`Drops (${state.rows.length})`}
+        description={
+          isQuoting ? (
+            'Working out distances…'
+          ) : quoteError ? (
+            <span className="text-destructive">{quoteError}</span>
+          ) : (
+            'Pick each address from the suggestions so riders get an exact pin.'
+          )
+        }
+        aside={
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className={segmentTrack} aria-label="Set who pays for every drop">
+              <button type="button" onClick={() => setAllPayers('vendor')} className={segmentItem(receiverRows === 0, 'sm')}>
+                All vendor pays
+              </button>
+              <button type="button" onClick={() => setAllPayers('receiver')} className={segmentItem(vendorRows === 0, 'sm')}>
+                All receiver pays
+              </button>
+            </div>
             <PasteDropsDialog onAdd={(rows) => addRows(rows)} />
-            <Button size="sm" variant="outline" onClick={() => setAllPayers('vendor')}>
-              All vendor pays
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setAllPayers('receiver')}>
-              All receiver pays
-            </Button>
           </div>
-        </CardHeader>
-        <CardContent className="px-0">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1080px] border-collapse text-[13px]">
-              <thead>
-                <tr className="border-b border-border text-left text-[11.5px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  <th className="w-8 px-3 py-2">#</th>
-                  <th className="w-[170px] px-2 py-2">Receiver</th>
-                  <th className="px-2 py-2">Drop-off address</th>
-                  <th className="w-[70px] px-2 py-2 text-right">Km</th>
-                  <th className="w-[150px] px-2 py-2">Who pays</th>
-                  <th className="w-[110px] px-2 py-2">Fee (₦)</th>
-                  <th className="w-[110px] px-2 py-2">Rider collects</th>
-                  <th className="w-[50px] px-2 py-2 text-center">Far</th>
-                  <th className="w-[140px] px-2 py-2">Note</th>
-                  <th className="w-10 px-2 py-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {priced.map(({ row, quote, far, tariff, fee }, i) => {
-                  const err = (bad: boolean) => showErrors && bad;
-                  return (
-                    <tr key={row.id} className="border-b border-border align-top last:border-0">
-                      <td className="px-3 py-2.5 font-semibold tabular-nums text-muted-foreground">{i + 1}</td>
-                      <td className="px-2 py-2">
-                        <div className="flex flex-col gap-1.5">
-                          <input
-                            value={row.name}
-                            onChange={(e) => setRow(row.id, { name: e.target.value })}
-                            placeholder="Name"
-                            aria-invalid={err(!row.name.trim())}
-                            className={inputClass}
-                          />
-                          <input
-                            value={row.phone}
-                            onChange={(e) => setRow(row.id, { phone: e.target.value })}
-                            placeholder="Phone"
-                            aria-invalid={err(!row.phone.trim())}
-                            className={inputClass}
-                          />
-                        </div>
-                      </td>
-                      <td className="px-2 py-2">
-                        <AddressInput
-                          compact
-                          value={row.address}
-                          query={row.addressQuery}
-                          onChange={(address, addressQuery) => setRow(row.id, { address, addressQuery })}
-                        />
-                        {!row.address && row.addressQuery && (
-                          <p className="mt-1 text-[11.5px] text-warning">Pick a suggestion to pin this address.</p>
+        }
+        footer={
+          <Button variant="outline" size="sm" onClick={() => addRows([newRow()])}>
+            <PlusIcon />
+            Add drop
+          </Button>
+        }
+      >
+        <table className="w-full min-w-[1080px] border-collapse text-[14px]">
+          <thead>
+            <tr className="border-b border-border text-left text-[11.5px] font-medium tracking-[0.06em] text-muted-foreground uppercase">
+              <th className="h-11 w-10 pr-2 pl-6">#</th>
+              <th className="w-[180px] px-2">Receiver</th>
+              <th className="px-2">Drop-off address</th>
+              <th className="w-[64px] px-2 text-right">Km</th>
+              <th className="w-[170px] px-2">Who pays</th>
+              <th className="w-[120px] px-2">Fee</th>
+              <th className="w-[120px] px-2">Rider collects</th>
+              <th className="w-[52px] px-2 text-center">Far</th>
+              <th className="w-[150px] px-2">Note</th>
+              <th className="w-12 pr-6 pl-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {priced.map(({ row, quote, far, tariff, fee }, i) => {
+              const err = (bad: boolean) => showErrors && bad;
+              return (
+                <tr key={row.id} className="border-b border-border align-top last:border-0">
+                  <td className="py-3.5 pr-2 pl-6 text-muted-foreground tabular-nums">{i + 1}</td>
+                  <td className="px-2 py-2.5">
+                    <div className="flex flex-col gap-1.5">
+                      <input
+                        value={row.name}
+                        onChange={(e) => setRow(row.id, { name: e.target.value })}
+                        placeholder="Name"
+                        aria-label={`Drop ${i + 1} receiver name`}
+                        aria-invalid={err(!row.name.trim())}
+                        className={cellInput}
+                      />
+                      <input
+                        value={row.phone}
+                        onChange={(e) => setRow(row.id, { phone: e.target.value })}
+                        placeholder="Phone"
+                        aria-label={`Drop ${i + 1} receiver phone`}
+                        aria-invalid={err(!row.phone.trim())}
+                        className={cn(cellInput, 'tabular-nums')}
+                      />
+                    </div>
+                  </td>
+                  <td className="px-2 py-2.5">
+                    <AddressInput
+                      compact
+                      value={row.address}
+                      query={row.addressQuery}
+                      onChange={(address, addressQuery) => setRow(row.id, { address, addressQuery })}
+                    />
+                    {!row.address && row.addressQuery && (
+                      <p className="mt-1 text-[12px] text-warning">Pick a suggestion to pin this address.</p>
+                    )}
+                  </td>
+                  <td className="px-2 py-3.5 text-right text-foreground-secondary tabular-nums">
+                    {quote ? quote.distanceKm : row.address ? '…' : '—'}
+                  </td>
+                  <td className="px-2 py-2.5">
+                    <div className={cn(segmentTrack, 'flex w-full flex-nowrap')}>
+                      {(['vendor', 'receiver'] as const).map((payer) => (
+                        <button
+                          key={payer}
+                          type="button"
+                          onClick={() => setRow(row.id, { payer })}
+                          className={cn(segmentItem(row.payer === payer, 'sm'), 'h-7 flex-1 justify-center px-2 text-[12.5px]')}
+                        >
+                          {payer === 'vendor' ? 'Vendor' : 'Receiver'}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-1 text-[12px] text-muted-foreground">
+                      {row.payer === 'vendor' ? 'Pays after delivery' : 'Pays rider at the door'}
+                    </p>
+                  </td>
+                  <td className="px-2 py-2.5">
+                    <div className="field-wrap h-9 px-2.5">
+                      <span>₦</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={row.feeOverride}
+                        onChange={(e) => setRow(row.id, { feeOverride: e.target.value })}
+                        placeholder={tariff != null ? String(tariff) : '…'}
+                        aria-label={`Drop ${i + 1} fee`}
+                        className="w-full min-w-0 border-0 bg-transparent text-foreground tabular-nums outline-none placeholder:text-muted-foreground"
+                      />
+                    </div>
+                    {row.feeOverride !== '' && tariff != null && Number(row.feeOverride) !== tariff && (
+                      <button
+                        type="button"
+                        onClick={() => setRow(row.id, { feeOverride: '' })}
+                        className="mt-1 text-[12px] text-primary hover:text-warning"
+                      >
+                        Reset to {naira(tariff)}
+                      </button>
+                    )}
+                  </td>
+                  <td className="px-2 py-2.5">
+                    {row.payer === 'receiver' ? (
+                      <div
+                        className={cn(
+                          'field-wrap h-9 px-2.5',
+                          err(row.collect !== '' && !(Number(row.collect) > 0)) && 'border-destructive'
                         )}
-                      </td>
-                      <td className="px-2 py-2.5 text-right tabular-nums text-muted-foreground">
-                        {quote ? quote.distanceKm : row.address ? '…' : '—'}
-                      </td>
-                      <td className="px-2 py-2">
-                        <div className="flex rounded-lg border border-input p-0.5">
-                          {(['vendor', 'receiver'] as const).map((payer) => (
-                            <button
-                              key={payer}
-                              type="button"
-                              onClick={() => setRow(row.id, { payer })}
-                              className={cn(
-                                'flex-1 rounded-md px-1.5 py-1 text-[12px] font-semibold',
-                                row.payer === payer
-                                  ? 'bg-brand-tint text-primary'
-                                  : 'text-muted-foreground hover:text-foreground'
-                              )}
-                            >
-                              {payer === 'vendor' ? 'Vendor' : 'Receiver'}
-                            </button>
-                          ))}
-                        </div>
-                        <p className="mt-1 text-[11px] text-muted-foreground">
-                          {row.payer === 'vendor' ? 'Pays after delivery' : 'Pays rider at the door'}
-                        </p>
-                      </td>
-                      <td className="px-2 py-2">
+                      >
+                        <span>₦</span>
                         <input
                           type="number"
                           min={0}
-                          value={row.feeOverride}
-                          onChange={(e) => setRow(row.id, { feeOverride: e.target.value })}
-                          placeholder={tariff != null ? String(tariff) : '…'}
-                          className={cn(inputClass, 'tabular-nums')}
+                          value={row.collect}
+                          onChange={(e) => setRow(row.id, { collect: e.target.value })}
+                          placeholder={fee != null ? String(fee) : '…'}
+                          aria-label={`Drop ${i + 1} amount the rider collects`}
+                          className="w-full min-w-0 border-0 bg-transparent text-foreground tabular-nums outline-none placeholder:text-muted-foreground"
                         />
-                        {row.feeOverride !== '' && tariff != null && Number(row.feeOverride) !== tariff && (
-                          <button
-                            type="button"
-                            onClick={() => setRow(row.id, { feeOverride: '' })}
-                            className="mt-1 text-[11px] text-primary hover:underline"
-                          >
-                            Reset to {naira(tariff)}
-                          </button>
-                        )}
-                      </td>
-                      <td className="px-2 py-2">
-                        {row.payer === 'receiver' ? (
-                          <input
-                            type="number"
-                            min={0}
-                            value={row.collect}
-                            onChange={(e) => setRow(row.id, { collect: e.target.value })}
-                            placeholder={fee != null ? String(fee) : '…'}
-                            aria-invalid={err(row.collect !== '' && !(Number(row.collect) > 0))}
-                            className={cn(inputClass, 'tabular-nums')}
-                          />
-                        ) : (
-                          <span className="block px-1 py-1.5 text-[12px] text-muted-foreground">Nothing</span>
-                        )}
-                      </td>
-                      <td className="px-2 py-2.5 text-center">
-                        <input
-                          type="checkbox"
-                          checked={far}
-                          disabled={!flatMode}
-                          onChange={(e) => setRow(row.id, { farOverride: e.target.checked })}
-                          title={flatMode ? 'Charge the far rate' : 'Far rate only applies to flat-rate bulks'}
-                          className="size-4 accent-[var(--primary)]"
-                        />
-                      </td>
-                      <td className="px-2 py-2">
-                        <input
-                          value={row.note}
-                          onChange={(e) => setRow(row.id, { note: e.target.value })}
-                          placeholder="Optional"
-                          className={inputClass}
-                        />
-                      </td>
-                      <td className="px-2 py-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setState((prev) => ({
-                              ...prev,
-                              rows: prev.rows.length > 1 ? prev.rows.filter((r) => r.id !== row.id) : [newRow()],
-                            }))
-                          }
-                          aria-label={`Remove drop ${i + 1}`}
-                          className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-destructive"
-                        >
-                          <Trash2Icon className="size-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div className="px-4 pt-3">
-            <Button size="sm" variant="outline" onClick={() => addRows([newRow()])}>
-              <PlusIcon data-icon="inline-start" />
-              Add drop
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+                      </div>
+                    ) : (
+                      <span className="block py-2 text-[13px] text-muted-foreground">Nothing</span>
+                    )}
+                  </td>
+                  <td className="px-2 py-3.5 text-center">
+                    <input
+                      type="checkbox"
+                      checked={far}
+                      disabled={!flatMode}
+                      onChange={(e) => setRow(row.id, { farOverride: e.target.checked })}
+                      title={flatMode ? 'Charge the far rate' : 'The far rate only applies to flat-rate bulks'}
+                      aria-label={`Drop ${i + 1} far rate`}
+                      className="size-4 accent-primary"
+                    />
+                  </td>
+                  <td className="px-2 py-2.5">
+                    <input
+                      value={row.note}
+                      onChange={(e) => setRow(row.id, { note: e.target.value })}
+                      placeholder="Optional"
+                      aria-label={`Drop ${i + 1} note`}
+                      className={cellInput}
+                    />
+                  </td>
+                  <td className="py-2.5 pr-6 pl-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setState((prev) => ({
+                          ...prev,
+                          rows: prev.rows.length > 1 ? prev.rows.filter((r) => r.id !== row.id) : [newRow()],
+                        }))
+                      }
+                      aria-label={`Remove drop ${i + 1}`}
+                      className="flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-negative-bg hover:text-destructive"
+                    >
+                      <Trash2Icon className="size-4" />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </ListCard>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Total label="Total fees" value={naira(totals.listed)} hint={`${state.rows.length} drops`} />
-            <Total
-              label="Vendor owes after delivery"
-              value={naira(totals.vendor)}
-              hint={`${vendorRows} ${vendorRows === 1 ? 'drop' : 'drops'}`}
-            />
-            <Total
-              label="Riders collect at the door"
-              value={naira(totals.collect)}
-              hint={`${receiverRows} ${receiverRows === 1 ? 'drop' : 'drops'}`}
-            />
-            <Total
-              label="Vendor’s split vs tariff"
-              value={
-                !splitInUse ? '—' : splitDiff === 0 ? 'Balanced' : `${splitDiff > 0 ? '+' : '−'}${naira(Math.abs(splitDiff))}`
-              }
-              hint={splitInUse ? `Tariff ${naira(totals.receiverTariff)} on receiver drops` : 'No custom split'}
-              tone={splitInUse && splitDiff !== 0 ? 'warning' : undefined}
-            />
-          </div>
-          {splitInUse && splitDiff !== 0 && (
-            <p className="rounded-[10px] bg-warning-bg px-3 py-2 text-[12.5px] text-foreground">
-              Riders will collect {naira(totals.collect)} but the receiver drops are priced at{' '}
-              {naira(totals.receiverTariff)}. Each drop is billed at what its rider collects, so this
-              bulk will total {naira(totals.vendor + totals.collect)}. Check the split with the vendor.
-            </p>
-          )}
-          {showErrors && problems.length > 0 && (
-            <ul className="list-disc space-y-0.5 pl-5 text-[12.5px] text-destructive">
-              {problems.slice(0, 6).map((p) => (
-                <li key={p}>{p}</li>
-              ))}
-              {problems.length > 6 && <li>…and {problems.length - 6} more</li>}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      <StatStrip
+        stats={[
+          { label: 'Total fees', value: naira(totals.listed), meta: `${state.rows.length} ${state.rows.length === 1 ? 'drop' : 'drops'}` },
+          {
+            label: 'Vendor owes after delivery',
+            value: naira(totals.vendor),
+            meta: `${vendorRows} ${vendorRows === 1 ? 'drop' : 'drops'}`,
+          },
+          {
+            label: 'Riders collect at the door',
+            value: naira(totals.collect),
+            meta: `${receiverRows} ${receiverRows === 1 ? 'drop' : 'drops'}`,
+          },
+          {
+            label: 'Vendor’s split vs tariff',
+            value: !splitInUse
+              ? '—'
+              : splitDiff === 0
+                ? 'Balanced'
+                : `${splitDiff > 0 ? '+' : '−'}${naira(Math.abs(splitDiff))}`,
+            meta: splitInUse ? `Tariff ${naira(totals.receiverTariff)} on receiver drops` : 'No custom split',
+          },
+        ]}
+      />
 
-      <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-border bg-card/95 px-4 py-3 shadow-[var(--shadow-card)] backdrop-blur supports-[backdrop-filter]:bg-card/85">
-        <div className="flex min-w-0 flex-col">
-          <span className="text-[15px] font-bold tabular-nums text-foreground">
+      {splitInUse && splitDiff !== 0 && (
+        <InlineNotice>
+          Riders will collect {naira(totals.collect)}, but the receiver drops are priced at {naira(totals.receiverTariff)}.
+          Each drop is billed at what its rider collects, so this bulk totals {naira(totals.vendor + totals.collect)}.
+          Check the split with the vendor.
+        </InlineNotice>
+      )}
+
+      {showErrors && problems.length > 0 && (
+        <section className="flex flex-col gap-2 rounded-[8px] bg-negative-bg px-4 py-3 text-[13.5px]">
+          <span className="font-medium text-destructive">
+            Fix {problems.length === 1 ? 'this' : `these ${problems.length}`} before booking
+          </span>
+          <ul className="list-disc space-y-0.5 pl-5 text-foreground">
+            {problems.slice(0, 6).map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+            {problems.length > 6 && <li>And {problems.length - 6} more</li>}
+          </ul>
+        </section>
+      )}
+
+      {/* Floating booking bar: the total and the one action, always in reach while editing drops. */}
+      <div
+        role="region"
+        aria-label="Booking"
+        className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-32px)] -translate-x-1/2 items-center gap-4 rounded-full bg-[#120460] py-2 pr-2 pl-5 text-[13.5px] text-white shadow-[0_12px_32px_rgba(18,4,96,0.35)] lg:left-[calc(50%+124px)] dark:bg-[#070418] dark:ring-1 dark:ring-white/10"
+      >
+        <span className="flex min-w-0 flex-col leading-tight">
+          <span className="font-semibold whitespace-nowrap tabular-nums">
             {naira(totals.listed)}{' '}
-            <span className="text-[12.5px] font-medium text-muted-foreground">
+            <span className="font-normal text-white/70">
               for {state.rows.length} {state.rows.length === 1 ? 'drop' : 'drops'}
             </span>
           </span>
-          <span className="truncate text-[12px] text-muted-foreground">{dispatchSummary}</span>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => {
-              clearDraft();
-              setState(emptyState());
-              setPickups([]);
-              setShowErrors(false);
-            }}
-            disabled={isSubmitting}
-          >
-            Clear form
-          </Button>
-          <Button onClick={submit} disabled={isSubmitting || isQuoting}>
-            {isSubmitting
-              ? 'Booking…'
-              : `Book ${state.rows.length} ${state.rows.length === 1 ? 'delivery' : 'deliveries'}`}
-          </Button>
-        </div>
+          <span className="truncate text-[12px] text-white/60">{dispatchSummary}</span>
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            clearDraft();
+            setState(emptyState());
+            setPickups([]);
+            setShowErrors(false);
+          }}
+          disabled={isSubmitting}
+          className="h-9 rounded-full px-3.5 whitespace-nowrap text-white/75 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+        >
+          Clear form
+        </button>
+        <button
+          type="button"
+          onClick={submit}
+          disabled={isSubmitting || isQuoting}
+          className="h-9 rounded-full bg-[#FFD500] px-4 font-semibold whitespace-nowrap text-[#120460] transition-opacity hover:opacity-90 disabled:opacity-60"
+        >
+          {isSubmitting ? 'Booking…' : isQuoting ? 'Pricing…' : bookLabel}
+        </button>
       </div>
     </div>
   );
 }
 
 function DispatchNote({ children }: { children: ReactNode }) {
-  return <p className="text-[12.5px] leading-relaxed text-foreground-secondary">{children}</p>;
+  return (
+    <p className="rounded-[8px] bg-hi-soft px-3.5 py-3 text-[13px] leading-[1.5] text-foreground">{children}</p>
+  );
 }
 
 function runsPreview(drops: number, runSize: BulkRunSize) {
   const runs = Math.ceil(drops / Math.max(1, runSize.maxDrops));
   const smallest = Math.floor(drops / runs);
   const largest = Math.ceil(drops / runs);
-  return `${drops} drops → ${runs} ${runs === 1 ? 'rider' : 'riders'}, ${smallest}${
+  return `${drops} drops go to ${runs} ${runs === 1 ? 'rider' : 'riders'}, ${smallest}${
     smallest === largest ? '' : `–${largest}`
   } drops each.${
     smallest < runSize.minDrops ? ' Runs under the minimum wait in the pool for you to assign.' : ''
@@ -1021,7 +1039,7 @@ function RiderPicker({
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-[12.5px] text-foreground-secondary">
+        <span className="text-[13px] text-foreground-secondary">
           {chosen ? (
             <>
               All {drops} drops go to <span className="font-semibold text-foreground">{riderName(chosen)}</span> as
@@ -1032,12 +1050,13 @@ function RiderPicker({
           )}
         </span>
         <div className="relative w-full sm:w-64">
-          <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-3.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name, phone or plate"
-            className={cn(inputClass, 'bg-card pl-8')}
+            placeholder="Name, phone or plate"
+            aria-label="Search riders"
+            className="h-[38px] w-full rounded-full border border-border bg-background pr-4 pl-9 text-[13.5px] outline-none focus-visible:border-ring"
           />
         </div>
       </div>
@@ -1046,12 +1065,12 @@ function RiderPicker({
         aria-label="Rider"
         aria-invalid={invalid}
         className={cn(
-          'max-h-[264px] overflow-y-auto rounded-[10px] border bg-card',
+          'max-h-[288px] overflow-y-auto rounded-[8px] border bg-card',
           invalid ? 'border-destructive' : 'border-border'
         )}
       >
         {shown.length === 0 ? (
-          <p className="px-3 py-6 text-center text-[12.5px] text-muted-foreground">
+          <p className="px-3 py-8 text-center text-[13.5px] text-muted-foreground">
             {eligible.length === 0 ? `No ${vehicleType} riders to assign this to.` : 'No rider matches that search.'}
           </p>
         ) : (
@@ -1066,37 +1085,29 @@ function RiderPicker({
                 aria-checked={active}
                 onClick={() => onChange(rider._id)}
                 className={cn(
-                  'flex w-full items-center gap-3 border-b border-border px-3 py-2 text-left last:border-0',
-                  active ? 'bg-brand-tint' : 'hover:bg-muted/60'
+                  'flex w-full items-center gap-3 border-b border-border px-3.5 py-2.5 text-left last:border-0',
+                  active ? 'bg-brand-tint' : 'hover:bg-muted'
                 )}
               >
                 <span
                   className={cn(
-                    'flex size-8 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold',
-                    active ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground-secondary'
+                    'flex size-[38px] shrink-0 items-center justify-center rounded-full text-[13px] font-semibold',
+                    active ? 'bg-primary text-primary-foreground' : 'bg-brand-tint text-primary'
                   )}
                 >
                   {active ? <CheckIcon className="size-4" /> : riderName(rider).slice(0, 1).toUpperCase()}
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-[13px] font-semibold text-foreground">{riderName(rider)}</span>
-                  <span className="truncate text-[11.5px] text-muted-foreground">
-                    {[rider.phone, rider.plateNumber].filter(Boolean).join(' · ') || '—'}
+                  <span className="truncate text-[14px] font-medium text-foreground">{riderName(rider)}</span>
+                  <span className="truncate text-[12.5px] text-muted-foreground tabular-nums">
+                    {[rider.phone && formatPhone(rider.phone), rider.plateNumber?.toUpperCase()].filter(Boolean).join(' · ') || '—'}
                   </span>
                 </span>
-                <span className="flex shrink-0 items-center gap-1.5 text-[11.5px]">
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-foreground-secondary">
-                    {rider.isInHouse ? 'In-house' : 'Gig'}
-                  </span>
-                  <span
-                    className={cn(
-                      'inline-flex items-center gap-1 rounded-full px-2 py-0.5',
-                      online ? 'bg-positive-bg text-positive' : 'bg-muted text-muted-foreground'
-                    )}
-                  >
-                    <span className={cn('size-1.5 rounded-full', online ? 'bg-positive' : 'bg-muted-foreground/60')} />
-                    {online ? 'Online' : rider.status || 'Offline'}
-                  </span>
+                <span className="flex shrink-0 items-center gap-1.5">
+                  <Badge variant="secondary">{rider.isInHouse ? 'In-house' : 'Gig'}</Badge>
+                  <Badge variant={online ? 'positive' : 'secondary'} dot={online}>
+                    {online ? 'Online' : humanize(rider.status || 'offline')}
+                  </Badge>
                 </span>
               </button>
             );
@@ -1109,46 +1120,31 @@ function RiderPicker({
 
 function NumberField({
   label,
+  unit,
+  help,
   value,
   onChange,
 }: {
   label: string;
+  unit: string;
+  help?: string;
   value: number;
   onChange: (value: number) => void;
 }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <Label>{label}</Label>
-      <input
-        type="number"
-        min={0}
-        value={Number.isFinite(value) ? value : ''}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className={cn(inputClass, 'tabular-nums')}
-      />
-    </div>
-  );
-}
-
-function Total({
-  label,
-  value,
-  hint,
-  tone,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  tone?: 'warning';
-}) {
-  return (
-    <div className="flex flex-col gap-1 rounded-[12px] border border-border bg-card p-[11px_14px]">
-      <span className="text-[12px] font-medium text-muted-foreground">{label}</span>
-      <span className={cn('text-[18px] font-bold tabular-nums', tone === 'warning' ? 'text-warning' : 'text-foreground')}>
-        {value}
-      </span>
-      {hint && <span className="text-[11.5px] text-muted-foreground">{hint}</span>}
-    </div>
+    <Field label={label} help={help}>
+      <div className="field-wrap">
+        <span>{unit}</span>
+        <input
+          type="number"
+          min={0}
+          value={Number.isFinite(value) ? value : ''}
+          onChange={(e) => onChange(Number(e.target.value))}
+          aria-label={label}
+          className="w-full min-w-0 border-0 bg-transparent text-foreground tabular-nums outline-none"
+        />
+      </div>
+    </Field>
   );
 }
 
@@ -1159,7 +1155,10 @@ function PasteDropsDialog({ onAdd }: { onAdd: (rows: DropRow[]) => void }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm" />}>Paste from WhatsApp</DialogTrigger>
+      <DialogTrigger render={<Button size="sm" />}>
+        <ClipboardPasteIcon />
+        Paste from WhatsApp
+      </DialogTrigger>
       <DialogContent className="sm:max-w-[560px]">
         <DialogHeader>
           <DialogTitle>Paste the vendor’s list</DialogTitle>
@@ -1173,13 +1172,13 @@ function PasteDropsDialog({ onAdd }: { onAdd: (rows: DropRow[]) => void }) {
           onChange={(e) => setText(e.target.value)}
           rows={10}
           placeholder={'Name: Ada Obi\nPhone: 0803 123 4567\nAddress: 12 Aminu Kano Crescent, Wuse 2\n\nMusa Bello, 07012345678, Kubwa Phase 4'}
-          className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 font-mono text-[12.5px] outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="field-area w-full font-mono"
         />
         {parsed.length > 0 && (
-          <div className="max-h-[180px] overflow-y-auto rounded-lg border border-border text-[12px]">
+          <div className="max-h-[200px] overflow-y-auto rounded-[8px] border border-border text-[13px]">
             {parsed.map((d, i) => (
-              <div key={i} className="flex gap-2 border-b border-border px-2.5 py-1.5 last:border-0">
-                <span className="w-5 shrink-0 text-muted-foreground">{i + 1}</span>
+              <div key={i} className="flex gap-3 border-b border-border px-3 py-2 last:border-0">
+                <span className="w-5 shrink-0 text-muted-foreground tabular-nums">{i + 1}</span>
                 <span className={cn('w-28 shrink-0 truncate', !d.name && 'text-destructive')}>{d.name || 'no name'}</span>
                 <span className={cn('w-28 shrink-0 tabular-nums', !d.phone && 'text-destructive')}>{d.phone || 'no phone'}</span>
                 <span className={cn('min-w-0 truncate', !d.address && 'text-destructive')}>{d.address || 'no address'}</span>

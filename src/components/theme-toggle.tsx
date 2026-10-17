@@ -35,7 +35,7 @@ export function ThemeToggle() {
       type="button"
       onClick={toggle}
       title="Toggle theme"
-      className="flex size-9 items-center justify-center rounded-lg border border-border-strong bg-card text-foreground-secondary transition-colors hover:bg-secondary"
+      className="flex size-[38px] items-center justify-center rounded-full border border-border bg-card text-foreground transition-colors hover:bg-muted"
     >
       {dark ? <Sun className="size-[17px]" /> : <Moon className="size-[17px]" />}
     </button>

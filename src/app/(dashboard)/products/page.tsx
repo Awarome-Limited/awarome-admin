@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { authedFetch, ApiError, PaginatedResponse } from '@/lib/api-client';
 import { AdminProduct } from '@/lib/types';
 import { ApiErrorCard } from '@/components/api-error-card';
@@ -13,7 +12,18 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { cn } from '@/lib/utils';
+import { StatStrip } from '@/components/stat-strip';
+import { AvatarInitials } from '@/components/avatar-initials';
+import { SegmentedLinks } from '@/components/segmented';
+import {
+  EmptyRow,
+  ListCard,
+  PageHeader,
+  PageStack,
+  RowChevron,
+  RowLink,
+  ToolbarEnd,
+} from '@/components/page';
 
 const LIMIT = 20;
 
@@ -31,7 +41,7 @@ function filterToQuery(filter: string): Record<string, string> {
 
 function formatPrice(price?: number) {
   if (price === undefined || price === null) return '—';
-  return `₦${price.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  return `₦ ${price.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 }
 
 function productVendorName(product: AdminProduct): string {
@@ -93,128 +103,39 @@ export default async function ProductsPage({
   }
 
   const chips = [
-    { label: 'Total products', value: result.totalCount.toLocaleString() },
+    { label: 'All products', value: result.totalCount.toLocaleString() },
     { label: 'In stock', value: inStockCount.toLocaleString() },
-    { label: 'Low / out', value: outOfStockCount.toLocaleString() },
+    { label: 'Unavailable', value: outOfStockCount.toLocaleString() },
     { label: 'Categories', value: categoriesCount.toLocaleString() },
   ];
 
+  const tabHref = (key: string) => {
+    const p = new URLSearchParams();
+    if (search) p.set('search', search);
+    if (key !== 'all') p.set('filter', key);
+    const q = p.toString();
+    return `/products${q ? `?${q}` : ''}`;
+  };
+
   return (
-    <div className="flex flex-col gap-4">
-      {/* Header */}
-      <div>
-        <h1 className="text-[23px] font-bold tracking-tight text-foreground">Products</h1>
-        <p className="mt-1 text-[14px] text-muted-foreground">Every item listed across vendors</p>
-      </div>
+    <PageStack>
+      <PageHeader title="Products" subtitle="Every item listed across vendors." />
 
-      {/* Stat chips */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {chips.map((chip) => (
-          <div
-            key={chip.label}
-            className="flex flex-col gap-1 rounded-[12px] border border-border bg-card p-[13px_16px] shadow-[var(--shadow-card)]"
-          >
-            <span className="text-[12px] font-medium text-muted-foreground">{chip.label}</span>
-            <span className="text-[20px] font-bold tabular-nums text-foreground">{chip.value}</span>
-          </div>
-        ))}
-      </div>
+      <StatStrip stats={chips} />
 
-      {/* Toolbar: filter pills + search */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {FILTERS.map((f) => {
-            const active = activeFilter === f.key;
-            const href = (() => {
-              const p = new URLSearchParams();
-              if (search) p.set('search', search);
-              if (f.key !== 'all') p.set('filter', f.key);
-              const s = p.toString();
-              return `/products${s ? `?${s}` : ''}`;
-            })();
-            return (
-              <Link
-                key={f.key}
-                href={href}
-                className={cn(
-                  'rounded-[9px] border px-3.5 py-[7px] text-[13px] font-semibold transition-colors',
-                  active
-                    ? 'border-transparent bg-brand-tint text-primary'
-                    : 'border-border-strong bg-card text-foreground-secondary hover:bg-muted'
-                )}
-              >
-                {f.label}
-              </Link>
-            );
-          })}
-        </div>
-        <SearchBox placeholder="Search by product name…" />
-      </div>
-
-      {/* Table card */}
-      <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-          <Table className="table-fixed">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[38%]">Product</TableHead>
-                <TableHead className="w-[20%]">Vendor</TableHead>
-                <TableHead className="w-[15%]">Category</TableHead>
-                <TableHead className="w-[10%] text-right">Price</TableHead>
-                <TableHead className="w-[7%] text-right">Stock</TableHead>
-                <TableHead className="w-[10%]">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {result.data.map((product) => (
-                <TableRow key={product._id} className="cursor-pointer">
-                  <TableCell className="min-w-0">
-                    <Link href={`/products/${product._id}`} className="flex min-w-0 items-center gap-3">
-                      {product.image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="size-9 flex-none rounded-[8px] object-cover"
-                        />
-                      ) : (
-                        <div className="flex size-9 flex-none items-center justify-center rounded-[8px] bg-brand-tint text-[11px] font-bold text-primary">
-                          {(product.name ?? '?').charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                      <span className="truncate font-semibold text-foreground hover:underline">
-                        {product.name || '—'}
-                      </span>
-                    </Link>
-                  </TableCell>
-                  <TableCell className="truncate text-muted-foreground">
-                    {productVendorName(product)}
-                  </TableCell>
-                  <TableCell className="truncate text-muted-foreground">
-                    {productCategoryName(product)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums font-medium">
-                    {formatPrice(product.price)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums text-muted-foreground">
-                    {product.quantityAvailable ?? '—'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={product.isAvailable ? 'positive' : 'destructive'} dot>
-                      {product.isAvailable ? 'In stock' : 'Unavailable'}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {result.data.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                    No products found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        <div className="border-t border-border px-4 py-3">
+      <ListCard
+        toolbar={
+          <>
+            <SegmentedLinks
+              active={activeFilter}
+              items={FILTERS.map((f) => ({ key: f.key, label: f.label, href: tabHref(f.key) }))}
+            />
+            <ToolbarEnd>
+              <SearchBox placeholder="Product name" />
+            </ToolbarEnd>
+          </>
+        }
+        footer={
           <PaginationControls
             skip={skip}
             limit={LIMIT}
@@ -222,8 +143,65 @@ export default async function ProductsPage({
             basePath="/products"
             searchParams={params}
           />
-        </div>
-      </div>
-    </div>
+        }
+      >
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Product</TableHead>
+              <TableHead>Store</TableHead>
+              <TableHead>Availability</TableHead>
+              <TableHead className="text-right">Stock</TableHead>
+              <TableHead className="text-right">Price</TableHead>
+              <TableHead className="w-12" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {result.data.map((product) => (
+              <TableRow key={product._id} className="relative">
+                <TableCell className="max-w-[360px]">
+                  <div className="flex min-w-0 items-center gap-3">
+                    {product.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={product.image}
+                        alt=""
+                        className="size-[38px] flex-none rounded-[8px] border border-border object-cover"
+                      />
+                    ) : (
+                      <AvatarInitials name={product.name || undefined} shape="store" />
+                    )}
+                    <div className="min-w-0">
+                      <RowLink href={`/products/${product._id}`} className="block truncate">
+                        {product.name || 'Untitled product'}
+                      </RowLink>
+                      <div className="truncate text-[12.5px] text-muted-foreground">{productCategoryName(product)}</div>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="max-w-[220px] truncate text-foreground-secondary">
+                  {productVendorName(product)}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={product.isAvailable ? 'positive' : 'destructive'} dot>
+                    {product.isAvailable ? 'In stock' : 'Unavailable'}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right text-foreground-secondary tabular-nums">
+                  {product.quantityAvailable?.toLocaleString() ?? '—'}
+                </TableCell>
+                <TableCell className="text-right font-medium tabular-nums">{formatPrice(product.price)}</TableCell>
+                <TableCell>
+                  <RowChevron />
+                </TableCell>
+              </TableRow>
+            ))}
+            {result.data.length === 0 && (
+              <EmptyRow colSpan={6} title="No products match" body="Clear the search or switch tabs." />
+            )}
+          </TableBody>
+        </Table>
+      </ListCard>
+    </PageStack>
   );
 }

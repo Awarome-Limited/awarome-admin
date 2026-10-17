@@ -99,9 +99,9 @@ export function PresetPicker({
   }
 
   return (
-    <div className="flex flex-col rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
+    <div className="flex flex-col rounded-[10px] border border-border bg-card">
       <div className="border-b border-border p-[18px_20px_14px]">
-        <div className="text-[15px] font-semibold text-foreground">Templates</div>
+        <div className="font-heading text-[17px] font-bold tracking-[-0.03em] text-foreground">Templates</div>
         <p className="mt-1 text-[12.5px] text-muted-foreground">
           Start from tested copy, then edit freely — or save your own.
         </p>
@@ -129,7 +129,7 @@ export function PresetPicker({
 
           return (
             <div key={category} className="mb-1.5">
-              <div className="px-2.5 pb-1 pt-2.5 text-[11px] font-semibold uppercase tracking-[.04em] text-muted-foreground">
+              <div className="px-2.5 pb-1 pt-2.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
                 {category}
               </div>
               {rows.map((row) => {

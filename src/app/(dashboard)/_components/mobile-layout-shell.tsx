@@ -5,16 +5,18 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Sidebar } from './sidebar';
 import { Header } from './header';
-import type { NavItem } from '@/lib/nav-items';
+import type { NavWorkspace, QueueCounts } from '@/lib/nav-items';
 import type { StaffProfile } from '@/lib/permissions';
 
 export function MobileLayoutShell({
   profile,
-  navItems,
+  workspaces,
+  queueCounts,
   children,
 }: {
   profile: StaffProfile;
-  navItems: NavItem[];
+  workspaces: NavWorkspace[];
+  queueCounts: Promise<QueueCounts>;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -44,19 +46,20 @@ export function MobileLayoutShell({
       >
         <Sidebar
           profile={profile}
-          navItems={navItems}
+          workspaces={workspaces}
+          queueCounts={queueCounts}
           onClose={() => setOpen(false)}
         />
       </div>
 
       {/* Main area */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <Header
-          profile={profile}
-          navItems={navItems}
-          onMenuClick={() => setOpen(true)}
-        />
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>
+        <Header workspaces={workspaces} onMenuClick={() => setOpen(true)} />
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-[1440px] px-4 pt-6 pb-24 lg:px-10 lg:pt-9 lg:pb-[120px]">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );

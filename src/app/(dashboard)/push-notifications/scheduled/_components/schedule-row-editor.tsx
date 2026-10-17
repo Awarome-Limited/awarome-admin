@@ -19,10 +19,8 @@ import { cn } from '@/lib/utils';
 
 const fieldClass = (invalid: boolean) =>
   cn(
-    'w-full rounded-[10px] border bg-background px-[13px] py-[10px] text-[13.5px] text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 disabled:opacity-60',
-    invalid
-      ? 'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25'
-      : 'border-input focus-visible:border-ring focus-visible:ring-ring/50'
+    'field-area',
+    invalid && 'border-destructive focus-visible:border-destructive'
   );
 
 function Chevron() {
@@ -101,7 +99,7 @@ export function ScheduleRowEditor({
   return (
     <div className="flex flex-col gap-3.5">
       <label className="flex flex-col gap-1.5">
-        <span className="text-[12.5px] font-medium text-foreground-secondary">Title</span>
+        <span className="text-[13.5px] font-medium text-foreground">Title</span>
         <input
           value={draft.title}
           onChange={(e) => onChange({ title: e.target.value })}
@@ -117,7 +115,7 @@ export function ScheduleRowEditor({
 
       <label className="flex flex-col gap-1.5">
         <span className="flex items-center justify-between">
-          <span className="text-[12.5px] font-medium text-foreground-secondary">Message</span>
+          <span className="text-[13.5px] font-medium text-foreground">Message</span>
           <span
             className={cn(
               'tabular-nums text-[11.5px]',
@@ -142,7 +140,7 @@ export function ScheduleRowEditor({
 
       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
         <label className="flex flex-col gap-1.5">
-          <span className="text-[12.5px] font-medium text-foreground-secondary">Audience</span>
+          <span className="text-[13.5px] font-medium text-foreground">Audience</span>
           <span className="relative">
             <select
               value={draft.audience}
@@ -175,7 +173,7 @@ export function ScheduleRowEditor({
 
         {draft.audience === 'list' && (
           <label className="flex flex-col gap-1.5">
-            <span className="text-[12.5px] font-medium text-foreground-secondary">Saved list</span>
+            <span className="text-[13.5px] font-medium text-foreground">Saved list</span>
             <span className="relative">
               <select
                 value={draft.audienceListId}
@@ -206,7 +204,7 @@ export function ScheduleRowEditor({
 
       <div className="grid grid-cols-2 gap-3.5">
         <label className="flex flex-col gap-1.5">
-          <span className="text-[12.5px] font-medium text-foreground-secondary">Date</span>
+          <span className="text-[13.5px] font-medium text-foreground">Date</span>
           <input
             type="date"
             value={draft.date}
@@ -219,7 +217,7 @@ export function ScheduleRowEditor({
           {fieldError('date')}
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-[12.5px] font-medium text-foreground-secondary">
+          <span className="text-[13.5px] font-medium text-foreground">
             Time <span className="font-normal text-muted-foreground">(Lagos, WAT)</span>
           </span>
           <input
@@ -284,7 +282,7 @@ function RepeatFields({
         <div className="mt-3 flex flex-col gap-2.5">
           <div className="grid grid-cols-2 gap-3.5">
             <label className="flex flex-col gap-1.5">
-              <span className="text-[12.5px] font-medium text-foreground-secondary">
+              <span className="text-[13.5px] font-medium text-foreground">
                 Every … days
               </span>
               <input
@@ -301,7 +299,7 @@ function RepeatFields({
               {fieldError('repeatEveryDays')}
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-[12.5px] font-medium text-foreground-secondary">
+              <span className="text-[13.5px] font-medium text-foreground">
                 Until (last day)
               </span>
               <input

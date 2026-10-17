@@ -2,14 +2,8 @@ import { notFound, redirect } from 'next/navigation';
 import { authedFetch, ApiError, SingleResponse } from '@/lib/api-client';
 import { AdminPromoCode } from '@/lib/types';
 import { ApiErrorCard } from '@/components/api-error-card';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { DetailRow } from '@/components/detail-row';
-import { PromoCodeActiveToggle } from '@/components/promo-code-active-toggle';
+import { PromoCodeActiveControl, PromoStatusPill } from '@/components/promo-code-active-toggle';
+import { DetailHeader, PageStack, Panel, StatCards } from '@/components/page';
 import { ConfirmActionButton } from '@/components/confirm-action-button';
 import { formatDate } from '@/lib/format';
 import { togglePromoCodeActive, deletePromoCode } from '../actions';
@@ -51,51 +45,47 @@ export default async function PromoCodeDetailPage({
   }
 
   return (
-    <div className="flex max-w-2xl flex-col gap-4">
-      <h1 className="w-fit rounded bg-chip px-2.5 py-1 font-mono text-lg font-semibold">
-        {promo.code}
-      </h1>
+    <PageStack>
+      <DetailHeader
+        back={{ href: '/promo-codes', label: 'All promo codes' }}
+        title={<span className="tracking-[0.01em] uppercase">{promo.code}</span>}
+        status={<PromoStatusPill isActive={promo.isActive} />}
+        meta={[`Created ${formatDate(promo.createdAt)}`, `by ${creatorName(promo.createdBy)}`]}
+        actions={
+          <PromoCodeActiveControl isActive={promo.isActive} action={togglePromoCodeActive.bind(null, promo._id)} />
+        }
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Details</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3 text-sm">
-          <DetailRow
-            label="Usage"
-            value={`${promo.usedCount}${promo.usageLimit ? ` / ${promo.usageLimit}` : ''}`}
-          />
-          <DetailRow label="Created by" value={creatorName(promo.createdBy)} />
-          <DetailRow label="Created" value={formatDate(promo.createdAt)} />
-          <DetailRow
-            label="Status"
-            value={
-              <PromoCodeActiveToggle
-                isActive={promo.isActive}
-                action={togglePromoCodeActive.bind(null, promo._id)}
-              />
-            }
-          />
-        </CardContent>
-      </Card>
+      <StatCards
+        stats={[
+          {
+            label: 'Redemptions',
+            value: (promo.usedCount ?? 0).toLocaleString(),
+            progress: promo.usageLimit ? (promo.usedCount ?? 0) / promo.usageLimit : undefined,
+            meta: promo.usageLimit ? `of ${promo.usageLimit.toLocaleString()} allowed` : 'No limit',
+          },
+          {
+            label: 'Expires',
+            value: promo.expiryDate ? formatDate(promo.expiryDate).split(',')[0] : 'Never',
+          },
+        ]}
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Edit promo code</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <section className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
+        <Panel title="Edit promo code" description="Change a field and a save bar appears at the bottom.">
           <PromoCodeEditForm promo={promo} />
-        </CardContent>
-      </Card>
-
-      <div>
-        <ConfirmActionButton
-          label="Delete promo code"
-          title="Delete this promo code?"
-          description="This soft-deletes the promo code. It stays recoverable in the database."
-          action={handleDelete}
-        />
-      </div>
-    </div>
+        </Panel>
+        <Panel title="Delete promo code" description="Soft-deletes the code. It stays recoverable in the database.">
+          <div>
+            <ConfirmActionButton
+              label="Delete promo code"
+              title="Delete this promo code?"
+              description="This soft-deletes the promo code. It stays recoverable in the database."
+              action={handleDelete}
+            />
+          </div>
+        </Panel>
+      </section>
+    </PageStack>
   );
 }

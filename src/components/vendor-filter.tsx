@@ -27,7 +27,7 @@ export function VendorFilter({ vendors, currentVendorId }: { vendors: VendorOpti
     <select
       value={currentVendorId}
       onChange={(e) => handleChange(e.target.value)}
-      className="h-9 rounded-[9px] border border-border-strong bg-card px-3 text-[13px] font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+      className="toolbar-select"
     >
       <option value="">All vendors</option>
       {vendors.map((v) => (

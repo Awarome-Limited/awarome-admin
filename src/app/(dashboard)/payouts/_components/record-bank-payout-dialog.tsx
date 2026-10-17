@@ -18,9 +18,9 @@ import type { OfflinePayoutPayload } from '@/lib/types';
 type Result = { ok: true } | { ok: false; error: string };
 
 const inputClass =
-  'h-9 rounded-[9px] border border-border-strong bg-card px-3 text-[13px] font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-ring';
+  'field';
 
-const naira = (n: number) => `₦${n.toLocaleString('en-NG', { maximumFractionDigits: 2 })}`;
+const naira = (n: number) => `₦ ${n.toLocaleString('en-NG', { maximumFractionDigits: 2 })}`;
 
 /** Today in Lagos as YYYY-MM-DD, for the date input. */
 const lagosToday = () =>

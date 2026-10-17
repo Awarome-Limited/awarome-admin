@@ -1,10 +1,9 @@
-import Link from 'next/link';
 import { authedFetch, ApiError, PaginatedResponse } from '@/lib/api-client';
 import { AdminPromoCode } from '@/lib/types';
 import { ApiErrorCard } from '@/components/api-error-card';
 import { SearchBox } from '@/components/search-box';
 import { PaginationControls } from '@/components/pagination-controls';
-import { PromoCodeActiveToggle } from '@/components/promo-code-active-toggle';
+import { PromoStatusPill } from '@/components/promo-code-active-toggle';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -14,10 +13,19 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { formatDate } from '@/lib/format';
-import { cn } from '@/lib/utils';
-import { togglePromoCodeActive } from './actions';
+import { formatDate, humanize } from '@/lib/format';
+import { SegmentedLinks } from '@/components/segmented';
+import {
+  EmptyRow,
+  ListCard,
+  PageHeader,
+  PageStack,
+  RowChevron,
+  RowLink,
+  ToolbarEnd,
+} from '@/components/page';
 import { CreatePromoDialog } from './_components/create-promo-dialog';
+import { StatStrip } from '@/components/stat-strip';
 
 const LIMIT = 20;
 
@@ -36,7 +44,7 @@ function filterToQuery(filter: string): Record<string, string> {
 function formatDiscount(promo: AdminPromoCode) {
   return promo.discountType === 'percentage'
     ? `${promo.discountValue}%`
-    : `₦${promo.discountValue.toLocaleString()}`;
+    : `₦ ${promo.discountValue.toLocaleString()}`;
 }
 
 async function safeCount(url: string): Promise<number> {
@@ -89,119 +97,42 @@ export default async function PromoCodesPage({
 
   const chips = [
     { label: 'Active codes', value: activeCount.toLocaleString() },
-    { label: 'Total codes', value: totalCount.toLocaleString() },
-    { label: 'Total redemptions', value: totalRedemptions.toLocaleString() },
-    { label: 'Expired / inactive', value: inactiveCount.toLocaleString() },
+    { label: 'All codes', value: totalCount.toLocaleString() },
+    { label: 'Off or expired', value: inactiveCount.toLocaleString() },
+    { label: 'Redemptions shown', value: totalRedemptions.toLocaleString(), meta: 'Codes on this page' },
   ];
 
+  const tabHref = (key: string) => {
+    const p = new URLSearchParams();
+    if (search) p.set('search', search);
+    if (key !== 'all') p.set('filter', key);
+    const q = p.toString();
+    return `/promo-codes${q ? `?${q}` : ''}`;
+  };
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[23px] font-bold tracking-tight text-foreground">Promo codes</h1>
-          <p className="mt-1 text-[14px] text-muted-foreground">
-            Discount codes and their redemption history
-          </p>
-        </div>
-        <CreatePromoDialog />
-      </div>
+    <PageStack>
+      <PageHeader
+        title="Promo codes"
+        subtitle="Discount codes customers can use at checkout, and how often they’re redeemed."
+        actions={<CreatePromoDialog />}
+      />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {chips.map((chip) => (
-          <div
-            key={chip.label}
-            className="flex flex-col gap-1 rounded-[12px] border border-border bg-card p-[13px_16px] shadow-[var(--shadow-card)]"
-          >
-            <span className="text-[12px] font-medium text-muted-foreground">{chip.label}</span>
-            <span className="text-[20px] font-bold tabular-nums text-foreground">{chip.value}</span>
-          </div>
-        ))}
-      </div>
+      <StatStrip stats={chips} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {FILTERS.map((f) => {
-            const active = activeFilter === f.key;
-            const href = (() => {
-              const p = new URLSearchParams();
-              if (search) p.set('search', search);
-              if (f.key !== 'all') p.set('filter', f.key);
-              const s = p.toString();
-              return `/promo-codes${s ? `?${s}` : ''}`;
-            })();
-            return (
-              <Link
-                key={f.key}
-                href={href}
-                className={cn(
-                  'rounded-[9px] border px-3.5 py-[7px] text-[13px] font-semibold transition-colors',
-                  active
-                    ? 'border-transparent bg-brand-tint text-primary'
-                    : 'border-border-strong bg-card text-foreground-secondary hover:bg-muted'
-                )}
-              >
-                {f.label}
-              </Link>
-            );
-          })}
-        </div>
-        <SearchBox placeholder="Search by code…" />
-      </div>
-
-      <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Discount</TableHead>
-                <TableHead>Applies to</TableHead>
-                <TableHead className="text-right">Uses</TableHead>
-                <TableHead>Expiry</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {result.data.map((promo) => (
-                <TableRow key={promo._id}>
-                  <TableCell>
-                    <Link
-                      href={`/promo-codes/${promo._id}`}
-                      className="rounded bg-chip px-2 py-0.5 font-mono text-xs hover:underline"
-                    >
-                      {promo.code}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="font-semibold">{formatDiscount(promo)}</TableCell>
-                  <TableCell className="capitalize text-muted-foreground">
-                    {promo.applicability || '—'}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {promo.usedCount ?? 0}
-                    {promo.usageLimit ? ` / ${promo.usageLimit}` : ''}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {promo.expiryDate ? formatDate(promo.expiryDate).split(',')[0] : '—'}
-                  </TableCell>
-                  <TableCell>
-                    <PromoCodeActiveToggle
-                      isActive={promo.isActive}
-                      action={togglePromoCodeActive.bind(null, promo._id)}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-              {result.data.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                    No promo codes found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="border-t border-border px-4 py-3">
+      <ListCard
+        toolbar={
+          <>
+            <SegmentedLinks
+              active={activeFilter}
+              items={FILTERS.map((f) => ({ key: f.key, label: f.label, href: tabHref(f.key) }))}
+            />
+            <ToolbarEnd>
+              <SearchBox placeholder="Code" />
+            </ToolbarEnd>
+          </>
+        }
+        footer={
           <PaginationControls
             skip={skip}
             limit={LIMIT}
@@ -209,8 +140,55 @@ export default async function PromoCodesPage({
             basePath="/promo-codes"
             searchParams={params}
           />
-        </div>
-      </div>
-    </div>
+        }
+      >
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Code</TableHead>
+              <TableHead>Applies to</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Expires</TableHead>
+              <TableHead className="text-right">Uses</TableHead>
+              <TableHead className="w-12" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {result.data.map((promo) => {
+              const nearlyUsed = promo.usageLimit && (promo.usedCount ?? 0) / promo.usageLimit >= 0.9;
+              return (
+                <TableRow key={promo._id} className="relative">
+                  <TableCell>
+                    <RowLink href={`/promo-codes/${promo._id}`} className="tracking-[0.02em] uppercase">
+                      {promo.code}
+                    </RowLink>
+                    <div className="text-[12.5px] text-muted-foreground">{formatDiscount(promo)}</div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{humanize(promo.applicability)}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <PromoStatusPill isActive={promo.isActive} />
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-foreground-secondary tabular-nums">
+                    {promo.expiryDate ? formatDate(promo.expiryDate).split(',')[0] : 'Never'}
+                  </TableCell>
+                  <TableCell className={nearlyUsed ? 'text-right font-medium text-warning tabular-nums' : 'text-right tabular-nums'}>
+                    {(promo.usedCount ?? 0).toLocaleString()}
+                    {promo.usageLimit ? ` of ${promo.usageLimit.toLocaleString()}` : ''}
+                  </TableCell>
+                  <TableCell>
+                    <RowChevron />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+            {result.data.length === 0 && (
+              <EmptyRow colSpan={6} title="No promo codes match" body="Clear the search or switch tabs, or create a code." />
+            )}
+          </TableBody>
+        </Table>
+      </ListCard>
+    </PageStack>
   );
 }

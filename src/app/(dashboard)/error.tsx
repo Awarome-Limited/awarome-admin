@@ -1,14 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 
 /**
  * Keeps a thrown Server Action or render error inside the dashboard shell.
@@ -28,23 +22,18 @@ export default function DashboardError({
   }, [error]);
 
   return (
-    <Card className="max-w-xl">
-      <CardHeader>
-        <CardTitle>Something went wrong</CardTitle>
-        <CardDescription>
-          {error.message || 'This section failed to load.'}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        {error.digest && (
-          <p className="font-mono text-[11px] text-muted-foreground">
-            Reference: {error.digest}
-          </p>
-        )}
-        <Button type="button" onClick={reset} className="self-start">
-          Try again
-        </Button>
-      </CardContent>
-    </Card>
+    <section className="flex flex-col items-center gap-3 rounded-[10px] border border-border bg-card px-6 py-14 text-center">
+      <AlertTriangle className="size-5 text-warning" />
+      <span className="font-heading text-[19px] font-bold tracking-[-0.03em]">Something went wrong</span>
+      <span className="max-w-[52ch] text-[14px] text-foreground-secondary">
+        {error.message || 'This section failed to load.'}
+      </span>
+      {error.digest && (
+        <span className="text-[12px] text-muted-foreground tabular-nums">Reference {error.digest}</span>
+      )}
+      <Button type="button" onClick={reset} className="mt-2">
+        Try again
+      </Button>
+    </section>
   );
 }

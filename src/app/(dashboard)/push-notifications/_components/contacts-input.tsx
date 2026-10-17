@@ -94,7 +94,7 @@ export function ContactsInput({
             className={cn(
               'rounded-[8px] px-3 py-[6px] text-[12.5px] font-semibold transition-colors',
               mode === value
-                ? 'bg-card text-foreground shadow-[var(--shadow-card)]'
+                ? 'bg-card text-foreground'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
@@ -112,7 +112,7 @@ export function ContactsInput({
             disabled={disabled}
             rows={5}
             placeholder="08031234567, ada@example.com, 07012345678"
-            className="w-full resize-y rounded-[10px] border border-input bg-background px-[14px] py-3 font-mono text-[13px] leading-[1.55] text-foreground outline-none placeholder:font-sans placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+            className="field-area w-full resize-y font-mono"
           />
           <span className="text-[11.5px] text-muted-foreground">
             Phone numbers or emails, separated by commas or new lines.
@@ -120,8 +120,8 @@ export function ContactsInput({
         </label>
       ) : (
         <div className="flex flex-col gap-2">
-          <label className="flex cursor-pointer flex-col items-center justify-center gap-[9px] rounded-[12px] border-[1.5px] border-dashed border-input bg-background p-[22px_16px] text-center transition-colors hover:border-primary hover:bg-brand-tint">
-            <span className="flex h-10 w-10 items-center justify-center rounded-[11px] border border-input bg-card text-primary">
+          <label className="flex cursor-pointer flex-col items-center justify-center gap-[9px] rounded-[10px] border-[1.5px] border-dashed border-input bg-background p-[22px_16px] text-center transition-colors hover:border-primary hover:bg-brand-tint">
+            <span className="flex h-10 w-10 items-center justify-center rounded-[10px] border border-input bg-card text-primary">
               <svg
                 width="19"
                 height="19"
@@ -163,7 +163,7 @@ export function ContactsInput({
           <button
             type="button"
             onClick={downloadTemplate}
-            className="self-start text-[12.5px] font-semibold text-primary underline-offset-2 hover:underline"
+            className="self-start text-[12.5px] font-semibold text-primary hover:text-warning"
           >
             Download CSV template
           </button>
@@ -173,7 +173,7 @@ export function ContactsInput({
       {hasInput && (
         <div
           aria-live="polite"
-          className="flex flex-col gap-2 rounded-[10px] border border-border bg-muted/40 px-3.5 py-2.5"
+          className="flex flex-col gap-2 rounded-[10px] border border-border bg-muted px-3.5 py-2.5"
         >
           <div className="flex flex-wrap items-center gap-1.5 text-[12.5px]">
             <SummaryChip count={parsed.phones.length} label="phone" />
@@ -187,7 +187,7 @@ export function ContactsInput({
           {parsed.invalid.length > 0 && (
             <p className="break-words text-[12px] leading-[1.5] text-muted-foreground">
               Skipped:{' '}
-              <span className="font-mono text-foreground-secondary">
+              <span className="tabular-nums text-foreground-secondary">
                 {parsed.invalid.slice(0, INVALID_PREVIEW).join(', ')}
               </span>
               {parsed.invalid.length > INVALID_PREVIEW &&

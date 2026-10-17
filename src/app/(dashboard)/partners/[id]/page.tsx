@@ -17,7 +17,17 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { formatDate, formatNaira } from '@/lib/format';
+import { formatDate, formatNaira, formatPhone, humanize } from '@/lib/format';
+import { AvatarInitials } from '@/components/avatar-initials';
+import { buttonVariants } from '@/components/ui/button';
+import {
+  DetailHeader,
+  EmptyRow,
+  InlineNotice,
+  PageStack,
+  Panel,
+  StatCards,
+} from '@/components/page';
 import { ApiAccessCard } from '../_components/api-access-card';
 import { IssueKeyDialog } from '../_components/issue-key-dialog';
 import { AddContactDialog } from '../_components/add-contact-dialog';
@@ -81,197 +91,182 @@ export default async function PartnerDetailPage({
     wallet.balance < (partner.lowBalanceThreshold ?? 0);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link href="/partners" className="text-[13px] text-muted-foreground hover:underline">
-            ← API partners
-          </Link>
-          <h1 className="mt-1 text-[23px] font-bold tracking-tight text-foreground">
-            {partner.name || 'Partner'}
-          </h1>
-          <p className="mt-1 text-[14px] text-muted-foreground">
-            {[partner.email, partner.phone].filter(Boolean).join(' · ') || '—'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant={partner.apiEnabled ? 'positive' : 'secondary'}>
-            {partner.apiEnabled ? 'API enabled' : 'API disabled'}
+    <PageStack>
+      <DetailHeader
+        back={{ href: '/partners', label: 'All API partners' }}
+        avatar={<AvatarInitials name={partner.name || undefined} size="lg" shape="store" />}
+        title={partner.name || 'No name yet'}
+        status={
+          <Badge variant={partner.apiEnabled ? 'positive' : 'secondary'} dot={partner.apiEnabled}>
+            {partner.apiEnabled ? 'API enabled' : 'API off'}
           </Badge>
-        </div>
-      </div>
+        }
+        meta={[partner.email, partner.phone && formatPhone(partner.phone)]}
+      />
+
+      <StatCards
+        stats={[
+          {
+            label: 'Wallet balance',
+            value: wallet ? formatNaira(wallet.balance) : '—',
+            meta: wallet?.lastFundedAt ? `Last funded ${formatDate(wallet.lastFundedAt)}` : 'Never funded',
+          },
+          {
+            label: 'Low-balance alert',
+            value: partner.lowBalanceThreshold ? formatNaira(partner.lowBalanceThreshold) : 'Off',
+          },
+          { label: 'Active keys', value: activeKeys.length.toLocaleString(), meta: `${keys.length} issued` },
+          { label: 'Contacts', value: contacts.length.toLocaleString() },
+        ]}
+      />
 
       {/*
         Funding is manual, so a partner at zero fails every delivery until ops
         notices. Say so here rather than leaving it to the list page.
       */}
       {lowOnFunds && (
-        <div className="rounded-[14px] border border-border bg-warning-bg p-4 text-[13px]">
-          <span className="font-semibold text-foreground">Balance is running low.</span>{' '}
-          <span className="text-muted-foreground">
-            Deliveries fail with a payment error once the wallet cannot cover the fee.
-          </span>{' '}
-          {partner.wallet && (
-            <Link
-              href={`/payments/wallets/${partner.wallet}`}
-              className="font-semibold text-primary hover:underline"
-            >
-              Top up now
-            </Link>
-          )}
-        </div>
+        <InlineNotice
+          action={
+            partner.wallet && <Link href={`/payments/wallets/${partner.wallet}`}>Top up now</Link>
+          }
+        >
+          Balance is running low. Deliveries fail with a payment error once the wallet can’t cover the fee.
+        </InlineNotice>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-[14px] border border-border bg-card p-5 shadow-[var(--shadow-card)]">
-          <div className="text-[15px] font-semibold text-foreground">Wallet</div>
-          <p className="mt-0.5 text-[13px] text-muted-foreground">
-            Every delivery is charged against this balance. Partners cannot top up
-            themselves.
-          </p>
-          <div className="mt-4 flex items-end justify-between gap-4">
-            <div>
-              <div className="text-[28px] font-bold tabular-nums text-foreground">
-                {wallet ? formatNaira(wallet.balance) : '—'}
-              </div>
-              <div className="text-[12px] text-muted-foreground">
-                {wallet?.lastFundedAt
-                  ? `Last funded ${formatDate(wallet.lastFundedAt)}`
-                  : 'Never funded'}
-              </div>
+      <section className="grid items-start gap-4 lg:grid-cols-[minmax(260px,1fr)_minmax(0,2fr)]">
+        <div className="flex flex-col gap-4">
+          <Panel
+            title="Wallet"
+            description="Every delivery is charged against this balance. Partners can’t top up themselves."
+            aside={
+              partner.wallet && (
+                <Link href={`/payments/wallets/${partner.wallet}`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+                  Fund or adjust
+                </Link>
+              )
+            }
+          >
+            <span className="stat-value text-[28px] leading-none">{wallet ? formatNaira(wallet.balance) : '—'}</span>
+          </Panel>
+
+          {/*
+            Only the fields the card edits. The partner document also carries the
+            legacy encrypted `apiKey`, and handing the whole object to a client
+            component would ship that to the browser in the RSC payload.
+          */}
+          <ApiAccessCard
+            partner={{
+              _id: partner._id,
+              apiEnabled: partner.apiEnabled,
+              defaultRequirePin: partner.defaultRequirePin,
+              lowBalanceThreshold: partner.lowBalanceThreshold,
+            }}
+          />
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-4">
+          <Panel
+            flush
+            title="API keys"
+            description={`${activeKeys.length} active. Secrets are shown once, when the key is issued.`}
+            aside={<IssueKeyDialog partnerId={partner._id} />}
+          >
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Key</TableHead>
+                    <TableHead>Secret</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Last used</TableHead>
+                    <TableHead />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {keys.map((key) => (
+                    <TableRow key={key._id}>
+                      <TableCell>
+                        <div className="font-medium tabular-nums">{key.keyId}</div>
+                        <div className="text-[12.5px] text-muted-foreground">{key.label || 'No label'}</div>
+                      </TableCell>
+                      <TableCell className="text-foreground-secondary tabular-nums">
+                        {key.secretLast4 ? `••••${key.secretLast4}` : '—'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={key.status === 'active' ? 'positive' : 'secondary'} dot={key.status === 'active'}>
+                          {humanize(key.status)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-foreground-secondary tabular-nums">
+                        {key.lastUsedAt ? formatDate(key.lastUsedAt) : 'Never'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {key.status === 'active' && <RevokeKeyButton partnerId={partner._id} keyId={key.keyId} />}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {keys.length === 0 && (
+                    <EmptyRow colSpan={5} title="No keys issued yet" body="Issue a key so the partner can call the API." />
+                  )}
+                </TableBody>
+              </Table>
             </div>
-            {partner.wallet && (
-              <Link
-                href={`/payments/wallets/${partner.wallet}`}
-                className="rounded-[9px] border border-border-strong bg-card px-3.5 py-[7px] text-[13px] font-semibold text-foreground-secondary hover:bg-muted"
-              >
-                Fund / adjust
-              </Link>
-            )}
-          </div>
-        </div>
+          </Panel>
 
-        {/*
-          Only the fields the card edits. The partner document also carries the
-          legacy encrypted `apiKey`, and handing the whole object to a client
-          component would ship that to the browser in the RSC payload.
-        */}
-        <ApiAccessCard
-          partner={{
-            _id: partner._id,
-            apiEnabled: partner.apiEnabled,
-            defaultRequirePin: partner.defaultRequirePin,
-            lowBalanceThreshold: partner.lowBalanceThreshold,
-          }}
-        />
-      </div>
-
-      <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
-          <div>
-            <div className="text-[15px] font-semibold text-foreground">API keys</div>
-            <p className="mt-0.5 text-[13px] text-muted-foreground">
-              {activeKeys.length} active. Secrets are shown once at issuance and never
-              again.
-            </p>
-          </div>
-          <IssueKeyDialog partnerId={partner._id} />
+          <Panel
+            flush
+            title="Contacts"
+            description="Who to reach about this integration."
+            aside={<AddContactDialog partnerId={partner._id} />}
+          >
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {contacts.map((contact) => {
+                    const name = [contact.firstName, contact.lastName].filter(Boolean).join(' ');
+                    return (
+                      <TableRow key={contact._id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <AvatarInitials name={name || undefined} />
+                            <div className="min-w-0">
+                              <div className={name ? 'font-medium' : 'font-medium text-muted-foreground'}>
+                                {name || 'No name yet'}
+                              </div>
+                              <div className="truncate text-[12.5px] text-muted-foreground">{contact.email}</div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-foreground-secondary tabular-nums">{formatPhone(contact.phone)}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{humanize(contact.role)}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={contact.status === 'active' ? 'positive' : 'info'} dot>
+                            {humanize(contact.status)}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {contacts.length === 0 && (
+                    <EmptyRow colSpan={4} title="No contacts yet" body="Add who to reach about this integration." />
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </Panel>
         </div>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Key ID</TableHead>
-                <TableHead>Label</TableHead>
-                <TableHead>Secret</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last used</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {keys.map((key) => (
-                <TableRow key={key._id}>
-                  <TableCell className="font-mono text-[12px]">{key.keyId}</TableCell>
-                  <TableCell className="text-muted-foreground">{key.label || '—'}</TableCell>
-                  <TableCell className="font-mono text-[12px] text-muted-foreground">
-                    {key.secretLast4 ? `••••${key.secretLast4}` : '—'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={key.status === 'active' ? 'positive' : 'secondary'}>
-                      {key.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {key.lastUsedAt ? formatDate(key.lastUsedAt) : 'Never'}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {key.status === 'active' && (
-                      <RevokeKeyButton partnerId={partner._id} keyId={key.keyId} />
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {keys.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                    No keys issued yet.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-
-      <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
-          <div>
-            <div className="text-[15px] font-semibold text-foreground">Contacts</div>
-            <p className="mt-0.5 text-[13px] text-muted-foreground">
-              Who to reach about this integration.
-            </p>
-          </div>
-          <AddContactDialog partnerId={partner._id} />
-        </div>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {contacts.map((contact) => (
-                <TableRow key={contact._id}>
-                  <TableCell className="font-medium">
-                    {[contact.firstName, contact.lastName].filter(Boolean).join(' ') || '—'}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{contact.email}</TableCell>
-                  <TableCell className="text-muted-foreground">{contact.phone || '—'}</TableCell>
-                  <TableCell className="text-muted-foreground capitalize">{contact.role}</TableCell>
-                  <TableCell>
-                    <Badge variant={contact.status === 'active' ? 'positive' : 'secondary'}>
-                      {contact.status}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {contacts.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-                    No contacts yet.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-    </div>
+      </section>
+    </PageStack>
   );
 }

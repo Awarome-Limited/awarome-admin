@@ -1,8 +1,9 @@
 'use client';
 
+import { InlineNotice, PageHeader, PageStack } from '@/components/page';
+import { SaveBar } from '@/components/save-bar';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { OperatingDay, OperatingHoursConfig } from '@/lib/types';
 import { updateOperatingHours } from '../actions';
@@ -55,6 +56,14 @@ export function OperatingHoursEditor({
   const [paused, setPaused] = useState(config.paused ?? false);
   const [closedMessage, setClosedMessage] = useState(config.closedMessage ?? '');
   const [isPending, startTransition] = useTransition();
+  // What the API last stored, to drive the floating save bar and Discard.
+  const snapshot = JSON.stringify({ rows, paused, closedMessage });
+  const [saved, setSaved] = useState(snapshot);
+  const dirty = snapshot !== saved;
+  function discard() {
+    const s = JSON.parse(saved);
+    setRows(s.rows); setPaused(s.paused); setClosedMessage(s.closedMessage);
+  }
 
   const status = config.status;
 
@@ -87,6 +96,7 @@ export function OperatingHoursEditor({
           paused,
           closedMessage: closedMessage.trim(),
         });
+        setSaved(snapshot);
         toast.success(
           paused ? 'Checkout paused.' : 'Operating hours saved.'
         );
@@ -99,43 +109,25 @@ export function OperatingHoursEditor({
   }
 
   return (
-    <div>
-      <div className="flex flex-wrap items-start justify-between gap-4 pb-[18px]">
-        <div>
-          <h1 className="text-[23px] font-bold tracking-tight text-foreground">
-            Operating hours
-          </h1>
-          <p className="mt-1 text-[14px] text-muted-foreground">
-            When we&apos;re open for business. Outside these hours customers
-            can&apos;t check out — neither marketplace orders nor package
-            deliveries. Times are West Africa Time. Changes apply within 15
-            seconds.
-          </p>
-        </div>
-        <Button type="button" onClick={handleSave} disabled={isPending}>
-          {isPending ? 'Saving…' : 'Save changes'}
-        </Button>
-      </div>
+    <PageStack>
+      <PageHeader title="Operating hours" subtitle={<>When we&apos;re open for business. Outside these hours customers can&apos;t check out: neither marketplace orders nor package deliveries. Times are West Africa Time. Changes apply within 15 seconds.</>} />
 
-      <div className="flex flex-col gap-4" style={{ maxWidth: 760 }}>
-        {status && (
-          <div
-            className={`rounded-[14px] border p-[16px_20px] text-[13px] font-semibold ${
-              status.open
-                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                : 'border-destructive/40 bg-destructive/10 text-destructive'
-            }`}
-          >
-            {status.open
-              ? `Open right now — ${status.dayLabel}${
-                  status.opensAt ? ` ${status.opensAt}–${status.closesAt}` : ''
-                }`
-              : `Closed right now (${status.reason.replace('-', ' ')}) — customers cannot check out`}
-          </div>
-        )}
+      <div className="flex flex-col gap-4" >
+        {status &&
+          (status.open ? (
+            <div className="flex items-center gap-2.5 rounded-[8px] bg-positive-bg px-4 py-3 text-[13.5px] text-foreground">
+              <span className="size-2 rounded-full bg-positive" />
+              Open right now: {status.dayLabel}
+              {status.opensAt ? ` ${status.opensAt}–${status.closesAt}` : ''}
+            </div>
+          ) : (
+            <InlineNotice>
+              Closed right now ({status.reason.replace('-', ' ')}). Customers can’t check out.
+            </InlineNotice>
+          ))}
 
-        <div className="rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]">
-          <div className="text-[15px] font-semibold text-foreground">
+        <div className="flex flex-col gap-[18px] rounded-[10px] border border-border bg-card px-6 py-[22px]">
+          <div className="font-heading text-[17px] font-bold tracking-[-0.03em] text-foreground">
             Stop checkout now
           </div>
           <div className="mb-[18px] mt-1 text-[13px] text-muted-foreground">
@@ -149,7 +141,7 @@ export function OperatingHoursEditor({
           </label>
 
           <div className="mt-[18px] flex flex-col gap-[7px]">
-            <span className="text-[13px] font-medium text-foreground-secondary">
+            <span className="text-[13.5px] font-medium text-foreground">
               Message shown to customers when closed
             </span>
             <input
@@ -157,13 +149,13 @@ export function OperatingHoursEditor({
               onChange={(e) => setClosedMessage(e.target.value)}
               maxLength={300}
               placeholder="We're currently closed. Please try again during our opening hours."
-              className="w-full rounded-[10px] border border-input bg-muted px-[13px] py-[10px] text-[14px] text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+              className="field w-full"
             />
           </div>
         </div>
 
-        <div className="rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]">
-          <div className="text-[15px] font-semibold text-foreground">
+        <div className="flex flex-col gap-[18px] rounded-[10px] border border-border bg-card px-6 py-[22px]">
+          <div className="font-heading text-[17px] font-bold tracking-[-0.03em] text-foreground">
             Weekly schedule
           </div>
           <div className="mb-[18px] mt-1 text-[13px] text-muted-foreground">
@@ -176,7 +168,7 @@ export function OperatingHoursEditor({
             {rows.map((row) => (
               <div
                 key={row.day}
-                className="flex flex-col gap-3 rounded-[12px] border border-border bg-muted/40 p-[14px_16px] sm:flex-row sm:items-center"
+                className="flex flex-col gap-3 rounded-[10px] border border-border bg-muted p-[14px_16px] sm:flex-row sm:items-center"
               >
                 <label className="flex min-w-[150px] items-center gap-3 text-[13px] font-semibold text-foreground">
                   <Switch
@@ -196,7 +188,7 @@ export function OperatingHoursEditor({
                     onChange={(e) =>
                       updateRow(row.day, { opensAt: e.target.value })
                     }
-                    className="rounded-[10px] border border-input bg-background px-[13px] py-[9px] text-[14px] font-semibold tabular-nums text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-40"
+                    className="field font-semibold tabular-nums"
                   />
                   <span className="text-[13px] text-muted-foreground">to</span>
                   <input
@@ -206,13 +198,13 @@ export function OperatingHoursEditor({
                     onChange={(e) =>
                       updateRow(row.day, { closesAt: e.target.value })
                     }
-                    className="rounded-[10px] border border-input bg-background px-[13px] py-[9px] text-[14px] font-semibold tabular-nums text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-40"
+                    className="field font-semibold tabular-nums"
                   />
                   <button
                     type="button"
                     disabled={!row.enabled}
                     onClick={() => updateRow(row.day, FULL_DAY)}
-                    className="rounded-[9px] px-[10px] py-[7px] text-[12px] font-semibold text-foreground-secondary transition-colors hover:bg-muted disabled:opacity-40"
+                    className="rounded-full px-[10px] py-[7px] text-[12px] font-semibold text-foreground-secondary transition-colors hover:bg-muted disabled:opacity-40"
                   >
                     24h
                   </button>
@@ -226,6 +218,7 @@ export function OperatingHoursEditor({
           </div>
         </div>
       </div>
-    </div>
+      <SaveBar dirty={dirty} saving={isPending} label="Unsaved operating hours" onDiscard={discard} onSave={handleSave} />
+    </PageStack>
   );
 }

@@ -78,7 +78,7 @@ export function AddMemberDialog({ businessId, hasOwner }: { businessId: string; 
               id="member-role"
               name="role"
               defaultValue={hasOwner ? 'dispatcher' : 'owner'}
-              className="h-9 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+              className="field pr-9"
             >
               {ROLES.filter((r) => r.value !== 'owner' || !hasOwner).map((r) => (
                 <option key={r.value} value={r.value}>{r.label}</option>

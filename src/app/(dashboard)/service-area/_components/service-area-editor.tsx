@@ -1,8 +1,9 @@
 'use client';
 
+import { PageHeader, PageStack } from '@/components/page';
+import { SaveBar } from '@/components/save-bar';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { ServiceAreaConfig, ServiceAreaPlace, ServiceAreaState } from '@/lib/types';
 import { updateServiceArea } from '../actions';
@@ -56,8 +57,8 @@ const toPlaceRows = (places: ServiceAreaPlace[]): PlaceRow[] =>
   }));
 
 const inputClass =
-  'w-full rounded-[10px] border border-input bg-muted px-[13px] py-[10px] text-[14px] text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50';
-const cardClass = 'rounded-[14px] border border-border bg-card p-[18px_20px] shadow-[var(--shadow-card)]';
+  'field-area w-full';
+const cardClass = 'rounded-[10px] border border-border bg-card px-6 py-5';
 
 function Input({
   label,
@@ -76,7 +77,7 @@ function Input({
 }) {
   return (
     <label className={`flex flex-col gap-[7px] ${className ?? ''}`}>
-      <span className="text-[13px] font-medium text-foreground-secondary">{label}</span>
+      <span className="text-[13.5px] font-medium text-foreground">{label}</span>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -99,14 +100,14 @@ function RowFooter({
 }) {
   return (
     <div className="mt-4 flex items-center justify-between">
-      <label className="flex items-center gap-2 text-[13px] font-medium text-foreground-secondary">
+      <label className="flex items-center gap-2 text-[13.5px] font-medium text-foreground">
         <Switch checked={active} onCheckedChange={onActive} />
         {active ? 'Active' : 'Inactive'}
       </label>
       <button
         type="button"
         onClick={onRemove}
-        className="rounded-[9px] px-[12px] py-[7px] text-[13px] font-semibold text-destructive transition-colors hover:bg-destructive/10"
+        className="rounded-full px-[12px] py-[7px] text-[13px] font-semibold text-destructive transition-colors hover:bg-destructive/10"
       >
         Remove
       </button>
@@ -119,6 +120,14 @@ export function ServiceAreaEditor({ config }: { config: ServiceAreaConfig }) {
   const [places, setPlaces] = useState<PlaceRow[]>(toPlaceRows(config.extraPlaces));
   const [message, setMessage] = useState(config.outsideMessage);
   const [isPending, startTransition] = useTransition();
+  // What the API last stored, to drive the floating save bar and Discard.
+  const snapshot = JSON.stringify({ states, places, message });
+  const [saved, setSaved] = useState(snapshot);
+  const dirty = snapshot !== saved;
+  function discard() {
+    const s = JSON.parse(saved);
+    setStates(s.states); setPlaces(s.places); setMessage(s.message);
+  }
 
   const patchState = (i: number, patch: Partial<StateRow>) =>
     setStates((prev) => prev.map((row, j) => (j === i ? { ...row, ...patch } : row)));
@@ -169,6 +178,7 @@ export function ServiceAreaEditor({ config }: { config: ServiceAreaConfig }) {
     startTransition(async () => {
       try {
         await updateServiceArea({ states: outStates, extraPlaces: outPlaces, outsideMessage: message.trim() });
+        setSaved(snapshot);
         toast.success('Service area saved.');
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Failed to save the service area.');
@@ -177,24 +187,13 @@ export function ServiceAreaEditor({ config }: { config: ServiceAreaConfig }) {
   }
 
   return (
-    <div>
-      <div className="flex flex-wrap items-start justify-between gap-4 pb-[18px]">
-        <div>
-          <h1 className="text-[23px] font-bold tracking-tight text-foreground">Service area</h1>
-          <p className="mt-1 text-[14px] text-muted-foreground">
-            Where Awarome Business delivers to and picks up from. Addresses anywhere else can&rsquo;t be
-            booked. Changes apply within 30 seconds.
-          </p>
-        </div>
-        <Button type="button" onClick={handleSave} disabled={isPending}>
-          {isPending ? 'Saving…' : 'Save changes'}
-        </Button>
-      </div>
+    <PageStack>
+      <PageHeader title="Service area" subtitle={<>Where Awarome Business delivers to and picks up from. Addresses anywhere else can&rsquo;t be booked. Changes apply within 30 seconds.</>} />
 
-      <div className="flex flex-col gap-6" style={{ maxWidth: 820 }}>
+      <div className="flex flex-col gap-6" >
         <section className="flex flex-col gap-3">
           <div>
-            <div className="text-[15px] font-semibold text-foreground">States</div>
+            <div className="font-heading text-[17px] font-bold tracking-[-0.03em] text-foreground">States</div>
             <p className="mt-1 text-[13px] text-muted-foreground">
               Matched on the state Google gives an address. Bounds (optional) stop an address elsewhere
               passing on the state&rsquo;s name alone.
@@ -230,7 +229,7 @@ export function ServiceAreaEditor({ config }: { config: ServiceAreaConfig }) {
 
         <section className="flex flex-col gap-3">
           <div>
-            <div className="text-[15px] font-semibold text-foreground">Extra places</div>
+            <div className="font-heading text-[17px] font-bold tracking-[-0.03em] text-foreground">Extra places</div>
             <p className="mt-1 text-[13px] text-muted-foreground">
               Towns outside those states that we still serve. An address counts if it&rsquo;s within the
               radius of the centre, or names the place and is close by.
@@ -265,7 +264,7 @@ export function ServiceAreaEditor({ config }: { config: ServiceAreaConfig }) {
 
         <section className={cardClass}>
           <label className="flex flex-col gap-[7px]">
-            <span className="text-[15px] font-semibold text-foreground">Message outside the area</span>
+            <span className="font-heading text-[17px] font-bold tracking-[-0.03em] text-foreground">Message outside the area</span>
             <span className="text-[13px] text-muted-foreground">
               What a business sees when they pick an address we don&rsquo;t serve.
             </span>
@@ -279,6 +278,7 @@ export function ServiceAreaEditor({ config }: { config: ServiceAreaConfig }) {
           </label>
         </section>
       </div>
-    </div>
+      <SaveBar dirty={dirty} saving={isPending} label="Unsaved service area changes" onDiscard={discard} onSave={handleSave} />
+    </PageStack>
   );
 }

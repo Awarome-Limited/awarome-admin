@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { PageHeader, PageStack } from '@/components/page';
 import { redirect } from 'next/navigation';
 import { authedFetch, type PaginatedResponse } from '@/lib/api-client';
 import { getSession } from '@/lib/session';
@@ -25,21 +25,13 @@ export default async function NewBulkDeliveryPage() {
     .catch(() => [] as AdminRider[]);
 
   return (
-    <div className="flex flex-col gap-4">
-      <Link
-        href="/bulk-deliveries"
-        className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-border-strong bg-card px-3 py-1.5 text-[13px] font-semibold text-foreground-secondary hover:bg-muted"
-      >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5 M12 19l-7-7 7-7"/></svg>
-        Back to bulk deliveries
-      </Link>
-      <div>
-        <h1 className="text-[23px] font-bold tracking-tight text-foreground">New bulk delivery</h1>
-        <p className="mt-1 text-[14px] text-muted-foreground">
-          Book a vendor’s drops into their account. Each one tracks in their app, and you choose how they reach riders.
-        </p>
-      </div>
+    <PageStack>
+      <PageHeader
+        back={{ href: '/bulk-deliveries', label: 'All bulk deliveries' }}
+        title="New bulk delivery"
+        subtitle="Book a vendor’s drops into their account. Each one tracks in their app, and you choose how they reach riders."
+      />
       <BulkDeliveryForm riders={riders} />
-    </div>
+    </PageStack>
   );
 }

@@ -51,9 +51,9 @@ export function SearchBox({ placeholder = 'Search…' }: { placeholder?: string 
   };
 
   return (
-    <div className="relative">
+    <div className="relative w-full sm:w-auto">
       <svg
-        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+        className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
         width="14"
         height="14"
         viewBox="0 0 24 24"
@@ -71,7 +71,7 @@ export function SearchBox({ placeholder = 'Search…' }: { placeholder?: string 
         value={value}
         onChange={(event) => handleChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full sm:w-56 rounded-[9px] border border-border-strong bg-card py-[7px] pl-8 pr-3 text-[13px] font-medium text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+        className="h-[38px] w-full rounded-full border border-border bg-background pl-9 pr-4 text-[13.5px] text-foreground outline-none sm:w-[300px] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
       />
     </div>
   );

@@ -1,11 +1,10 @@
-import Link from 'next/link';
 import { authedFetch, ApiError, PaginatedResponse } from '@/lib/api-client';
 import { AdminStaff } from '@/lib/types';
 import { StaffRole } from '@/lib/permissions';
 import { ApiErrorCard } from '@/components/api-error-card';
 import { SearchBox } from '@/components/search-box';
 import { PaginationControls } from '@/components/pagination-controls';
-import { SuspendToggle } from '@/components/suspend-toggle';
+import { StatusPill } from '@/components/account-status';
 import { AvatarInitials } from '@/components/avatar-initials';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -16,11 +15,20 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { formatDate } from '@/lib/format';
-import { cn } from '@/lib/utils';
-import { setStaffSuspended } from './actions';
+import { formatDate, humanize } from '@/lib/format';
+import { ROLE_LABELS } from '@/lib/staff-roles';
 import { InviteMemberDialog } from './_components/invite-member-dialog';
-import { ChangeRoleDialog } from './_components/change-role-dialog';
+import { StatStrip } from '@/components/stat-strip';
+import { SegmentedLinks } from '@/components/segmented';
+import {
+  EmptyRow,
+  ListCard,
+  PageHeader,
+  PageStack,
+  RowChevron,
+  RowLink,
+  ToolbarEnd,
+} from '@/components/page';
 
 const LIMIT = 20;
 
@@ -34,13 +42,6 @@ function filterToQuery(filter: string): Record<string, string> {
   if (filter === 'active') return { isActive: 'true' };
   if (filter === 'suspended') return { isActive: 'false' };
   return {};
-}
-
-function roleBadgeVariant(role: string) {
-  if (role === StaffRole.SUPER_ADMIN) return 'destructive' as const;
-  if (role === StaffRole.FINANCE) return 'info' as const;
-  if (role === StaffRole.OPS) return 'warning' as const;
-  return 'secondary' as const;
 }
 
 async function safeCount(url: string): Promise<number> {
@@ -92,123 +93,50 @@ export default async function StaffPage({
   }
 
   const chips = [
-    { label: 'Total members', value: totalCount.toLocaleString() },
+    { label: 'Team members', value: totalCount.toLocaleString() },
     { label: 'Active', value: activeCount.toLocaleString() },
     { label: 'Suspended', value: suspendedCount.toLocaleString() },
-    { label: 'Roles', value: Object.values(StaffRole).length.toString() },
   ];
 
+  const tabHref = (key: string) => {
+    const p = new URLSearchParams();
+    if (search) p.set('search', search);
+    if (role) p.set('role', role);
+    if (key !== 'all') p.set('filter', key);
+    const q = p.toString();
+    return `/staff${q ? `?${q}` : ''}`;
+  };
+  const tabCounts: Record<string, number> = { all: totalCount, active: activeCount, suspended: suspendedCount };
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[23px] font-bold tracking-tight text-foreground">Staff</h1>
-          <p className="mt-1 text-[14px] text-muted-foreground">
-            Admin team members and their permissions
-          </p>
-        </div>
-        <InviteMemberDialog />
-      </div>
+    <PageStack>
+      <PageHeader
+        title="Staff"
+        subtitle="Admin team members, their roles and what they can do."
+        actions={<InviteMemberDialog />}
+      />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {chips.map((chip) => (
-          <div
-            key={chip.label}
-            className="flex flex-col gap-1 rounded-[12px] border border-border bg-card p-[13px_16px] shadow-[var(--shadow-card)]"
-          >
-            <span className="text-[12px] font-medium text-muted-foreground">{chip.label}</span>
-            <span className="text-[20px] font-bold tabular-nums text-foreground">{chip.value}</span>
-          </div>
-        ))}
-      </div>
+      <StatStrip stats={chips} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {STATUS_FILTERS.map((f) => {
-            const active = activeFilter === f.key;
-            const href = (() => {
-              const p = new URLSearchParams();
-              if (search) p.set('search', search);
-              if (role) p.set('role', role);
-              if (f.key !== 'all') p.set('filter', f.key);
-              const s = p.toString();
-              return `/staff${s ? `?${s}` : ''}`;
-            })();
-            return (
-              <Link
-                key={f.key}
-                href={href}
-                className={cn(
-                  'rounded-[9px] border px-3.5 py-[7px] text-[13px] font-semibold transition-colors',
-                  active
-                    ? 'border-transparent bg-brand-tint text-primary'
-                    : 'border-border-strong bg-card text-foreground-secondary hover:bg-muted'
-                )}
-              >
-                {f.label}
-              </Link>
-            );
-          })}
-        </div>
-        <div className="flex items-center gap-2">
-          <RoleSelect value={role} search={search} activeFilter={activeFilter} />
-          <SearchBox placeholder="Search by name or email…" />
-        </div>
-      </div>
-
-      <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Joined</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {result.data.map((staff) => (
-                <TableRow key={staff._id}>
-                  <TableCell>
-                    <Link href={`/staff/${staff._id}`} className="flex items-center gap-2.5">
-                      <AvatarInitials name={`${staff.firstName} ${staff.lastName}`} size="sm" />
-                      <span className="font-medium hover:underline">
-                        {staff.firstName} {staff.lastName}
-                      </span>
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{staff.email}</TableCell>
-                  <TableCell>
-                    <ChangeRoleDialog
-                      staffId={staff._id}
-                      staffName={`${staff.firstName} ${staff.lastName}`}
-                      role={staff.role}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <SuspendToggle
-                      suspended={!staff.isActive}
-                      action={setStaffSuspended.bind(null, staff._id)}
-                    />
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDate(staff.createdAt).split(',')[0]}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {result.data.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-                    No staff members found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="border-t border-border px-4 py-3">
+      <ListCard
+        toolbar={
+          <>
+            <SegmentedLinks
+              active={activeFilter}
+              items={STATUS_FILTERS.map((f) => ({
+                key: f.key,
+                label: f.label,
+                href: tabHref(f.key),
+                count: tabCounts[f.key]?.toLocaleString(),
+              }))}
+            />
+            <RoleSelect value={role} search={search} activeFilter={activeFilter} />
+            <ToolbarEnd>
+              <SearchBox placeholder="Name or email" />
+            </ToolbarEnd>
+          </>
+        }
+        footer={
           <PaginationControls
             skip={skip}
             limit={LIMIT}
@@ -216,9 +144,56 @@ export default async function StaffPage({
             basePath="/staff"
             searchParams={params}
           />
-        </div>
-      </div>
-    </div>
+        }
+      >
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Member</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Joined</TableHead>
+              <TableHead className="w-12" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {result.data.map((staff) => {
+              const name = [staff.firstName, staff.lastName].filter(Boolean).join(' ');
+              return (
+                <TableRow key={staff._id} className="relative">
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <AvatarInitials name={name || undefined} />
+                      <div className="min-w-0">
+                        <RowLink href={`/staff/${staff._id}`}>{name || 'No name yet'}</RowLink>
+                        <div className="truncate text-[12.5px] text-muted-foreground">{staff.email}</div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={staff.role === StaffRole.SUPER_ADMIN ? 'info' : 'secondary'}>
+                      {ROLE_LABELS[staff.role as StaffRole] ?? humanize(staff.role)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <StatusPill suspended={!staff.isActive} />
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-foreground-secondary tabular-nums">
+                    {formatDate(staff.createdAt).split(',')[0]}
+                  </TableCell>
+                  <TableCell>
+                    <RowChevron />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+            {result.data.length === 0 && (
+              <EmptyRow colSpan={5} title="No staff match" body="Clear the search, role or tab." />
+            )}
+          </TableBody>
+        </Table>
+      </ListCard>
+    </PageStack>
   );
 }
 
@@ -237,12 +212,15 @@ function RoleSelect({
       {activeFilter !== 'all' && <input type="hidden" name="filter" value={activeFilter} />}
       <select
         name="role"
+        aria-label="Role"
         defaultValue={value}
-        className="h-[34px] rounded-[9px] border border-border-strong bg-card px-3 text-[13px] font-semibold text-foreground-secondary outline-none"
+        className="toolbar-select"
       >
         <option value="">All roles</option>
         {Object.values(StaffRole).map((r) => (
-          <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>
+          <option key={r} value={r}>
+            {ROLE_LABELS[r]}
+          </option>
         ))}
       </select>
       <noscript>

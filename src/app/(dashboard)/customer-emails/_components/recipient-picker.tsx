@@ -8,7 +8,7 @@ import { searchCustomers, type CustomerSuggestion, type EmailRecipient } from '.
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const inputClass =
-  'w-full rounded-[10px] border border-input bg-background px-[14px] py-[11px] text-[14px] text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50';
+  'field w-full';
 
 export function RecipientPicker({
   recipients,
@@ -68,7 +68,7 @@ export function RecipientPicker({
   return (
     <div className="flex flex-col gap-[7px]">
       <div className="flex items-center justify-between">
-        <span className="text-[13px] font-medium text-foreground-secondary">
+        <span className="text-[13.5px] font-medium text-foreground">
           To <span className="text-destructive">*</span>
         </span>
         {recipients.length > 0 && (

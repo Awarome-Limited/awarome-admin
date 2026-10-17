@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { authedFetch, ApiError, SingleResponse } from '@/lib/api-client';
 import { ApiErrorCard } from '@/components/api-error-card';
 import { Badge } from '@/components/ui/badge';
@@ -10,8 +9,9 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { formatDate } from '@/lib/format';
-import { cn } from '@/lib/utils';
+import { formatDate, humanize } from '@/lib/format';
+import { SegmentedLinks } from '@/components/segmented';
+import { EmptyRow, ListCard, PageHeader, PageStack } from '@/components/page';
 
 interface CampaignMessageRow {
   _id: string;
@@ -102,65 +102,39 @@ export default async function CampaignMessagesPage({
   }
 
   return (
-    <>
-      <div className="flex flex-wrap items-start justify-between gap-4 pb-[18px]">
-        <div>
-          <h1 className="text-[23px] font-bold tracking-tight text-foreground">
-            Campaign send log
-          </h1>
-          <p className="mt-1 text-[14px] text-muted-foreground">
-            Every claimed nudge and how it ended — the audit trail behind{' '}
-            <Link href="/campaigns" className="text-primary underline-offset-2 hover:underline">
-              Campaigns
-            </Link>
-            . Showing the latest {messages.length} entries.
-          </p>
-        </div>
-      </div>
+    <PageStack>
+      <PageHeader
+        back={{ href: '/campaigns', label: 'Campaigns' }}
+        title="Campaign send log"
+        subtitle={`Every claimed nudge and how it ended. Showing the latest ${messages.length} entries.`}
+      />
 
-      <div className="mb-4 flex flex-wrap gap-1.5">
-        {CAMPAIGN_FILTERS.map((f) => (
-          <Link
-            key={f.key || 'all'}
-            href={filterHref(params, { campaign: f.key })}
-            className={cn(
-              'rounded-full border px-3 py-1 text-[12px] font-medium',
-              campaign === f.key
-                ? 'border-primary bg-primary text-primary-foreground'
-                : 'border-border bg-card text-muted-foreground hover:text-foreground'
-            )}
-          >
-            {f.label}
-          </Link>
-        ))}
-        <span className="mx-1.5 self-center text-border">|</span>
-        {STATUS_FILTERS.map((f) => (
-          <Link
-            key={f.key || 'all'}
-            href={filterHref(params, { status: f.key })}
-            className={cn(
-              'rounded-full border px-3 py-1 text-[12px] font-medium',
-              status === f.key
-                ? 'border-primary bg-primary text-primary-foreground'
-                : 'border-border bg-card text-muted-foreground hover:text-foreground'
-            )}
-          >
-            {f.label}
-          </Link>
-        ))}
-      </div>
-
-      {messages.length === 0 ? (
-        <p className="text-[13px] text-muted-foreground">
-          No campaign messages match these filters yet.
-        </p>
-      ) : (
+      <ListCard
+        toolbar={
+          <>
+            <SegmentedLinks
+              active={campaign || 'all'}
+              items={CAMPAIGN_FILTERS.map((f) => ({
+                key: f.key || 'all',
+                label: f.label,
+                href: filterHref(params, { campaign: f.key }),
+              }))}
+            />
+            <SegmentedLinks
+              active={status || 'all'}
+              items={STATUS_FILTERS.map((f) => ({
+                key: f.key || 'all',
+                label: f.label,
+                href: filterHref(params, { status: f.key }),
+              }))}
+            />
+          </>
+        }
+      >
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>When</TableHead>
-              <TableHead>User</TableHead>
-              <TableHead>Campaign</TableHead>
+              <TableHead>Customer</TableHead>
               <TableHead>Step</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Channels</TableHead>
@@ -170,34 +144,46 @@ export default async function CampaignMessagesPage({
           <TableBody>
             {messages.map((msg) => (
               <TableRow key={msg._id}>
-                <TableCell className="whitespace-nowrap text-muted-foreground">
-                  {formatDate(msg.sentAt ?? msg.createdAt)}
-                </TableCell>
-                <TableCell>{userLabel(msg.user)}</TableCell>
-                <TableCell className="whitespace-nowrap">{msg.campaign}</TableCell>
-                <TableCell className="whitespace-nowrap">{msg.step}</TableCell>
                 <TableCell>
-                  <Badge variant={statusVariant(msg.status)}>{msg.status}</Badge>
+                  <div>{userLabel(msg.user)}</div>
+                  <div className="text-[12.5px] whitespace-nowrap text-muted-foreground tabular-nums">
+                    {formatDate(msg.sentAt ?? msg.createdAt)}
+                  </div>
                 </TableCell>
-                <TableCell className="whitespace-nowrap text-[12px] text-muted-foreground">
-                  {msg.channels?.length
-                    ? msg.channels
-                        .map((c) => `${c.channel}${c.status === 'failed' ? ' ✕' : ' ✓'}`)
-                        .join('  ')
-                    : '—'}
+                <TableCell>
+                  <div className="whitespace-nowrap">{humanize(msg.step)}</div>
+                  <div className="text-[12.5px] whitespace-nowrap text-muted-foreground">{humanize(msg.campaign)}</div>
                 </TableCell>
-                <TableCell className="max-w-[240px] truncate text-[12px] text-muted-foreground">
+                <TableCell>
+                  <Badge variant={statusVariant(msg.status)} dot>
+                    {humanize(msg.status)}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <span className="flex flex-wrap gap-1">
+                    {msg.channels?.length
+                      ? msg.channels.map((c) => (
+                          <Badge key={c.channel} variant={c.status === 'failed' ? 'destructive' : 'secondary'}>
+                            {humanize(c.channel)}
+                            {c.status === 'failed' ? ' failed' : ''}
+                          </Badge>
+                        ))
+                      : '—'}
+                  </span>
+                </TableCell>
+                <TableCell className="max-w-[260px] truncate text-[13px] text-foreground-secondary">
                   {msg.status === 'deferred' && msg.deferredUntil
-                    ? `until ${formatDate(msg.deferredUntil)}`
-                    : msg.reason ||
-                      msg.channels?.find((c) => c.error)?.error ||
-                      '—'}
+                    ? `Until ${formatDate(msg.deferredUntil)}`
+                    : msg.reason || msg.channels?.find((c) => c.error)?.error || '—'}
                 </TableCell>
               </TableRow>
             ))}
+            {messages.length === 0 && (
+              <EmptyRow colSpan={5} title="No messages match" body="Try another campaign or status." />
+            )}
           </TableBody>
         </Table>
-      )}
-    </>
+      </ListCard>
+    </PageStack>
   );
 }

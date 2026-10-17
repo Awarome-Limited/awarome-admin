@@ -33,12 +33,12 @@ export function RenameForm({
         onChange={(e) => setName(e.target.value)}
         maxLength={80}
         required
-        className="w-full rounded-[10px] border border-input bg-background px-[13px] py-[10px] text-[13.5px] text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+        className="field w-full"
       />
       <button
         type="submit"
         disabled={isPending || name.trim() === currentName || !name.trim()}
-        className="self-start rounded-[10px] bg-primary px-[18px] py-[9px] text-[13px] font-semibold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
+        className="self-start rounded-full bg-primary px-[18px] py-[9px] text-[13px] font-semibold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
       >
         {isPending ? 'Saving…' : 'Save name'}
       </button>

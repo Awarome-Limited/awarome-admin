@@ -12,8 +12,19 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { formatDate, formatNaira } from '@/lib/format';
+import { formatDate, formatNaira, formatPhone } from '@/lib/format';
 import { CreatePartnerDialog } from './_components/create-partner-dialog';
+import { StatStrip } from '@/components/stat-strip';
+import { AvatarInitials } from '@/components/avatar-initials';
+import {
+  EmptyRow,
+  InlineNotice,
+  ListCard,
+  PageHeader,
+  PageStack,
+  RowChevron,
+  RowLink,
+} from '@/components/page';
 
 const LIMIT = 20;
 
@@ -65,108 +76,33 @@ export default async function PartnersPage({
   ];
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[23px] font-bold tracking-tight text-foreground">API partners</h1>
-          <p className="mt-1 text-[14px] text-muted-foreground">
-            Third parties booking couriers over the delivery API
-          </p>
-        </div>
-        <CreatePartnerDialog />
-      </div>
+    <PageStack>
+      <PageHeader
+        title="API partners"
+        subtitle="Third parties booking couriers over the delivery API."
+        actions={<CreatePartnerDialog />}
+      />
 
-      <div className="grid grid-cols-3 gap-3">
-        {chips.map((chip) => (
-          <div
-            key={chip.label}
-            className="flex flex-col gap-1 rounded-[12px] border border-border bg-card p-[13px_16px] shadow-[var(--shadow-card)]"
-          >
-            <span className="text-[12px] font-medium text-muted-foreground">{chip.label}</span>
-            <span className="text-[20px] font-bold tabular-nums text-foreground">{chip.value}</span>
-          </div>
-        ))}
-      </div>
+      <StatStrip stats={chips} />
 
       {/*
         Partners cannot top themselves up — funding is an ops action. A partner
         that runs dry starts failing every delivery with a 402, so this has to
         be visible here rather than discovered from a support ticket.
       */}
-      {lowBalance.length > 0 && (
-        <div className="rounded-[14px] border border-border bg-warning-bg p-4">
-          <div className="text-[14px] font-semibold text-foreground">
-            {lowBalance.length} partner{lowBalance.length === 1 ? '' : 's'} running low on balance
-          </div>
-          <p className="mt-0.5 text-[13px] text-muted-foreground">
-            Deliveries start failing once the wallet cannot cover the fee. Top up from the
-            partner&apos;s wallet.
-          </p>
-          <ul className="mt-3 flex flex-col gap-1.5">
-            {lowBalance.map((p) => (
-              <li key={p._id} className="flex flex-wrap items-center gap-2 text-[13px]">
-                <Link href={`/partners/${p._id}`} className="font-semibold hover:underline">
-                  {p.name || p.email || p._id}
-                </Link>
-                <span className="tabular-nums text-muted-foreground">
-                  {formatNaira(p.balance)} left · alerts below {formatNaira(p.lowBalanceThreshold)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {lowBalance.map((p) => (
+        <InlineNotice
+          key={p._id}
+          action={<Link href={`/partners/${p._id}`}>Top up</Link>}
+        >
+          <strong className="font-semibold">{p.name || p.email || p._id}</strong> has{' '}
+          {formatNaira(p.balance)} left (alerts below {formatNaira(p.lowBalanceThreshold)}). Deliveries start
+          failing once the wallet can’t cover the fee.
+        </InlineNotice>
+      ))}
 
-      <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Partner</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>API</TableHead>
-                <TableHead>Handover PIN</TableHead>
-                <TableHead>Added</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {result.data.map((partner) => (
-                <TableRow key={partner._id}>
-                  <TableCell>
-                    <Link
-                      href={`/partners/${partner._id}`}
-                      className="font-medium hover:underline"
-                    >
-                      {partner.name || '—'}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {partner.email || partner.phone || '—'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={partner.apiEnabled ? 'positive' : 'secondary'}>
-                      {partner.apiEnabled ? 'Enabled' : 'Disabled'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {partner.defaultRequirePin ? 'Required' : 'Not required'}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDate(partner.createdAt).split(',')[0]}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {result.data.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-                    No API partners yet.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="border-t border-border px-4 py-3">
+      <ListCard
+        footer={
           <PaginationControls
             skip={skip}
             limit={LIMIT}
@@ -174,8 +110,58 @@ export default async function PartnersPage({
             basePath="/partners"
             searchParams={params}
           />
-        </div>
-      </div>
-    </div>
+        }
+      >
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Partner</TableHead>
+              <TableHead>API access</TableHead>
+              <TableHead>Handover PIN</TableHead>
+              <TableHead>Added</TableHead>
+              <TableHead className="w-12" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {result.data.map((partner) => (
+              <TableRow key={partner._id} className="relative">
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <AvatarInitials name={partner.name || undefined} shape="store" />
+                    <div className="min-w-0">
+                      <RowLink href={`/partners/${partner._id}`}>{partner.name || 'No name yet'}</RowLink>
+                      <div className="truncate text-[12.5px] text-muted-foreground tabular-nums">
+                        {partner.email || (partner.phone && formatPhone(partner.phone)) || 'No contact'}
+                      </div>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={partner.apiEnabled ? 'positive' : 'secondary'} dot={partner.apiEnabled}>
+                    {partner.apiEnabled ? 'Enabled' : 'Off'}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-foreground-secondary">
+                  {partner.defaultRequirePin ? 'Required' : 'Not required'}
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-foreground-secondary tabular-nums">
+                  {formatDate(partner.createdAt).split(',')[0]}
+                </TableCell>
+                <TableCell>
+                  <RowChevron />
+                </TableCell>
+              </TableRow>
+            ))}
+            {result.data.length === 0 && (
+              <EmptyRow
+                colSpan={5}
+                title="No API partners yet"
+                body="Add a partner, then issue them an API key from their page."
+              />
+            )}
+          </TableBody>
+        </Table>
+      </ListCard>
+    </PageStack>
   );
 }

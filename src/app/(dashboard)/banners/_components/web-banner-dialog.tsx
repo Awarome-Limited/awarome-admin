@@ -31,7 +31,7 @@ import {
 } from '../actions';
 
 const selectClass =
-  'h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50';
+  'field pr-9';
 
 const MODES: { key: WebBannerMode; label: string; hint: string }[] = [
   { key: 'structured', label: 'Structured', hint: 'Text + CTA on a brand background' },

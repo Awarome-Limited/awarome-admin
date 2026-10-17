@@ -29,7 +29,7 @@ export function ChannelFilter() {
       aria-label="Filter by channel"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="h-[34px] rounded-[9px] border border-border-strong bg-card px-3 text-[13px] font-semibold text-foreground-secondary outline-none"
+      className="toolbar-select"
     >
       <option value="">All channels</option>
       {Object.entries(CHANNEL_LABELS).map(([key, label]) => (

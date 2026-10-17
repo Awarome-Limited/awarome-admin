@@ -39,7 +39,7 @@ export function ReplaceContactsForm({
       <button
         type="submit"
         disabled={isPending || contacts.count === 0}
-        className="self-start rounded-[10px] bg-primary px-[18px] py-[9px] text-[13px] font-semibold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
+        className="self-start rounded-full bg-primary px-[18px] py-[9px] text-[13px] font-semibold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
       >
         {isPending ? 'Replacing…' : 'Replace contacts'}
       </button>

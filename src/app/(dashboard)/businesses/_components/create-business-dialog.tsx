@@ -112,7 +112,7 @@ export function CreateBusinessDialog() {
                 id="feeMode"
                 value={feeMode}
                 onChange={(e) => setFeeMode(e.target.value as BusinessFeeMode)}
-                className="h-9 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+                className="field pr-9"
               >
                 <option value="inclusive">Included in the amount collected</option>
                 <option value="added">Added on top of the item price</option>

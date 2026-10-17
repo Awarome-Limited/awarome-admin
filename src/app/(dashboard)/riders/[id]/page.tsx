@@ -3,14 +3,18 @@ import { notFound } from 'next/navigation';
 import { authedFetch, ApiError, SingleResponse, PaginatedResponse } from '@/lib/api-client';
 import { AdminRider, AdminOrder } from '@/lib/types';
 import { ApiErrorCard } from '@/components/api-error-card';
+import { AccountStatusControl, StatusPill } from '@/components/account-status';
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { DetailRow } from '@/components/detail-row';
-import { SuspendToggle } from '@/components/suspend-toggle';
+  DetailHeader,
+  EmptyRow,
+  FactList,
+  InlineNotice,
+  PageStack,
+  Panel,
+  RowLink,
+  StatCards,
+  type StatCardData,
+} from '@/components/page';
 import { AvatarInitials } from '@/components/avatar-initials';
 import { Badge } from '@/components/ui/badge';
 import { PaginationControls } from '@/components/pagination-controls';
@@ -22,7 +26,7 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { formatDate, statusBadgeVariant } from '@/lib/format';
+import { formatDate, formatPhone, humanize, statusBadgeVariant } from '@/lib/format';
 import { RiderDocuments } from '@/components/rider-documents';
 import { getRiderPosition, setRiderSuspended } from '../actions';
 import { RiderLocationMap } from '@/components/rider-location-map';
@@ -105,249 +109,290 @@ export default async function RiderDetailPage({
       : verificationStatus === 'rejected'
         ? 'destructive'
         : verificationStatus === 'pending'
-          ? 'warning'
+          ? 'info'
           : 'secondary';
+  const verificationLabel =
+    verificationStatus === 'pending'
+      ? 'Waiting for review'
+      : verificationStatus === 'unsubmitted'
+        ? 'Not submitted'
+        : humanize(verificationStatus);
+
+  const name = [rider.firstName, rider.lastName].filter(Boolean).join(' ');
+  const owes = payoutSummary && payoutSummary.balance < 0 ? -payoutSummary.balance : 0;
+
+  const stats: StatCardData[] = [
+    {
+      label: 'Completed jobs',
+      value: (rider.ordersCompleted ?? 0).toLocaleString(),
+      meta: `${orders.totalCount.toLocaleString()} in order history`,
+    },
+  ];
+  if (payoutSummary) {
+    stats.push(
+      owes > 0
+        ? {
+            label: 'Owes Awarome',
+            value: naira(owes),
+            progress: payoutSummary.threshold ? owes / payoutSummary.threshold : undefined,
+            meta: payoutSummary.locked
+              ? `Over the ${naira(payoutSummary.threshold ?? 0)} limit, locked out of jobs`
+              : `of ${naira(payoutSummary.threshold ?? 0)} limit`,
+          }
+        : { label: 'Balance to pay out', value: naira(payoutSummary.balance), meta: 'Earned, not yet paid' },
+      {
+        label: 'Paid to date',
+        value: naira(payoutSummary.totalPaid),
+        meta: payoutSummary.lastPaidAt
+          ? `Last payout ${formatDate(payoutSummary.lastPaidAt)}`
+          : 'No payouts yet',
+      }
+    );
+  }
+  stats.push({
+    label: 'Verification',
+    value: verificationLabel,
+    meta: rider.verificationNote || (verificationStatus === 'approved' ? 'Can receive jobs' : undefined),
+  });
 
   return (
-    <div className="flex max-w-3xl flex-col gap-4">
-      <div className="flex items-center gap-3.5">
-        <AvatarInitials name={`${rider.firstName ?? ''} ${rider.lastName ?? ''}`} size="lg" />
-        <h1 className="text-[22px] font-bold tracking-tight">
-          {rider.firstName} {rider.lastName}
-        </h1>
-      </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Details</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3 text-sm">
-          <DetailRow label="Email" value={rider.email} />
-          <DetailRow label="Phone" value={rider.phone} />
-          <DetailRow
-            label="Online status"
-            value={<Badge variant={statusBadgeVariant(rider.status)} dot>{rider.status}</Badge>}
-          />
-          <DetailRow label="Vehicle" value={rider.vehicleType} />
-          <DetailRow label="Plate number" value={rider.plateNumber} />
-          <DetailRow label="Orders completed" value={rider.ordersCompleted} />
-          <DetailRow
-            label="Account status"
-            value={
-              <SuspendToggle
-                suspended={!!rider.suspended}
-                action={setRiderSuspended.bind(null, rider._id)}
-              />
-            }
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Current location</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <RiderLocationMap
-            initial={riderPosition(rider)}
-            load={getRiderPosition.bind(null, rider._id)}
-          />
-        </CardContent>
-      </Card>
-
-      {payoutSummary && (
-        <Card>
-          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
-            <CardTitle className="flex items-center gap-2">
-              Payouts
-              {payoutSummary.locked && <Badge variant="destructive">Locked — over debt limit</Badge>}
-            </CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
-            {canPay && <AdjustBalanceDialog riderId={rider._id} owed={payoutSummary.owed ?? 0} />}
-            {canPay && !payoutSummary.inFlight && payoutSummary.balance > 0 && (
-              <RecordBankPayoutDialog
-                payee="this courier"
-                owed={payoutSummary.balance}
-                action={recordRiderBankPayout.bind(null, rider._id)}
-              />
-            )}
-            {canPay && !payoutSummary.inFlight && payoutSummary.balance >= 100 && payoutSummary.bankAccount?.verified && (
-              <PayoutActionButton
-                label={`Pay ${naira(payoutSummary.balance)} now`}
-                title="Pay this courier now?"
-                description={`${naira(payoutSummary.balance)} — their whole balance — is sent by Paystack transfer to ${payoutSummary.bankAccount.bankName} •••• ${payoutSummary.bankAccount.accountNumber?.slice(-4)} (${payoutSummary.bankAccount.accountName}).`}
-                confirmLabel="Send payout"
-                successMessage="Payout sent to Paystack"
-                action={payRiderNow.bind(null, rider._id)}
-              />
-            )}
-            </div>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3 text-sm">
-            {payoutSummary.balance < 0 ? (
-              <DetailRow
-                label="Owes Awarome"
-                value={
-                  <span className={payoutSummary.locked ? 'font-semibold text-destructive' : 'font-semibold text-warning'}>
-                    {naira(-payoutSummary.balance)}
-                    <span className="font-normal text-muted-foreground">
-                      {' '}of {naira(payoutSummary.threshold ?? 0)} limit
-                    </span>
-                  </span>
-                }
-              />
-            ) : (
-              <DetailRow
-                label="Balance owed"
-                value={<span className="font-semibold">{naira(payoutSummary.balance)}</span>}
-              />
-            )}
-            {payoutSummary.balance < 0 && (
-              <p className="text-[12px] text-muted-foreground">
-                Commission on pay-on-delivery runs the courier collected themselves. It clears as they
-                fund their wallet or earn on card and bank-transfer jobs.
-              </p>
-            )}
-            <DetailRow
-              label="Payout account"
-              value={
-                payoutSummary.bankAccount?.accountNumber ? (
-                  <span className="flex flex-wrap items-center justify-end gap-2">
-                    {payoutSummary.bankAccount.bankName} · {payoutSummary.bankAccount.accountNumber}
-                    {payoutSummary.bankAccount.verified ? (
-                      <Badge variant="positive">Verified</Badge>
-                    ) : (
-                      <Badge variant="warning">Not verified</Badge>
-                    )}
-                  </span>
-                ) : (
-                  'None added'
-                )
-              }
+    <PageStack>
+      <DetailHeader
+        back={{ href: '/riders', label: 'All riders' }}
+        avatar={<AvatarInitials name={name || undefined} size="lg" />}
+        title={name || 'No name yet'}
+        status={<StatusPill suspended={!!rider.suspended} />}
+        meta={[
+          rider.vehicleType && humanize(rider.vehicleType),
+          rider.status && humanize(rider.status),
+          rider.createdAt && `Rider since ${formatDate(rider.createdAt).split(',')[0]}`,
+        ]}
+        actions={
+          canUpdateRider && (
+            <AccountStatusControl
+              noun="rider"
+              suspended={!!rider.suspended}
+              action={setRiderSuspended.bind(null, rider._id)}
             />
-            {payoutSummary.bankAccount?.accountName && (
-              <DetailRow label="Account name" value={payoutSummary.bankAccount.accountName} />
-            )}
-            {payoutSummary.inFlight && (
-              <DetailRow
-                label="In flight"
-                value={
-                  <Link href={`/payouts/${payoutSummary.inFlight._id}`} className="flex items-center gap-2 hover:underline">
-                    {naira(payoutSummary.inFlight.amount)}
-                    <Badge variant={payoutStatusVariant(payoutSummary.inFlight.status)}>
-                      {payoutStatusLabel(payoutSummary.inFlight.status)}
-                    </Badge>
-                  </Link>
-                }
-              />
-            )}
-            <DetailRow
-              label="Paid to date"
-              value={`${naira(payoutSummary.totalPaid)} · ${payoutSummary.payoutsCount} ${payoutSummary.payoutsCount === 1 ? 'payout' : 'payouts'}`}
-            />
-            <DetailRow label="Last paid" value={payoutSummary.lastPaidAt ? formatDate(payoutSummary.lastPaidAt) : '—'} />
-            {payoutSummary.bankAccount && !payoutSummary.bankAccount.verified && (
-              <p className="text-[12px] text-warning">
-                This account was saved before bank verification, so automatic payouts skip it. The
-                courier needs to re-save it in the app.
-              </p>
-            )}
-            <Link href={`/payouts?rider=${rider._id}`} className="text-[13px] font-semibold text-primary hover:underline">
-              Payout history →
-            </Link>
-          </CardContent>
-        </Card>
+          )
+        }
+      />
+
+      <StatCards stats={stats} />
+
+      {payoutSummary?.locked && (
+        <InlineNotice>
+          {name || 'This rider'} owes {naira(owes)}, over the {naira(payoutSummary.threshold ?? 0)} limit,
+          so they won’t be offered new jobs until they fund their wallet.
+        </InlineNotice>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Wallet funding account</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <RiderCollectionAccountCard
-            riderId={rider._id}
-            account={collectionAccount}
-            canUpdate={canUpdateRider}
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Verification documents</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-col gap-3 text-sm">
-            <DetailRow
-              label="Verification"
-              value={
-                <Badge variant={verificationVariant} dot className="capitalize">
-                  {verificationStatus}
-                </Badge>
-              }
-            />
-            {rider.verificationNote && (
-              <DetailRow label="Note" value={rider.verificationNote} />
-            )}
-          </div>
-          <RiderDocuments documents={rider.documents} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Order history</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order ID</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Delivery status</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead>Date</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orders.data.map((order) => (
-                <TableRow key={order._id}>
-                  <TableCell>
-                    <span className="rounded bg-chip px-2 py-0.5 font-mono text-xs">
-                      {order.orderId}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={statusBadgeVariant(order.status)} dot>{order.status}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={statusBadgeVariant(order.orderDeliveryStatus)} dot>
-                      {order.orderDeliveryStatus}
+      <section className="grid items-start gap-4 lg:grid-cols-[minmax(260px,1fr)_minmax(0,2fr)]">
+        <div className="flex flex-col gap-4">
+          <Panel title="Profile">
+            <FactList
+              facts={[
+                { label: 'Email', value: rider.email || 'No email' },
+                { label: 'Phone', value: formatPhone(rider.phone) },
+                {
+                  label: 'Presence',
+                  value: rider.status ? (
+                    <Badge variant={statusBadgeVariant(rider.status)} dot>
+                      {humanize(rider.status)}
                     </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-semibold tabular-nums">
-                    ₦{order.totalPrice?.toLocaleString()}
-                  </TableCell>
-                  <TableCell>{formatDate(order.createdAt)}</TableCell>
-                </TableRow>
-              ))}
-              {orders.data.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    No orders yet.
-                  </TableCell>
-                </TableRow>
+                  ) : (
+                    '—'
+                  ),
+                },
+                { label: 'Vehicle', value: humanize(rider.vehicleType) },
+                { label: 'Plate number', value: rider.plateNumber ? rider.plateNumber.toUpperCase() : '—' },
+                {
+                  label: 'Verification',
+                  value: (
+                    <Badge variant={verificationVariant} dot>
+                      {verificationLabel}
+                    </Badge>
+                  ),
+                },
+                ...(rider.verificationNote ? [{ label: 'Verification note', value: rider.verificationNote }] : []),
+              ]}
+            />
+          </Panel>
+
+          <Panel title="Current location">
+            <RiderLocationMap
+              initial={riderPosition(rider)}
+              load={getRiderPosition.bind(null, rider._id)}
+            />
+          </Panel>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-4">
+          <Panel
+            flush
+            title="Recent jobs"
+            aside={
+              <span className="text-[13px] text-muted-foreground tabular-nums">
+                {orders.totalCount.toLocaleString()} total
+              </span>
+            }
+          >
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Job</TableHead>
+                    <TableHead>Payment</TableHead>
+                    <TableHead>Stage</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orders.data.map((order) => (
+                    <TableRow key={order._id} className="relative">
+                      <TableCell className="tabular-nums">
+                        <RowLink href={`/orders/${order._id}`}>{order.orderId}</RowLink>
+                        <div className="text-[12.5px] text-muted-foreground">{formatDate(order.createdAt)}</div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusBadgeVariant(order.status)} dot>
+                          {humanize(order.status)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusBadgeVariant(order.orderDeliveryStatus)} dot>
+                          {humanize(order.orderDeliveryStatus)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums">
+                        ₦ {(order.totalPrice ?? 0).toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {orders.data.length === 0 && (
+                    <EmptyRow colSpan={4} title="No jobs yet" body="Jobs this rider completes show up here." />
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            {orders.totalCount > LIMIT && (
+              <div className="border-t border-border px-6 py-3.5">
+                <PaginationControls
+                  skip={skip}
+                  limit={LIMIT}
+                  totalCount={orders.totalCount}
+                  basePath={`/riders/${id}`}
+                  searchParams={query}
+                />
+              </div>
+            )}
+          </Panel>
+
+          {payoutSummary && (
+            <Panel
+              title="Payouts"
+              aside={
+                canPay && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <AdjustBalanceDialog riderId={rider._id} owed={payoutSummary.owed ?? 0} />
+                    {!payoutSummary.inFlight && payoutSummary.balance > 0 && (
+                      <RecordBankPayoutDialog
+                        payee="this courier"
+                        owed={payoutSummary.balance}
+                        action={recordRiderBankPayout.bind(null, rider._id)}
+                      />
+                    )}
+                    {!payoutSummary.inFlight &&
+                      payoutSummary.balance >= 100 &&
+                      payoutSummary.bankAccount?.verified && (
+                        <PayoutActionButton
+                          label={`Pay ${naira(payoutSummary.balance)} now`}
+                          title="Pay this courier now?"
+                          description={`${naira(payoutSummary.balance)} — their whole balance — is sent by Paystack transfer to ${payoutSummary.bankAccount.bankName} •••• ${payoutSummary.bankAccount.accountNumber?.slice(-4)} (${payoutSummary.bankAccount.accountName}).`}
+                          confirmLabel="Send payout"
+                          successMessage="Payout sent to Paystack"
+                          action={payRiderNow.bind(null, rider._id)}
+                        />
+                      )}
+                  </div>
+                )
+              }
+            >
+              {payoutSummary.balance < 0 && (
+                <p className="-mt-2 text-[13px] text-foreground-secondary">
+                  Commission on pay-on-delivery runs the courier collected themselves. It clears as they
+                  fund their wallet or earn on card and bank-transfer jobs.
+                </p>
               )}
-            </TableBody>
-          </Table>
-          <PaginationControls
-            skip={skip}
-            limit={LIMIT}
-            totalCount={orders.totalCount}
-            basePath={`/riders/${id}`}
-            searchParams={query}
-          />
-        </CardContent>
-      </Card>
-    </div>
+              <FactList
+                columns={2}
+                facts={[
+                  {
+                    label: 'Payout account',
+                    value: payoutSummary.bankAccount?.accountNumber ? (
+                      <span className="flex flex-wrap items-center gap-2">
+                        {payoutSummary.bankAccount.bankName} · {payoutSummary.bankAccount.accountNumber}
+                        {payoutSummary.bankAccount.verified ? (
+                          <Badge variant="positive">Verified</Badge>
+                        ) : (
+                          <Badge variant="warning">Not verified</Badge>
+                        )}
+                      </span>
+                    ) : (
+                      <Badge variant="warning">Not set</Badge>
+                    ),
+                  },
+                  { label: 'Account name', value: payoutSummary.bankAccount?.accountName || '—' },
+                  {
+                    label: 'In flight',
+                    value: payoutSummary.inFlight ? (
+                      <Link
+                        href={`/payouts/${payoutSummary.inFlight._id}`}
+                        className="inline-flex items-center gap-2 hover:text-primary"
+                      >
+                        {naira(payoutSummary.inFlight.amount)}
+                        <Badge variant={payoutStatusVariant(payoutSummary.inFlight.status)}>
+                          {payoutStatusLabel(payoutSummary.inFlight.status)}
+                        </Badge>
+                      </Link>
+                    ) : (
+                      'Nothing in flight'
+                    ),
+                  },
+                  {
+                    label: 'Paid to date',
+                    value: `${naira(payoutSummary.totalPaid)} · ${payoutSummary.payoutsCount} ${payoutSummary.payoutsCount === 1 ? 'payout' : 'payouts'}`,
+                  },
+                ]}
+              />
+              {payoutSummary.bankAccount && !payoutSummary.bankAccount.verified && (
+                <InlineNotice>
+                  This account was saved before bank verification, so automatic payouts skip it. The
+                  courier needs to re-save it in the app.
+                </InlineNotice>
+              )}
+              <Link
+                href={`/payouts?rider=${rider._id}`}
+                className="text-[13.5px] font-medium text-primary hover:text-warning"
+              >
+                Payout history
+              </Link>
+            </Panel>
+          )}
+
+          <Panel title="Wallet funding account">
+            <RiderCollectionAccountCard
+              riderId={rider._id}
+              account={collectionAccount}
+              canUpdate={canUpdateRider}
+            />
+          </Panel>
+
+          <Panel title="Verification documents">
+            <RiderDocuments documents={rider.documents} />
+          </Panel>
+        </div>
+      </section>
+    </PageStack>
   );
 }

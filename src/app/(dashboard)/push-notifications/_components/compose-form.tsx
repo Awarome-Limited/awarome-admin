@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { AdminAudienceList } from '@/lib/types';
 import { AUDIENCE_LABELS, MESSAGE_MAX as MAX_BODY } from '@/lib/scheduled-push';
 import type { BroadcastPushPayload, BroadcastResult } from '../actions';
+import { RadioCards } from '@/components/radio-cards';
 
 const AUDIENCE_OPTIONS: BroadcastPushPayload['audience'][] = [
   'everyone',
@@ -22,8 +23,7 @@ const REACH_LABELS: Record<BroadcastPushPayload['audience'], string> = {
   list: 'Selected audience list',
 };
 
-const inputClass =
-  'w-full rounded-[10px] border border-input bg-background px-[14px] py-[11px] text-[14px] text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50';
+const inputClass = 'field';
 
 export function ComposeForm({
   action,
@@ -97,10 +97,8 @@ export function ComposeForm({
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-[18px]">
-      <label className="flex flex-col gap-[7px]">
-        <span className="text-[13px] font-medium text-foreground-secondary">
-          Title <span className="text-destructive">*</span>
-        </span>
+      <label className="flex flex-col gap-2">
+        <span className="text-[13.5px] font-medium">Title</span>
         <input
           name="title"
           value={title}
@@ -112,12 +110,10 @@ export function ComposeForm({
         />
       </label>
 
-      <label className="flex flex-col gap-[7px]">
+      <label className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <span className="text-[13px] font-medium text-foreground-secondary">
-            Message <span className="text-destructive">*</span>
-          </span>
-          <span className="tabular-nums text-[11.5px] text-muted-foreground">
+          <span className="text-[13.5px] font-medium">Message</span>
+          <span className="text-[12.5px] text-muted-foreground tabular-nums">
             {body.length} / {MAX_BODY}
           </span>
         </div>
@@ -129,47 +125,28 @@ export function ComposeForm({
           required
           maxLength={MAX_BODY}
           rows={4}
-          className="w-full resize-y rounded-[10px] border border-input bg-background px-[14px] py-3 text-[14px] leading-[1.5] text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+          className="field-area w-full resize-y"
           style={{ minHeight: '104px' }}
         />
       </label>
 
-      <div className="flex flex-col gap-[7px]">
-        <span className="text-[13px] font-medium text-foreground-secondary">Audience</span>
-        <div className="relative">
-          <select
-            name="audience"
-            value={audience}
-            onChange={(e) =>
-              setAudience(e.target.value as BroadcastPushPayload['audience'])
-            }
-            className="w-full cursor-pointer appearance-none rounded-[10px] border border-input bg-background py-[11px] pl-[14px] pr-10 text-[14px] text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
-          >
-            {AUDIENCE_OPTIONS.map((value) => (
-              <option key={value} value={value}>
-                {AUDIENCE_LABELS[value]}
-              </option>
-            ))}
-          </select>
-          <svg
-            className="pointer-events-none absolute right-[13px] top-1/2 -translate-y-1/2 text-muted-foreground"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        </div>
+      <div className="flex flex-col gap-2.5">
+        <span className="text-[13.5px] font-medium">Audience</span>
+        <RadioCards
+          name="audience"
+          value={audience}
+          onChange={setAudience}
+          options={AUDIENCE_OPTIONS.map((value) => ({
+            value,
+            label: AUDIENCE_LABELS[value],
+            meta: REACH_LABELS[value],
+          }))}
+        />
       </div>
 
       {audience === 'list' && (
-        <div className="flex flex-col gap-[7px]">
-          <span className="text-[13px] font-medium text-foreground-secondary">List</span>
+        <div className="flex flex-col gap-2">
+          <span className="text-[13.5px] font-medium">List</span>
           {audienceLists.length === 0 ? (
             <p className="text-[13px] text-muted-foreground">
               No lists yet. Create one in the Audience lists section below.
@@ -178,7 +155,7 @@ export function ComposeForm({
             <div className="relative">
               <select
                 name="audienceListId"
-                className="w-full cursor-pointer appearance-none rounded-[10px] border border-input bg-background py-[11px] pl-[14px] pr-10 text-[14px] text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+                className="field w-full cursor-pointer appearance-none pl-[14px] pr-10"
               >
                 <option value="">— Select a list —</option>
                 {audienceLists.map((l) => (
@@ -206,7 +183,7 @@ export function ComposeForm({
       )}
 
       {result && (
-        <div className="rounded-[10px] border border-border bg-muted/40 px-4 py-3 text-[13px]">
+        <div className="rounded-[8px] bg-muted px-4 py-3 text-[13.5px]">
           <span className="font-medium text-foreground">Last broadcast: </span>
           <span className="text-muted-foreground">
             {result.sent} sent · {result.failed} failed · {result.total} devices targeted
@@ -214,12 +191,14 @@ export function ComposeForm({
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-3 border-t border-border pt-[18px]">
-        <span className="text-[12px] text-muted-foreground">{REACH_LABELS[audience]}</span>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-[18px]">
+        <span className="text-[13.5px] text-foreground-secondary">
+          Goes to <strong className="font-semibold text-foreground">{REACH_LABELS[audience].toLowerCase()}</strong>
+        </span>
         <button
           type="submit"
           disabled={isPending}
-          className="inline-flex items-center gap-2 whitespace-nowrap rounded-[10px] bg-primary px-5 py-[11px] text-[13.5px] font-semibold text-primary-foreground shadow-[var(--shadow-card)] transition-all hover:brightness-110 disabled:opacity-50"
+          className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-[14px] font-medium whitespace-nowrap text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           <svg
             width="15"

@@ -218,7 +218,7 @@ function DocumentLightbox({
               href={entry.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 self-start text-[13px] font-semibold text-primary hover:underline"
+              className="inline-flex items-center gap-1.5 self-start text-[13px] font-semibold text-primary hover:text-warning"
             >
               <ExternalLinkIcon className="size-3.5" />
               Open full size in a new tab

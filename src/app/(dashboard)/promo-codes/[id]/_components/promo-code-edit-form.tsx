@@ -1,7 +1,6 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/submit-button';
+import { SaveBar } from '@/components/save-bar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AdminPromoCode } from '@/lib/types';
@@ -9,7 +8,7 @@ import { useEditForm } from '@/lib/use-edit-form';
 import { updatePromoCode } from '../../actions';
 
 const selectClass =
-  'h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50';
+  'field pr-9';
 
 interface FormState {
   code: string;
@@ -24,7 +23,7 @@ interface FormState {
 }
 
 export function PromoCodeEditForm({ promo }: { promo: AdminPromoCode }) {
-  const { values, set, submit, isPending } = useEditForm<FormState>(
+  const { values, set, submit, isPending, dirty, reset } = useEditForm<FormState>(
     {
       code: promo.code ?? '',
       discountType: promo.discountType ?? 'percentage',
@@ -131,21 +130,13 @@ export function PromoCodeEditForm({ promo }: { promo: AdminPromoCode }) {
           onChange={(description) => set({ description })}
         />
       </div>
-      <Button
-        type="button"
-        className="self-start"
-        onClick={() => submit()}
-        disabled={isPending}
-      >
-        {isPending ? (
-          <>
-            <Spinner />
-            Saving…
-          </>
-        ) : (
-          'Save changes'
-        )}
-      </Button>
+      <SaveBar
+        dirty={dirty}
+        saving={isPending}
+        label="Unsaved promo code changes"
+        onDiscard={reset}
+        onSave={() => submit()}
+      />
     </div>
   );
 }

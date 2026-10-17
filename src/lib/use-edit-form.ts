@@ -67,5 +67,10 @@ export function useEditForm<T extends Record<string, unknown>>(
     });
   };
 
-  return { values, set, submit, isPending };
+  // Drives the floating save bar: it shows only while the form differs from
+  // what the API stored.
+  const dirty = JSON.stringify(values) !== seed;
+  const reset = () => setValues(record);
+
+  return { values, set, submit, isPending, dirty, reset };
 }

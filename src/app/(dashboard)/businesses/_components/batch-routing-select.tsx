@@ -20,7 +20,7 @@ export function BatchRoutingSelect({ businessId, value }: { businessId: string; 
           else toast.error(result.error);
         });
       }}
-      className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
+      className="field pr-9"
     >
       <option value="same_route">Same route only</option>
       <option value="any_route">Any route</option>

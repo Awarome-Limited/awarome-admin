@@ -102,7 +102,7 @@ export function AssignBatchDialog({
               id="assign-batch-rider"
               value={riderId}
               onChange={(event) => setRiderId(event.target.value)}
-              className="h-9 rounded-[9px] border border-border-strong bg-card px-3 text-[13px] font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              className="field font-medium pr-9"
               autoFocus
             >
               <option value="">Pick a courier…</option>

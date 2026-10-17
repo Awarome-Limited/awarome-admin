@@ -10,8 +10,10 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { formatDate } from '@/lib/format';
-import { cn } from '@/lib/utils';
+import { formatDate, formatPhone, humanize } from '@/lib/format';
+import { StatStrip } from '@/components/stat-strip';
+import { SegmentedLinks } from '@/components/segmented';
+import { EmptyRow, InlineNotice, ListCard, PageHeader, PageStack } from '@/components/page';
 import { DropMoney, ResolveTicketDialog } from './_components/resolve-ticket-dialog';
 
 interface Party {
@@ -104,7 +106,7 @@ const STAGES: Record<string, string> = {
 };
 
 const naira = (amount?: number | null) =>
-  amount == null ? '—' : `₦${amount.toLocaleString('en-NG', { maximumFractionDigits: 2 })}`;
+  amount == null ? '—' : `₦ ${amount.toLocaleString('en-NG', { maximumFractionDigits: 2 })}`;
 
 function partyName(p?: Party | string) {
   if (!p || typeof p === 'string') return '—';
@@ -154,76 +156,71 @@ export default async function SupportTicketsPage({
   const hrefFor = (filter: string, type?: string) =>
     `/support-tickets?filter=${filter}${type ? `&type=${type}` : ''}`;
 
+  const openTotal = Object.values(open).reduce((a, b) => a + b, 0);
+  const waitingAtDoor = DECISION_TYPES.reduce((sum, key) => sum + (open[key] ?? 0), 0);
+
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[23px] font-bold tracking-tight text-foreground">
-            Support tickets
-          </h1>
-          <p className="mt-1 max-w-[70ch] text-[14px] text-muted-foreground">
-            Concerns riders raise from a run. Cash and amount-change requests
-            hold the drop until you answer, because the rider is waiting at the door.
-            Everything is also posted to #support-tickets. Post-pickup
-            cancellations have their own{' '}
-            <Link href="/cancellations" className="text-primary hover:underline">
+    <PageStack>
+      <PageHeader
+        title="Support tickets"
+        subtitle={
+          <>
+            Concerns riders raise from a run. Cash and amount-change requests hold the drop until you answer.
+            Post-pickup cancellations have their own{' '}
+            <Link href="/cancellations" className="text-primary hover:text-warning">
               queue
             </Link>
             .
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {FILTERS.map((f) => (
-            <Link
-              key={f.key}
-              href={hrefFor(f.key, activeType)}
-              className={cn(
-                'rounded-[9px] border px-3.5 py-[7px] text-[13px] font-semibold transition-colors',
-                activeFilter === f.key
-                  ? 'border-transparent bg-brand-tint text-primary'
-                  : 'border-border-strong bg-card text-foreground-secondary hover:bg-muted'
-              )}
-            >
-              {f.label}
-              {f.key === 'open' && Object.values(open).reduce((a, b) => a + b, 0) > 0 && (
-                <span className="ml-1.5 tabular-nums">
-                  ({Object.values(open).reduce((a, b) => a + b, 0)})
-                </span>
-              )}
-            </Link>
-          ))}
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Link
-          href={hrefFor(activeFilter)}
-          className={cn(
-            'rounded-full border px-3 py-1 text-[12.5px] font-medium',
-            !activeType ? 'border-transparent bg-muted text-foreground' : 'border-border text-muted-foreground hover:bg-muted'
-          )}
-        >
-          All types
-        </Link>
-        {Object.entries(TYPES).map(([key, t]) => (
-          <Link
-            key={key}
-            href={hrefFor(activeFilter, key)}
-            className={cn(
-              'rounded-full border px-3 py-1 text-[12.5px] font-medium',
-              activeType === key
-                ? 'border-transparent bg-muted text-foreground'
-                : 'border-border text-muted-foreground hover:bg-muted'
-            )}
-          >
-            {t.label}
-            {open[key] ? <span className="ml-1 tabular-nums">· {open[key]}</span> : null}
-          </Link>
-        ))}
-      </div>
+      <StatStrip
+        stats={[
+          { label: 'Open tickets', value: openTotal.toLocaleString() },
+          { label: 'Cash requests', value: (open['cash-payment'] ?? 0).toLocaleString(), meta: 'Rider waiting at the door' },
+          { label: 'Amount changes', value: (open['amount-change'] ?? 0).toLocaleString(), meta: 'Rider waiting at the door' },
+          {
+            label: 'Address or package',
+            value: ((open['address-issue'] ?? 0) + (open['package-issue'] ?? 0) + (open.other ?? 0)).toLocaleString(),
+          },
+        ]}
+      />
 
-      <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="overflow-x-auto">
+      {waitingAtDoor > 0 && activeFilter !== 'open' && (
+        <InlineNotice action={<Link href={hrefFor('open')}>Answer them</Link>}>
+          {waitingAtDoor === 1 ? '1 rider is' : `${waitingAtDoor} riders are`} waiting at a door for a cash or
+          amount-change decision.
+        </InlineNotice>
+      )}
+
+      <ListCard
+        toolbar={
+          <>
+            <SegmentedLinks
+              active={activeFilter}
+              items={FILTERS.map((f) => ({
+                key: f.key,
+                label: f.label,
+                href: hrefFor(f.key, activeType),
+                count: f.key === 'open' && openTotal > 0 ? openTotal : undefined,
+              }))}
+            />
+            <SegmentedLinks
+              active={activeType ?? 'all'}
+              items={[
+                { key: 'all', label: 'All types', href: hrefFor(activeFilter) },
+                ...Object.entries(TYPES).map(([key, t]) => ({
+                  key,
+                  label: t.label,
+                  href: hrefFor(activeFilter, key),
+                  count: open[key] || undefined,
+                })),
+              ]}
+            />
+          </>
+        }
+      >
           <Table>
             <TableHeader>
               <TableRow>
@@ -240,11 +237,11 @@ export default async function SupportTicketsPage({
             </TableHeader>
             <TableBody>
               {tickets.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
-                    {isOpen ? 'Nothing waiting. No rider needs an answer.' : 'Nothing here yet.'}
-                  </TableCell>
-                </TableRow>
+                <EmptyRow
+                  colSpan={7}
+                  title={isOpen ? 'Nothing waiting' : 'Nothing here yet'}
+                  body={isOpen ? 'No rider needs an answer right now.' : 'Answered tickets show up here.'}
+                />
               )}
               {tickets.map((ticket) => {
                 const type = TYPES[ticket.type] ?? { label: ticket.type, variant: 'secondary' as const };
@@ -261,9 +258,7 @@ export default async function SupportTicketsPage({
                   <TableRow key={ticket._id}>
                     <TableCell>
                       <div className="flex flex-col gap-1">
-                        <span className="font-mono text-[12.5px] font-semibold">
-                          {ticket.reference}
-                        </span>
+                        <span className="font-medium tabular-nums">{ticket.reference}</span>
                         <Badge variant={type.variant}>{type.label}</Badge>
                       </div>
                     </TableCell>
@@ -272,18 +267,18 @@ export default async function SupportTicketsPage({
                         {jobId ? (
                           <Link
                             href={`/${ticket.jobType === 'order' ? 'orders' : 'deliveries'}/${jobId}`}
-                            className="font-medium hover:underline"
+                            className="font-medium tabular-nums hover:text-primary"
                           >
                             {reference}
                           </Link>
                         ) : (
                           <span>{reference || '—'}</span>
                         )}
-                        <span className="text-[12px] text-muted-foreground">
+                        <span className="text-[12.5px] text-muted-foreground">
                           {business ? partyName(business) : ticket.jobType === 'order' ? 'Marketplace' : 'Delivery'}
                           {(delivery?.batchId || order?.batchId) && ` · batch ${delivery?.batchId || order?.batchId}`}
                         </span>
-                        <span className="text-[12px] text-muted-foreground">
+                        <span className="text-[12.5px] text-muted-foreground">
                           {STAGES[ticket.atStatus || ''] || ticket.atStatus || ''}
                         </span>
                       </div>
@@ -292,8 +287,8 @@ export default async function SupportTicketsPage({
                       <div className="flex flex-col gap-0.5">
                         <span>{partyName(rider ?? undefined)}</span>
                         {rider?.phone && (
-                          <a href={`tel:${rider.phone}`} className="text-[12px] text-primary hover:underline">
-                            {rider.phone}
+                          <a href={`tel:${rider.phone}`} className="text-[12.5px] text-primary tabular-nums hover:text-warning">
+                            {formatPhone(rider.phone)}
                           </a>
                         )}
                       </div>
@@ -304,9 +299,9 @@ export default async function SupportTicketsPage({
                         {delivery?.receiver?.phone && (
                           <a
                             href={`tel:${delivery.receiver.phone}`}
-                            className="text-[12px] text-primary hover:underline"
+                            className="text-[12.5px] text-primary tabular-nums hover:text-warning"
                           >
-                            {delivery.receiver.phone}
+                            {formatPhone(delivery.receiver.phone)}
                           </a>
                         )}
                       </div>
@@ -314,34 +309,34 @@ export default async function SupportTicketsPage({
                     <TableCell>
                       <div className="flex max-w-[34ch] flex-col gap-0.5">
                         {ticket.type === 'cash-payment' && (
-                          <span className="font-semibold tabular-nums">
+                          <span className="font-medium tabular-nums">
                             {naira(ticket.amountAtRaise)} in cash
                           </span>
                         )}
                         {ticket.type === 'amount-change' && (
-                          <span className="font-semibold tabular-nums">
+                          <span className="font-medium tabular-nums">
                             Collecting {naira(ticket.amountAtRaise)}
                             {isOpen && (
-                              <span className="block text-[12px] font-normal text-muted-foreground">
+                              <span className="block text-[12.5px] font-normal text-muted-foreground">
                                 Agree the new price with the receiver and the business
                               </span>
                             )}
                           </span>
                         )}
                         {ticket.note && (
-                          <span className="text-[12px] text-muted-foreground">“{ticket.note}”</span>
+                          <span className="text-[12.5px] text-muted-foreground">“{ticket.note}”</span>
                         )}
                         {!isOpen && ticket.resolutionNote && (
-                          <span className="text-[12px] text-muted-foreground">
+                          <span className="text-[12.5px] text-muted-foreground">
                             Ops: {ticket.resolutionNote}
                           </span>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="whitespace-nowrap text-foreground-secondary tabular-nums">
                       {formatDate(isOpen ? ticket.createdAt : ticket.resolvedAt)}
                       {!isOpen && ticket.resolvedBy && (
-                        <div className="text-[12px]">by {partyName(ticket.resolvedBy)}</div>
+                        <div className="text-[12.5px] text-muted-foreground">by {partyName(ticket.resolvedBy)}</div>
                       )}
                     </TableCell>
                     <TableCell>
@@ -380,12 +375,12 @@ export default async function SupportTicketsPage({
                             }
                             dot
                           >
-                            {ticket.status}
+                            {humanize(ticket.status)}
                           </Badge>
                           {ticket.type === 'amount-change' &&
                             ticket.status === 'approved' &&
                             ticket.appliedCollectKobo != null && (
-                              <span className="text-[12px] tabular-nums text-muted-foreground">
+                              <span className="text-[12.5px] text-muted-foreground tabular-nums">
                                 Now {naira(ticket.appliedCollectKobo / 100)}
                               </span>
                             )}
@@ -397,8 +392,7 @@ export default async function SupportTicketsPage({
               })}
             </TableBody>
           </Table>
-        </div>
-      </div>
-    </div>
+      </ListCard>
+    </PageStack>
   );
 }

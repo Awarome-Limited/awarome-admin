@@ -14,11 +14,12 @@ const STATUS_VARIANTS: Record<
   BatchStatus,
   'positive' | 'warning' | 'info' | 'destructive' | 'secondary'
 > = {
+  // Stages are indigo; only outcomes that need someone get orange or red.
   offered: 'info',
-  assigned: 'warning',
-  'in-progress': 'warning',
+  assigned: 'info',
+  'in-progress': 'info',
   completed: 'positive',
-  partial: 'destructive',
+  partial: 'warning',
   dissolved: 'secondary',
   unassigned: 'destructive',
 };

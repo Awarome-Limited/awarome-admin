@@ -113,7 +113,7 @@ export function ResolveDialog({
                 <Label htmlFor={`refund-${id}`}>Owe the customer a refund</Label>
                 <span className="text-[12.5px] text-muted-foreground">
                   {isPaid
-                    ? `Adds ₦${amount.toLocaleString()} to the refunds queue. The money still gets moved by hand there.`
+                    ? `Adds ₦ ${amount.toLocaleString()} to the refunds queue. The money still gets moved by hand there.`
                     : 'This run was never paid for, so there is nothing to refund.'}
                 </span>
               </div>

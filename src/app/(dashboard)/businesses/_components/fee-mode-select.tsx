@@ -20,7 +20,7 @@ export function FeeModeSelect({ businessId, value }: { businessId: string; value
           else toast.error(result.error);
         });
       }}
-      className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
+      className="field pr-9"
     >
       <option value="inclusive">Included in amount collected</option>
       <option value="added">Added on top of item price</option>

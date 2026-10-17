@@ -39,7 +39,7 @@ const staffName = (s?: VendorCommission['createdBy']) =>
   s ? [s.firstName, s.lastName].filter(Boolean).join(' ') || s.email || 'Staff' : '—';
 
 const inputClass =
-  'h-9 rounded-[9px] border border-border-strong bg-card px-3 text-[13px] font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-ring';
+  'field';
 
 /**
  * The commercial terms a vendor is paid on. Each agreement is a percentage
@@ -59,10 +59,10 @@ export function VendorCommissions({
   const current = agreements.find((a) => a.active);
 
   return (
-    <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
+    <div className="overflow-hidden rounded-[10px] border border-border bg-card">
       <div className="flex flex-wrap items-start justify-between gap-3 px-5 pb-3 pt-[18px]">
         <div>
-          <div className="text-[15px] font-semibold text-foreground">Commission</div>
+          <div className="font-heading text-[17px] font-bold tracking-[-0.03em] text-foreground">Commission</div>
           <p className="mt-1 max-w-xl text-[13px] text-muted-foreground">
             {current
               ? current.percent === 0

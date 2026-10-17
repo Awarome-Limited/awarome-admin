@@ -15,16 +15,26 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { formatDate, statusBadgeVariant } from '@/lib/format';
-import { cn } from '@/lib/utils';
+import { formatDate, humanize, statusBadgeVariant } from '@/lib/format';
+import { StatStrip } from '@/components/stat-strip';
+import { SegmentedLinks } from '@/components/segmented';
+import {
+  EmptyRow,
+  ListCard,
+  PageHeader,
+  PageStack,
+  RowChevron,
+  RowLink,
+  ToolbarEnd,
+} from '@/components/page';
 
 const LIMIT = 20;
 
 const FILTERS = [
   { key: 'all', label: 'All' },
-  { key: 'pending', label: 'Pending' },
-  { key: 'initialized', label: 'Initialized' },
-  { key: 'delivered', label: 'Delivered' },
+  { key: 'pending', label: 'Pending payment' },
+  { key: 'initialized', label: 'Checkout started' },
+  { key: 'delivered', label: 'Confirmed' },
   { key: 'failed', label: 'Failed' },
   { key: 'bulk', label: 'Bulk' },
 ] as const;
@@ -37,8 +47,8 @@ function filterToQuery(filter: string): Record<string, string> {
 }
 
 function customerName(user: AdminDelivery['user']) {
-  if (!user || typeof user === 'string') return user || '—';
-  return [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || '—';
+  if (!user || typeof user === 'string') return user || 'No name yet';
+  return [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || 'No name yet';
 }
 
 async function safeCount(url: string): Promise<number> {
@@ -92,134 +102,52 @@ export default async function DeliveriesPage({
   }
 
   const chips = [
-    { label: 'Total deliveries', value: totalDeliveriesCount.toLocaleString() },
-    { label: 'Pending', value: pendingCount.toLocaleString() },
-    { label: 'Initialized', value: initializedCount.toLocaleString() },
-    { label: 'Completed', value: completedCount.toLocaleString() },
+    { label: 'All deliveries', value: totalDeliveriesCount.toLocaleString() },
+    { label: 'Pending payment', value: pendingCount.toLocaleString() },
+    { label: 'Checkout started', value: initializedCount.toLocaleString() },
+    { label: 'Confirmed', value: completedCount.toLocaleString() },
   ];
 
+  const tabHref = (key: string) => {
+    const p = new URLSearchParams();
+    if (search) p.set('search', search);
+    if (channel) p.set('channel', channel);
+    if (key !== 'all') p.set('filter', key);
+    const q = p.toString();
+    return `/deliveries${q ? `?${q}` : ''}`;
+  };
+  const tabCounts: Record<string, number> = {
+    all: totalDeliveriesCount,
+    pending: pendingCount,
+    initialized: initializedCount,
+    delivered: completedCount,
+  };
+
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-[23px] font-bold tracking-tight text-foreground">Deliveries</h1>
-        <p className="mt-1 text-[14px] text-muted-foreground">Standalone delivery requests</p>
-      </div>
+    <PageStack>
+      <PageHeader title="Deliveries" subtitle="Standalone package deliveries, from the apps, the web, partners and bulk bookings." />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {chips.map((chip) => (
-          <div
-            key={chip.label}
-            className="flex flex-col gap-1 rounded-[12px] border border-border bg-card p-[13px_16px] shadow-[var(--shadow-card)]"
-          >
-            <span className="text-[12px] font-medium text-muted-foreground">{chip.label}</span>
-            <span className="text-[20px] font-bold tabular-nums text-foreground">{chip.value}</span>
-          </div>
-        ))}
-      </div>
+      <StatStrip stats={chips} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {FILTERS.map((f) => {
-            const active = activeFilter === f.key;
-            const href = (() => {
-              const p = new URLSearchParams();
-              if (search) p.set('search', search);
-              if (f.key !== 'all') p.set('filter', f.key);
-              const s = p.toString();
-              return `/deliveries${s ? `?${s}` : ''}`;
-            })();
-            return (
-              <Link
-                key={f.key}
-                href={href}
-                className={cn(
-                  'rounded-[9px] border px-3.5 py-[7px] text-[13px] font-semibold transition-colors',
-                  active
-                    ? 'border-transparent bg-brand-tint text-primary'
-                    : 'border-border-strong bg-card text-foreground-secondary hover:bg-muted'
-                )}
-              >
-                {f.label}
-              </Link>
-            );
-          })}
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="inline-flex h-[34px] items-center gap-1.5 rounded-[9px] border border-border-strong bg-card px-3.5 text-[13px] font-semibold text-foreground-secondary hover:bg-muted"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
-            </svg>
-            Export
-          </button>
-          <ChannelFilter />
-          <SearchBox placeholder="Search by delivery ID…" />
-        </div>
-      </div>
-
-      <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Delivery ID</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Channel</TableHead>
-                <TableHead className="text-right">Fee</TableHead>
-                <TableHead>Date</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {result.data.map((delivery) => (
-                <TableRow key={delivery._id} className="cursor-pointer">
-                  <TableCell>
-                    <Link
-                      href={`/deliveries/${delivery._id}`}
-                      className="rounded bg-chip px-2 py-0.5 font-mono text-xs hover:underline"
-                    >
-                      {delivery.deliveryId}
-                    </Link>
-                    {delivery.bulk && typeof delivery.bulk !== 'string' && (
-                      <Link href={`/bulk-deliveries/${delivery.bulk._id}`} className="ml-1.5">
-                        <Badge variant="info">Bulk</Badge>
-                      </Link>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-medium">{customerName(delivery.user)}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {[delivery.requestType, delivery.deliveryOption].filter(Boolean).join(' · ') || '—'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={statusBadgeVariant(delivery.status)} dot>
-                      {delivery.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <ChannelBadge channel={delivery.channel as Channel | undefined} />
-                  </TableCell>
-                  <TableCell className="text-right font-semibold tabular-nums">
-                    ₦{(delivery.deliveryFee ?? 0).toLocaleString()}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDate(delivery.createdAt).split(',')[0]}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {result.data.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
-                    No deliveries found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="border-t border-border px-4 py-3">
+      <ListCard
+        toolbar={
+          <>
+            <SegmentedLinks
+              active={activeFilter}
+              items={FILTERS.map((f) => ({
+                key: f.key,
+                label: f.label,
+                href: tabHref(f.key),
+                count: tabCounts[f.key]?.toLocaleString(),
+              }))}
+            />
+            <ChannelFilter />
+            <ToolbarEnd>
+              <SearchBox placeholder="Delivery ID" />
+            </ToolbarEnd>
+          </>
+        }
+        footer={
           <PaginationControls
             skip={skip}
             limit={LIMIT}
@@ -227,8 +155,70 @@ export default async function DeliveriesPage({
             basePath="/deliveries"
             searchParams={params}
           />
-        </div>
-      </div>
-    </div>
+        }
+      >
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Delivery</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Route</TableHead>
+              <TableHead>Payment</TableHead>
+              <TableHead>Channel</TableHead>
+              <TableHead className="text-right">Fee</TableHead>
+              <TableHead className="w-12" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {result.data.map((delivery) => (
+              <TableRow key={delivery._id} className="relative">
+                <TableCell className="tabular-nums">
+                  <div className="flex items-center gap-2">
+                    <RowLink href={`/deliveries/${delivery._id}`}>{delivery.deliveryId}</RowLink>
+                    {delivery.bulk && typeof delivery.bulk !== 'string' && (
+                      <Link href={`/bulk-deliveries/${delivery.bulk._id}`} className="relative z-10">
+                        <Badge variant="info">Bulk</Badge>
+                      </Link>
+                    )}
+                  </div>
+                  <div className="text-[12.5px] whitespace-nowrap text-muted-foreground">
+                    {formatDate(delivery.createdAt)}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div>{customerName(delivery.user)}</div>
+                  <div className="text-[12.5px] text-muted-foreground">
+                    {[delivery.requestType, delivery.deliveryOption].filter(Boolean).map(humanize).join(' · ') || '—'}
+                  </div>
+                </TableCell>
+                <TableCell className="max-w-[260px]">
+                  <div className="truncate text-foreground-secondary">{delivery.pickupAddress?.address || '—'}</div>
+                  <div className="truncate text-[12.5px] text-muted-foreground">
+                    to {delivery.dropoffAddress?.address || '—'}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={statusBadgeVariant(delivery.status)} dot>
+                    {humanize(delivery.status)}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <ChannelBadge channel={delivery.channel as Channel | undefined} />
+                </TableCell>
+                <TableCell className="text-right font-medium tabular-nums">
+                  ₦ {(delivery.deliveryFee ?? 0).toLocaleString()}
+                </TableCell>
+                <TableCell>
+                  <RowChevron />
+                </TableCell>
+              </TableRow>
+            ))}
+            {result.data.length === 0 && (
+              <EmptyRow colSpan={7} title="No deliveries match" body="Clear the search, channel or tab." />
+            )}
+          </TableBody>
+        </Table>
+      </ListCard>
+    </PageStack>
   );
 }

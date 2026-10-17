@@ -12,23 +12,25 @@ import {
   type TooltipContentProps,
   type TooltipValueType,
 } from 'recharts';
+import { useState } from 'react';
 import type { AnalyticsTrendPoint } from '@/lib/types';
+import { segmentItem, segmentTrack } from '@/components/segmented';
 
 type Metric = 'revenue' | 'jobs';
 
-// The two series colours are validated as a pair (light and dark) for
-// colour-blind separation. The comparison line is neutral ink, not a third hue.
+// Series 1 is brand indigo, series 2 the orange accent (DESIGN.md "Charts").
+// The comparison line is neutral dashed ink, not a third hue.
 const SERIES: Record<
   Metric,
   { key: keyof AnalyticsTrendPoint; label: string; color: string }[]
 > = {
   revenue: [
     { key: 'orderRevenue', label: 'Orders', color: 'var(--chart-1)' },
-    { key: 'deliveryRevenue', label: 'Deliveries', color: 'var(--chart-4)' },
+    { key: 'deliveryRevenue', label: 'Deliveries', color: 'var(--chart-2)' },
   ],
   jobs: [
     { key: 'orders', label: 'Orders', color: 'var(--chart-1)' },
-    { key: 'deliveries', label: 'Deliveries', color: 'var(--chart-4)' },
+    { key: 'deliveries', label: 'Deliveries', color: 'var(--chart-2)' },
   ],
 };
 
@@ -44,17 +46,17 @@ const PREVIOUS: Record<Metric, keyof AnalyticsTrendPoint> = {
 
 const PREVIOUS_COLOR = 'var(--muted-foreground)';
 
-const naira = (value: number) => `₦${Math.round(value).toLocaleString()}`;
+const naira = (value: number) => `₦ ${Math.round(value).toLocaleString()}`;
 
 function compactNaira(value: number) {
-  if (value >= 1_000_000) return `₦${+(value / 1_000_000).toFixed(1)}m`;
-  if (value >= 1_000) return `₦${+(value / 1_000).toFixed(1)}k`;
-  return `₦${value}`;
+  if (value >= 1_000_000) return `₦ ${+(value / 1_000_000).toFixed(1)}m`;
+  if (value >= 1_000) return `₦ ${+(value / 1_000).toFixed(1)}k`;
+  return `₦ ${value}`;
 }
 
-export function TrendLegend({ metric }: { metric: Metric }) {
+export function TrendLegend({ metric, previousLabel }: { metric: Metric; previousLabel?: string }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 text-[12px] text-muted-foreground">
+    <div className="flex flex-wrap items-center gap-4 text-[12.5px] text-foreground-secondary">
       {SERIES[metric].map((s) => (
         <span key={s.key} className="inline-flex items-center gap-1.5">
           <span className="size-[9px] rounded-[3px]" style={{ background: s.color }} />
@@ -65,8 +67,44 @@ export function TrendLegend({ metric }: { metric: Metric }) {
         <svg width="14" height="4" aria-hidden>
           <line x1="0" y1="2" x2="14" y2="2" stroke={PREVIOUS_COLOR} strokeWidth="2" strokeDasharray="3 2" />
         </svg>
-        Previous range
+        {previousLabel ?? 'Previous range'}
       </span>
+    </div>
+  );
+}
+
+const METRICS: { key: Metric; label: string }[] = [
+  { key: 'revenue', label: 'Revenue' },
+  { key: 'jobs', label: 'Paid jobs' },
+];
+
+/** One chart card with a metric switch, rather than a card per metric. */
+export function TrendCard({
+  data,
+  previousLabel,
+}: {
+  data: AnalyticsTrendPoint[];
+  previousLabel: string;
+}) {
+  const [metric, setMetric] = useState<Metric>('revenue');
+  return (
+    <div className="flex min-w-0 flex-col gap-[18px] rounded-[10px] border border-border bg-card px-6 py-[22px]">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className={segmentTrack}>
+          {METRICS.map((m) => (
+            <button
+              key={m.key}
+              type="button"
+              onClick={() => setMetric(m.key)}
+              className={segmentItem(metric === m.key, 'sm')}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+        <TrendLegend metric={metric} previousLabel={previousLabel} />
+      </div>
+      <TrendChart data={data} metric={metric} height={260} />
     </div>
   );
 }
@@ -99,7 +137,7 @@ export function TrendChart({
     const point = payload[0].payload as AnalyticsTrendPoint;
 
     return (
-      <div className="min-w-[180px] rounded-[10px] border border-border bg-popover px-3 py-2.5 text-[12px] shadow-[var(--shadow-card)]">
+      <div className="min-w-[180px] rounded-[8px] border border-border bg-popover px-3 py-2.5 text-[12px] shadow-[0_8px_24px_rgba(18,4,96,0.12)]">
         <div className="mb-1.5 font-semibold text-foreground">{label}</div>
         {SERIES[metric].map((s) => (
           <div key={s.key} className="flex items-center justify-between gap-4 py-0.5">
@@ -127,7 +165,7 @@ export function TrendChart({
   return (
     <ResponsiveContainer width="100%" height={height}>
       <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barCategoryGap="18%">
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+        <CartesianGrid vertical={false} stroke="var(--border)" />
         <XAxis
           dataKey="label"
           tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}

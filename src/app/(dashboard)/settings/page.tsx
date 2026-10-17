@@ -1,8 +1,11 @@
 import { getSession } from '@/lib/session';
 import { redirect } from 'next/navigation';
 import { ChangePasswordForm } from './_components/change-password-form';
+import { AvatarInitials } from '@/components/avatar-initials';
+import { FactList, PageHeader, PageStack, Panel } from '@/components/page';
+import { ROLE_LABELS } from '@/lib/staff-roles';
 
-export const metadata = { title: 'Settings — Awarome Admin' };
+export const metadata = { title: 'Settings · Awarome Admin' };
 
 export default async function SettingsPage() {
   const session = await getSession();
@@ -11,57 +14,32 @@ export default async function SettingsPage() {
   const { profile } = session;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-[22px] font-bold tracking-tight text-foreground">Settings</h1>
-        <p className="mt-1 text-[13.5px] text-muted-foreground">Manage your account preferences.</p>
-      </div>
+    <PageStack>
+      <PageHeader title="Settings" subtitle="Your staff account and password." />
 
-      {/* Profile card */}
-      <section className="rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="border-b border-border px-6 py-4">
-          <h2 className="text-[14.5px] font-semibold text-foreground">Profile</h2>
-        </div>
-        <div className="grid grid-cols-1 gap-4 px-6 py-5 sm:grid-cols-2">
-          <div className="flex flex-col gap-[5px]">
-            <span className="text-[11.5px] font-medium uppercase tracking-wide text-muted-foreground">
-              First name
-            </span>
-            <span className="text-[14px] text-foreground">{profile.firstName}</span>
+      <section className="grid items-start gap-4 lg:grid-cols-[minmax(260px,1fr)_minmax(0,1.4fr)]">
+        <Panel title="Profile" description="Ask a super admin to change your name or role.">
+          <div className="flex items-center gap-3">
+            <AvatarInitials name={`${profile.firstName} ${profile.lastName}`} />
+            <div className="min-w-0">
+              <div className="font-medium">
+                {profile.firstName} {profile.lastName}
+              </div>
+              <div className="truncate text-[12.5px] text-muted-foreground">{profile.email}</div>
+            </div>
           </div>
-          <div className="flex flex-col gap-[5px]">
-            <span className="text-[11.5px] font-medium uppercase tracking-wide text-muted-foreground">
-              Last name
-            </span>
-            <span className="text-[14px] text-foreground">{profile.lastName}</span>
-          </div>
-          <div className="flex flex-col gap-[5px]">
-            <span className="text-[11.5px] font-medium uppercase tracking-wide text-muted-foreground">
-              Email
-            </span>
-            <span className="text-[14px] text-foreground">{profile.email}</span>
-          </div>
-          <div className="flex flex-col gap-[5px]">
-            <span className="text-[11.5px] font-medium uppercase tracking-wide text-muted-foreground">
-              Role
-            </span>
-            <span className="text-[14px] capitalize text-foreground">{profile.role}</span>
-          </div>
-        </div>
-      </section>
+          <FactList
+            facts={[
+              { label: 'Email', value: profile.email },
+              { label: 'Role', value: ROLE_LABELS[profile.role] ?? profile.role },
+            ]}
+          />
+        </Panel>
 
-      {/* Change password card */}
-      <section className="rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="border-b border-border px-6 py-4">
-          <h2 className="text-[14.5px] font-semibold text-foreground">Change password</h2>
-          <p className="mt-0.5 text-[13px] text-muted-foreground">
-            You&apos;ll need your current password to set a new one.
-          </p>
-        </div>
-        <div className="px-6 py-5">
+        <Panel title="Change password" description="You’ll need your current password to set a new one.">
           <ChangePasswordForm />
-        </div>
+        </Panel>
       </section>
-    </div>
+    </PageStack>
   );
 }

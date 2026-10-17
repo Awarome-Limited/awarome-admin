@@ -1,18 +1,19 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeftIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+  Field,
+  FieldGrid,
+  InlineNotice,
+  PageHeader,
+  PageStack,
+  Panel,
+  SettingsLayout,
+  SummaryRows,
+} from '@/components/page';
 import { VENDOR_TYPES } from '@/lib/types';
 import { toDisplayTime } from '@/lib/format';
 import { createVendor } from '../actions';
@@ -87,54 +88,61 @@ export default function AddVendorPage() {
   }
 
   return (
-    <div className="flex max-w-2xl flex-col gap-4">
-      <Link
-        href="/vendors"
-        className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeftIcon className="size-4" />
-        Back to vendors
-      </Link>
-      <div>
-        <h1 className="text-2xl font-semibold">Add vendor</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Onboard a new store to the Awarome marketplace
-        </p>
-      </div>
+    <PageStack>
+      <PageHeader
+        back={{ href: '/vendors', label: 'All vendors' }}
+        title="Add vendor"
+        subtitle="Onboard a new store to the Awarome marketplace."
+      />
 
-      <form action={handleSubmit} className="flex flex-col gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Business information</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <Field label="Owner / contact name" name="name" placeholder="e.g. Tunde Adeyemi" required />
-            <Field label="Business name" name="businessName" placeholder="e.g. FreshMart Express" />
-            <Field label="Email address" name="email" type="email" placeholder="vendor@example.com" required />
-            <Field label="Phone number" name="phone" placeholder="080…" required />
-          </CardContent>
-        </Card>
+      <form action={handleSubmit}>
+        <SettingsLayout
+          aside={
+            <Panel title="What happens next" description="The store is created and can sign in straight away.">
+              <SummaryRows
+                rows={[
+                  { label: 'Categories', value: types.length ? types.map((t) => TYPE_LABELS[t as keyof typeof TYPE_LABELS] ?? t).join(', ') : 'None yet' },
+                  { label: 'Approval', value: 'Waiting for review' },
+                ]}
+              />
+              {error && <InlineNotice>{error}</InlineNotice>}
+              <div className="flex flex-col gap-2 border-t border-border pt-4">
+                <Button type="submit" size="lg" disabled={isPending}>
+                  {isPending ? 'Creating…' : 'Create vendor'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isPending}
+                  onClick={() => router.push('/vendors')}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </Panel>
+          }
+        >
+          <Panel title="Business" description="Who runs the store and how customers and riders reach them.">
+            <FieldGrid>
+              <TextField label="Owner or contact name" name="name" placeholder="e.g. Tunde Adeyemi" required />
+              <TextField label="Business name" name="businessName" placeholder="e.g. FreshMart Express" />
+              <TextField label="Email address" name="email" type="email" placeholder="vendor@example.com" required />
+              <TextField label="Phone number" name="phone" placeholder="0803 123 4567" required />
+            </FieldGrid>
+          </Panel>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Location</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2 sm:col-span-2">
-              <Label htmlFor="address">Street address</Label>
-              <Input id="address" name="address" placeholder="12 Adeola Odeku St" required />
-            </div>
-            <Field label="State" name="state" placeholder="Lagos State" />
-            <Field label="Latitude" name="lat" type="number" step="any" placeholder="6.5244" required />
-            <Field label="Longitude" name="long" type="number" step="any" placeholder="3.3792" required />
-          </CardContent>
-        </Card>
+          <Panel title="Location" description="Riders are routed to these coordinates for pickups.">
+            <FieldGrid>
+              <div className="col-span-full">
+                <TextField label="Street address" name="address" placeholder="12 Adeola Odeku St" required />
+              </div>
+              <TextField label="State" name="state" placeholder="Lagos" />
+              <TextField label="Latitude" name="lat" type="number" step="any" placeholder="6.5244" required />
+              <TextField label="Longitude" name="long" type="number" step="any" placeholder="3.3792" required />
+            </FieldGrid>
+          </Panel>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Categories</CardTitle>
-          </CardHeader>
-          <CardContent>
+          <Panel title="Categories" description="Pick every category this store sells in.">
             <div className="flex flex-wrap gap-2">
               {VENDOR_TYPES.map((type) => {
                 const active = types.includes(type);
@@ -142,47 +150,34 @@ export default function AddVendorPage() {
                   <button
                     key={type}
                     type="button"
+                    aria-pressed={active}
                     onClick={() => toggleType(type)}
-                    className={`rounded-full border px-3.5 py-1.5 text-sm font-semibold ${
+                    className={
                       active
-                        ? 'border-primary bg-brand-tint2 text-primary'
-                        : 'border-border-strong text-muted-foreground'
-                    }`}
+                        ? 'h-9 rounded-full border-[1.5px] border-primary bg-brand-tint px-4 text-[13.5px] font-medium text-primary'
+                        : 'h-9 rounded-full border border-border bg-card px-4 text-[13.5px] text-foreground-secondary hover:bg-muted'
+                    }
                   >
                     {TYPE_LABELS[type]}
                   </button>
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
+          </Panel>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Operating hours</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <Field label="Opens at" name="opensAt" type="time" required />
-            <Field label="Closes at" name="closesAt" type="time" required />
-          </CardContent>
-        </Card>
-
-        {error && <p className="text-sm text-destructive">{error}</p>}
-
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" disabled={isPending} onClick={() => router.push('/vendors')}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={isPending}>
-            Create vendor
-          </Button>
-        </div>
+          <Panel title="Opening hours" description="Lagos time. Customers can’t order outside these hours.">
+            <FieldGrid>
+              <TextField label="Opens at" name="opensAt" type="time" required />
+              <TextField label="Closes at" name="closesAt" type="time" required />
+            </FieldGrid>
+          </Panel>
+        </SettingsLayout>
       </form>
-    </div>
+    </PageStack>
   );
 }
 
-function Field({
+function TextField({
   label,
   name,
   type = 'text',
@@ -198,9 +193,8 @@ function Field({
   required?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor={name}>{label}</Label>
+    <Field label={label} htmlFor={name}>
       <Input id={name} name={name} type={type} step={step} placeholder={placeholder} required={required} />
-    </div>
+    </Field>
   );
 }

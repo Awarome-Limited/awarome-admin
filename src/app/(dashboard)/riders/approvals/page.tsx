@@ -15,10 +15,13 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { formatDate } from '@/lib/format';
+import { formatDate, formatPhone, humanize } from '@/lib/format';
 import { RiderDocumentsStrip } from '@/components/rider-documents';
 import { cn } from '@/lib/utils';
 import { updateRiderProfileStatus } from '../actions';
+import { StatStrip } from '@/components/stat-strip';
+import { SegmentedLinks } from '@/components/segmented';
+import { EmptyRow, ListCard, PageHeader, PageStack, ToolbarEnd } from '@/components/page';
 
 const LIMIT = 20;
 
@@ -93,169 +96,53 @@ export default async function RiderApprovalsPage({
   const listTotalCount = result?.totalCount ?? totalCount ?? ridersList.length;
 
   const chips = [
-    { label: 'Pending approval', value: pendingCount.toLocaleString() },
+    { label: 'Waiting for review', value: pendingCount.toLocaleString() },
     { label: 'Approved', value: approvedCount.toLocaleString() },
     { label: 'Rejected', value: rejectedCount.toLocaleString() },
-    { label: 'Total riders', value: totalCount.toLocaleString() },
+    { label: 'All riders', value: totalCount.toLocaleString() },
   ];
 
+  const tabHref = (key: string) => {
+    const p = new URLSearchParams();
+    if (search) p.set('search', search);
+    if (key !== 'pending') p.set('filter', key);
+    const q = p.toString();
+    return `/riders/approvals${q ? `?${q}` : ''}`;
+  };
+  const tabCounts: Record<string, number> = {
+    pending: pendingCount,
+    approved: approvedCount,
+    rejected: rejectedCount,
+    all: totalCount,
+  };
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-[23px] font-bold tracking-tight text-foreground">Rider Approvals</h1>
-          <p className="mt-1 text-[14px] text-muted-foreground">
-            Review rider verification applications, vehicle details, and grant access to order dispatches
-          </p>
-        </div>
-      </div>
+    <PageStack>
+      <PageHeader
+        title="Rider approvals"
+        subtitle="Check documents and vehicle details, then approve riders so they can be dispatched."
+      />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {chips.map((chip) => (
-          <div
-            key={chip.label}
-            className="flex flex-col gap-1 rounded-[12px] border border-border bg-card p-[13px_16px] shadow-[var(--shadow-card)]"
-          >
-            <span className="text-[12px] font-medium text-muted-foreground">{chip.label}</span>
-            <span className="text-[20px] font-bold tabular-nums text-foreground">{chip.value}</span>
-          </div>
-        ))}
-      </div>
+      <StatStrip stats={chips} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {FILTERS.map((f) => {
-            const active = activeFilter === f.key;
-            const href = (() => {
-              const p = new URLSearchParams();
-              if (search) p.set('search', search);
-              if (f.key !== 'pending') p.set('filter', f.key);
-              const s = p.toString();
-              return `/riders/approvals${s ? `?${s}` : ''}`;
-            })();
-            return (
-              <Link
-                key={f.key}
-                href={href}
-                className={cn(
-                  'rounded-[9px] border px-3.5 py-[7px] text-[13px] font-semibold transition-colors',
-                  active
-                    ? 'border-transparent bg-brand-tint text-primary'
-                    : 'border-border-strong bg-card text-foreground-secondary hover:bg-muted'
-                )}
-              >
-                {f.label}
-              </Link>
-            );
-          })}
-        </div>
-        <SearchBox placeholder="Search rider profile by name, email, phone…" />
-      </div>
-
-      <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Rider</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Vehicle & Plate</TableHead>
-                <TableHead>Documents</TableHead>
-                <TableHead>Verification</TableHead>
-                <TableHead>Registered</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {ridersList.map((rider) => {
-                const vStatus = rider.verificationStatus || (rider.suspended ? 'rejected' : 'pending');
-                const isApproved = vStatus === 'approved';
-                const isRejected = vStatus === 'rejected';
-
-                return (
-                  <TableRow key={rider._id}>
-                    <TableCell>
-                      <Link href={`/riders/${rider._id}`} className="flex items-center gap-2.5">
-                        <AvatarInitials name={`${rider.firstName ?? ''} ${rider.lastName ?? ''}`} size="sm" />
-                        <div>
-                          <div className="font-semibold text-foreground hover:underline">
-                            {rider.firstName} {rider.lastName}
-                          </div>
-                          <div className="text-[12px] text-muted-foreground">{rider.email || '—'}</div>
-                        </div>
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-[13px] text-muted-foreground">{rider.phone || '—'}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-0.5">
-                        <span className="w-fit rounded bg-chip px-2 py-0.5 text-xs font-medium capitalize text-foreground-secondary">
-                          {rider.vehicleType || 'Bike'}
-                        </span>
-                        {rider.plateNumber && (
-                          <span className="font-mono text-[11px] text-muted-foreground">
-                            {rider.plateNumber}
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <RiderDocumentsStrip documents={rider.documents} />
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          isApproved ? 'positive' : isRejected ? 'destructive' : 'warning'
-                        }
-                        dot
-                      >
-                        {isApproved ? 'Approved' : isRejected ? 'Rejected' : vStatus === 'unsubmitted' ? 'Unsubmitted' : 'Pending review'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-[13px] text-muted-foreground">
-                      {formatDate(rider.createdAt)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {!isApproved && (
-                          <ConfirmActionButton
-                            label="Approve"
-                            title="Approve rider profile?"
-                            description={`Approve ${rider.firstName} ${rider.lastName}'s verification application to allow them to receive order dispatches.`}
-                            variant="default"
-                            action={async () => {
-                              'use server';
-                              await updateRiderProfileStatus(rider._id, 'approved');
-                            }}
-                          />
-                        )}
-                        {!isRejected && (
-                          <ConfirmActionButton
-                            label="Reject"
-                            title="Reject rider profile?"
-                            description={`Reject ${rider.firstName} ${rider.lastName}'s verification application.`}
-                            variant="destructive"
-                            action={async () => {
-                              'use server';
-                              await updateRiderProfileStatus(rider._id, 'rejected');
-                            }}
-                          />
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {ridersList.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
-                    No riders found for approval review.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="border-t border-border px-4 py-3">
+      <ListCard
+        toolbar={
+          <>
+            <SegmentedLinks
+              active={activeFilter}
+              items={FILTERS.map((f) => ({
+                key: f.key,
+                label: f.label,
+                href: tabHref(f.key),
+                count: tabCounts[f.key]?.toLocaleString(),
+              }))}
+            />
+            <ToolbarEnd>
+              <SearchBox placeholder="Name, email or phone" />
+            </ToolbarEnd>
+          </>
+        }
+        footer={
           <PaginationControls
             skip={skip}
             limit={LIMIT}
@@ -263,8 +150,117 @@ export default async function RiderApprovalsPage({
             basePath="/riders/approvals"
             searchParams={params}
           />
-        </div>
-      </div>
-    </div>
+        }
+      >
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Rider</TableHead>
+              <TableHead>Vehicle</TableHead>
+              <TableHead>Documents</TableHead>
+              <TableHead>Verification</TableHead>
+              <TableHead>Registered</TableHead>
+              <TableHead className="text-right">Decision</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {ridersList.map((rider) => {
+              const vStatus = rider.verificationStatus || (rider.suspended ? 'rejected' : 'pending');
+              const isApproved = vStatus === 'approved';
+              const isRejected = vStatus === 'rejected';
+              const name = [rider.firstName, rider.lastName].filter(Boolean).join(' ');
+
+              return (
+                <TableRow key={rider._id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <AvatarInitials name={name || undefined} />
+                      <div className="min-w-0">
+                        <Link
+                          href={`/riders/${rider._id}`}
+                          className={cn('font-medium hover:text-primary', !name && 'text-muted-foreground')}
+                        >
+                          {name || 'No name yet'}
+                        </Link>
+                        <div className="truncate text-[12.5px] text-muted-foreground tabular-nums">
+                          {[rider.email, rider.phone && formatPhone(rider.phone)].filter(Boolean).join(' · ') ||
+                            'No contact details'}
+                        </div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-1">
+                      <Badge variant="secondary">{humanize(rider.vehicleType || 'bike')}</Badge>
+                      {rider.plateNumber && (
+                        <span className="text-[12.5px] text-muted-foreground uppercase tabular-nums">
+                          {rider.plateNumber}
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <RiderDocumentsStrip documents={rider.documents} />
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={isApproved ? 'positive' : isRejected ? 'destructive' : 'info'} dot>
+                      {isApproved
+                        ? 'Approved'
+                        : isRejected
+                          ? 'Rejected'
+                          : vStatus === 'unsubmitted'
+                            ? 'Not submitted'
+                            : 'Waiting for review'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-foreground-secondary tabular-nums">
+                    {formatDate(rider.createdAt)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      {!isApproved && (
+                        <ConfirmActionButton
+                          label="Approve"
+                          title="Approve this rider?"
+                          description={`${name || 'This rider'} can start receiving jobs as soon as you approve.`}
+                          variant="default"
+                          action={async () => {
+                            'use server';
+                            await updateRiderProfileStatus(rider._id, 'approved');
+                          }}
+                        />
+                      )}
+                      {!isRejected && (
+                        <ConfirmActionButton
+                          label="Reject"
+                          title="Reject this rider?"
+                          description={`${name || 'This rider'} won’t be able to receive jobs.`}
+                          variant="destructive"
+                          action={async () => {
+                            'use server';
+                            await updateRiderProfileStatus(rider._id, 'rejected');
+                          }}
+                        />
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+            {ridersList.length === 0 && (
+              <EmptyRow
+                colSpan={6}
+                title={activeFilter === 'pending' ? 'No one is waiting' : 'No riders match'}
+                body={
+                  activeFilter === 'pending'
+                    ? 'Every application has been reviewed. New sign-ups show up here.'
+                    : 'Clear the search or switch tabs.'
+                }
+              />
+            )}
+          </TableBody>
+        </Table>
+      </ListCard>
+    </PageStack>
   );
 }

@@ -4,7 +4,7 @@ import { AdminRider } from '@/lib/types';
 import { ApiErrorCard } from '@/components/api-error-card';
 import { SearchBox } from '@/components/search-box';
 import { PaginationControls } from '@/components/pagination-controls';
-import { SuspendToggle } from '@/components/suspend-toggle';
+import { StatusPill } from '@/components/account-status';
 import { AvatarInitials } from '@/components/avatar-initials';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -15,12 +15,23 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { statusBadgeVariant } from '@/lib/format';
+import { formatPhone, humanize, statusBadgeVariant } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { setRiderSuspended } from './actions';
 import { getSession } from '@/lib/session';
 import { hasPermission, PermissionAction, PermissionModule } from '@/lib/permissions';
 import { BackfillCollectionAccounts } from './_components/backfill-collection-accounts';
+import { StatStrip } from '@/components/stat-strip';
+import { SegmentedLinks } from '@/components/segmented';
+import {
+  EmptyRow,
+  InlineNotice,
+  ListCard,
+  PageHeader,
+  PageStack,
+  RowChevron,
+  RowLink,
+  ToolbarEnd,
+} from '@/components/page';
 
 const LIMIT = 20;
 
@@ -70,13 +81,17 @@ export default async function RidersPage({
   let totalCount = 0;
   let activeCount = 0;
   let suspendedCount = 0;
+  let owingCount = 0;
+  let overLimitCount = 0;
 
   try {
-    [result, totalCount, activeCount, suspendedCount] = await Promise.all([
+    [result, totalCount, activeCount, suspendedCount, owingCount, overLimitCount] = await Promise.all([
       authedFetch<PaginatedResponse<AdminRider>>(`/riders/admin?${query.toString()}`),
       safeCount('/riders/admin?limit=1'),
       safeCount('/riders/admin?suspended=false&limit=1'),
       safeCount('/riders/admin?suspended=true&limit=1'),
+      safeCount('/riders/admin?owing=any&limit=1'),
+      safeCount('/riders/admin?owing=over-limit&limit=1'),
     ]);
   } catch (error) {
     return (
@@ -88,133 +103,65 @@ export default async function RidersPage({
 
   const chips = [
     { label: 'Total riders', value: totalCount.toLocaleString() },
-    { label: 'Active', value: activeCount.toLocaleString() },
-    { label: 'Suspended', value: suspendedCount.toLocaleString() },
-    { label: 'Orders completed', value: result.data.reduce((s, r) => s + (r.ordersCompleted ?? 0), 0).toLocaleString() },
+    { label: 'Active', value: activeCount.toLocaleString(), meta: `${suspendedCount.toLocaleString()} suspended` },
+    { label: 'Owe commission', value: owingCount.toLocaleString() },
+    { label: 'Over debt limit', value: overLimitCount.toLocaleString(), meta: 'Locked out of new jobs' },
   ];
 
   const session = await getSession();
   const canUpdateRiders =
     !!session && hasPermission(session.profile, PermissionModule.RIDERS, PermissionAction.UPDATE);
 
+  const tabHref = (key: string) => {
+    const p = new URLSearchParams();
+    if (search) p.set('search', search);
+    if (key !== 'all') p.set('filter', key);
+    const q = p.toString();
+    return `/riders${q ? `?${q}` : ''}`;
+  };
+  const tabCounts: Record<string, number> = {
+    all: totalCount,
+    active: activeCount,
+    suspended: suspendedCount,
+    owing: owingCount,
+    'over-limit': overLimitCount,
+  };
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[23px] font-bold tracking-tight text-foreground">Riders</h1>
-          <p className="mt-1 text-[14px] text-muted-foreground">Delivery riders on the platform</p>
-        </div>
-        {canUpdateRiders && <BackfillCollectionAccounts />}
-      </div>
+    <PageStack>
+      <PageHeader
+        title="Riders"
+        subtitle="Delivery riders on the platform, their status and what they owe Awarome."
+        actions={canUpdateRiders && <BackfillCollectionAccounts />}
+      />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {chips.map((chip) => (
-          <div
-            key={chip.label}
-            className="flex flex-col gap-1 rounded-[12px] border border-border bg-card p-[13px_16px] shadow-[var(--shadow-card)]"
-          >
-            <span className="text-[12px] font-medium text-muted-foreground">{chip.label}</span>
-            <span className="text-[20px] font-bold tabular-nums text-foreground">{chip.value}</span>
-          </div>
-        ))}
-      </div>
+      <StatStrip stats={chips} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {FILTERS.map((f) => {
-            const active = activeFilter === f.key;
-            const href = (() => {
-              const p = new URLSearchParams();
-              if (search) p.set('search', search);
-              if (f.key !== 'all') p.set('filter', f.key);
-              const s = p.toString();
-              return `/riders${s ? `?${s}` : ''}`;
-            })();
-            return (
-              <Link
-                key={f.key}
-                href={href}
-                className={cn(
-                  'rounded-[9px] border px-3.5 py-[7px] text-[13px] font-semibold transition-colors',
-                  active
-                    ? 'border-transparent bg-brand-tint text-primary'
-                    : 'border-border-strong bg-card text-foreground-secondary hover:bg-muted'
-                )}
-              >
-                {f.label}
-              </Link>
-            );
-          })}
-        </div>
-        <SearchBox placeholder="Search by name, email, phone…" />
-      </div>
+      {overLimitCount > 0 && activeFilter !== 'over-limit' && (
+        <InlineNotice action={<Link href={tabHref('over-limit')}>Show them</Link>}>
+          {overLimitCount === 1 ? '1 rider is' : `${overLimitCount.toLocaleString()} riders are`} over the
+          debt limit and won’t be offered new jobs until they pay.
+        </InlineNotice>
+      )}
 
-      <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Online status</TableHead>
-                <TableHead className="text-right">Orders completed</TableHead>
-                <TableHead className="text-right">Owes</TableHead>
-                <TableHead>Account status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {result.data.map((rider) => (
-                <TableRow key={rider._id}>
-                  <TableCell>
-                    <Link href={`/riders/${rider._id}`} className="flex items-center gap-2.5">
-                      <AvatarInitials name={`${rider.firstName ?? ''} ${rider.lastName ?? ''}`} size="sm" />
-                      <span className="font-medium hover:underline">
-                        {rider.firstName} {rider.lastName}
-                      </span>
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{rider.email || '—'}</TableCell>
-                  <TableCell className="text-muted-foreground">{rider.phone || '—'}</TableCell>
-                  <TableCell>
-                    <Badge variant={statusBadgeVariant(rider.status)} dot>
-                      {rider.status || '—'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-semibold tabular-nums">
-                    {rider.ordersCompleted ?? 0}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {rider.owed ? (
-                      <span className="flex items-center justify-end gap-2">
-                        <span className={rider.debtLocked ? 'font-semibold text-destructive' : 'font-semibold'}>
-                          ₦{rider.owed.toLocaleString('en-NG')}
-                        </span>
-                        {rider.debtLocked && <Badge variant="destructive">Locked</Badge>}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <SuspendToggle
-                      suspended={!!rider.suspended}
-                      action={setRiderSuspended.bind(null, rider._id)}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-              {result.data.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
-                    No riders found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="border-t border-border px-4 py-3">
+      <ListCard
+        toolbar={
+          <>
+            <SegmentedLinks
+              active={activeFilter}
+              items={FILTERS.map((f) => ({
+                key: f.key,
+                label: f.label,
+                href: tabHref(f.key),
+                count: tabCounts[f.key]?.toLocaleString(),
+              }))}
+            />
+            <ToolbarEnd>
+              <SearchBox placeholder="Name, email or phone" />
+            </ToolbarEnd>
+          </>
+        }
+        footer={
           <PaginationControls
             skip={skip}
             limit={LIMIT}
@@ -222,8 +169,84 @@ export default async function RidersPage({
             basePath="/riders"
             searchParams={params}
           />
-        </div>
-      </div>
-    </div>
+        }
+      >
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Rider</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>Presence</TableHead>
+              <TableHead className="text-right">Completed</TableHead>
+              <TableHead className="text-right">Owes Awarome</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="w-12" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {result.data.map((rider) => {
+              const name = [rider.firstName, rider.lastName].filter(Boolean).join(' ');
+              return (
+                <TableRow key={rider._id} className="relative">
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <AvatarInitials name={name || undefined} />
+                      <div className="min-w-0">
+                        <RowLink href={`/riders/${rider._id}`} className={cn(!name && 'text-muted-foreground')}>
+                          {name || 'No name yet'}
+                        </RowLink>
+                        <div className="truncate text-[12.5px] text-muted-foreground">
+                          {rider.email || 'No email'}
+                        </div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-foreground-secondary tabular-nums">
+                    {formatPhone(rider.phone)}
+                  </TableCell>
+                  <TableCell>
+                    {rider.status ? (
+                      <Badge variant={statusBadgeVariant(rider.status)} dot>
+                        {humanize(rider.status)}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {(rider.ordersCompleted ?? 0).toLocaleString()}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {rider.owed ? (
+                      <span className="inline-flex items-center justify-end gap-2">
+                        <span className={cn('font-medium', rider.debtLocked && 'text-destructive')}>
+                          ₦ {rider.owed.toLocaleString('en-NG')}
+                        </span>
+                        {rider.debtLocked && <Badge variant="destructive">Over limit</Badge>}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <StatusPill suspended={!!rider.suspended} />
+                  </TableCell>
+                  <TableCell>
+                    <RowChevron />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+            {result.data.length === 0 && (
+              <EmptyRow
+                colSpan={7}
+                title="No riders match"
+                body="Nobody in this view right now. Clear the search or switch tabs."
+              />
+            )}
+          </TableBody>
+        </Table>
+      </ListCard>
+    </PageStack>
   );
 }

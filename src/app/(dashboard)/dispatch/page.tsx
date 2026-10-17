@@ -1,8 +1,8 @@
-import { authedFetch, ApiError, SingleResponse } from '@/lib/api-client';
+import { authedFetch, ApiError, PaginatedResponse, SingleResponse } from '@/lib/api-client';
 import { ApiErrorCard } from '@/components/api-error-card';
-import { SubmitButton } from '@/components/submit-button';
+import { PageHeader, PageStack } from '@/components/page';
 import { updateDispatchConfig } from './actions';
-import { BatchSizeGrid } from './_components/batch-size-grid';
+import { DispatchEditor, type DispatchGroup } from './_components/dispatch-editor';
 
 interface DispatchConfig {
   batchTargetSize: number;
@@ -67,7 +67,7 @@ export default async function DispatchPage() {
     });
   }
 
-  const groups = [
+  const groups: DispatchGroup[] = [
     {
       title: 'Earnings',
       sub: "Awarome's cut of every delivery fee. Riders are offered and paid the fee net of this commission.",
@@ -141,7 +141,7 @@ export default async function DispatchPage() {
       ],
     },
     {
-      title: 'Delivery windows — window model only',
+      title: 'Delivery windows (window model only)',
       sub: 'When a delivery window closes to customers. Batches for that window form and dispatch at the same moment.',
       fields: [
         { label: 'Window closes before start', name: 'selectionCutoffMinutes', unit: 'min', value: config.selectionCutoffMinutes },
@@ -149,59 +149,26 @@ export default async function DispatchPage() {
     },
   ];
 
+  const overLimitRiders = await authedFetch<PaginatedResponse<unknown>>('/riders/admin?owing=over-limit&limit=1')
+    .then((r) => r.totalCount ?? 0)
+    .catch(() => null);
+
   return (
-    <form action={handleSave}>
-      <div className="flex flex-wrap items-start justify-between gap-4 pb-[18px]">
-        <div>
-          <h1 className="text-[23px] font-bold tracking-tight text-foreground">Dispatch</h1>
-          <p className="mt-1 text-[14px] text-muted-foreground">
-            Fleet and commission tunables. Changes apply within 30 seconds — no redeploy needed.
-          </p>
-        </div>
-        <SubmitButton />
-      </div>
-
-      <div className="flex flex-col gap-4" style={{ maxWidth: 900 }}>
-        {groups.map((group) => (
-          <div
-            key={group.title}
-            className="rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]"
-          >
-            <div className="text-[15px] font-semibold text-foreground">{group.title}</div>
-            <div className="mb-[18px] mt-1 text-[13px] text-muted-foreground">{group.sub}</div>
-            <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
-              {group.fields.map((field) => (
-                <div key={field.name} className="flex flex-col gap-[7px]">
-                  <span className="text-[13px] font-medium text-foreground-secondary">
-                    {field.label}
-                  </span>
-                  <div className="flex items-center gap-2 rounded-[10px] border border-input bg-muted px-[13px] py-[10px]">
-                    <span className="text-[13px] font-semibold text-muted-foreground">
-                      {field.unit}
-                    </span>
-                    <input
-                      id={field.name}
-                      name={field.name}
-                      type="number"
-                      step="any"
-                      defaultValue={field.value}
-                      className="w-full border-none bg-transparent text-[14px] font-semibold tabular-nums text-foreground outline-none"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-
-        <BatchSizeGrid
-          minSize={config.batchMinSize ?? { bike: 3, car: 3, truck: 3 }}
-          maxSize={config.batchMaxSize}
-          maxWaitMinutes={Math.round(
-            (config.batchMaxWaitMs ?? 45 * 60 * 1000) / 60000
-          )}
-        />
-      </div>
-    </form>
+    <PageStack>
+      <PageHeader
+        title="Dispatch rules"
+        subtitle="Fleet and commission tunables. Changes apply within 30 seconds. No redeploy needed."
+      />
+      <DispatchEditor
+        groups={groups}
+        action={handleSave}
+        overLimitRiders={overLimitRiders}
+        batch={{
+          minSize: config.batchMinSize ?? { bike: 3, car: 3, truck: 3 },
+          maxSize: config.batchMaxSize,
+          maxWaitMinutes: Math.round((config.batchMaxWaitMs ?? 45 * 60 * 1000) / 60000),
+        }}
+      />
+    </PageStack>
   );
 }

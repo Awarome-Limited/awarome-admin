@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { authedFetch, ApiError } from '@/lib/api-client';
 import type { AdminBusiness } from '@/lib/types';
 import { getSession } from '@/lib/session';
@@ -6,13 +5,24 @@ import { hasPermission, PermissionAction, PermissionModule } from '@/lib/permiss
 import { ApiErrorCard } from '@/components/api-error-card';
 import { PaginationControls } from '@/components/pagination-controls';
 import { SearchBox } from '@/components/search-box';
-import { SuspendToggle } from '@/components/suspend-toggle';
+import { StatusPill } from '@/components/account-status';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { formatDate } from '@/lib/format';
-import { cn } from '@/lib/utils';
+import { formatDate, humanize } from '@/lib/format';
+import { AvatarInitials } from '@/components/avatar-initials';
 import { CreateBusinessDialog } from './_components/create-business-dialog';
-import { setBusinessSuspended } from './actions';
+import { StatStrip } from '@/components/stat-strip';
+import { SegmentedLinks } from '@/components/segmented';
+import {
+  EmptyRow,
+  InlineNotice,
+  ListCard,
+  PageHeader,
+  PageStack,
+  RowChevron,
+  RowLink,
+  ToolbarEnd,
+} from '@/components/page';
 
 const LIMIT = 20;
 const FILTERS = [
@@ -40,7 +50,6 @@ export default async function BusinessesPage({
   const filter = params.filter ?? 'all';
   const session = await getSession();
   const canCreate = !!session && hasPermission(session.profile, PermissionModule.BUSINESSES, PermissionAction.CREATE);
-  const canUpdate = !!session && hasPermission(session.profile, PermissionModule.BUSINESSES, PermissionAction.UPDATE);
 
   const query = new URLSearchParams({ skip: String(skip), limit: String(LIMIT) });
   if (search) query.set('search', search);
@@ -58,119 +67,141 @@ export default async function BusinessesPage({
     { label: 'Active', value: result.stats.active.toLocaleString() },
     { label: 'Suspended', value: result.stats.suspended.toLocaleString() },
   ];
+  const noPayoutAccount = result.data.filter((b) => !b.payoutAccount && b.status === 'active').length;
+
+  const tabHref = (key: string) => {
+    const p = new URLSearchParams();
+    if (search) p.set('search', search);
+    if (key !== 'all') p.set('filter', key);
+    const q = p.toString();
+    return `/businesses${q ? `?${q}` : ''}`;
+  };
+  const tabCounts: Record<string, number> = {
+    all: result.stats.active + result.stats.suspended,
+    active: result.stats.active,
+    suspended: result.stats.suspended,
+  };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[23px] font-bold tracking-tight text-foreground">Businesses</h1>
-          <p className="mt-1 text-[14px] text-muted-foreground">
-            Logistics businesses booking pay-on-delivery runs at business.awarome.com
-          </p>
-        </div>
-        {canCreate && <CreateBusinessDialog />}
-      </div>
+    <PageStack>
+      <PageHeader
+        title="Businesses"
+        subtitle="Logistics businesses booking pay-on-delivery runs at business.awarome.com."
+        actions={canCreate && <CreateBusinessDialog />}
+      />
 
-      <div className="grid grid-cols-3 gap-3">
-        {chips.map((chip) => (
-          <div key={chip.label} className="flex flex-col gap-1 rounded-[12px] border border-border bg-card p-[13px_16px] shadow-[var(--shadow-card)]">
-            <span className="text-[12px] font-medium text-muted-foreground">{chip.label}</span>
-            <span className="text-[20px] font-bold tabular-nums text-foreground">{chip.value}</span>
-          </div>
-        ))}
-      </div>
+      <StatStrip stats={chips} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {FILTERS.map((f) => {
-            const p = new URLSearchParams();
-            if (search) p.set('search', search);
-            if (f.key !== 'all') p.set('filter', f.key);
-            const href = `/businesses${p.toString() ? `?${p}` : ''}`;
-            return (
-              <Link
-                key={f.key}
-                href={href}
-                className={cn(
-                  'rounded-[9px] border px-3.5 py-[7px] text-[13px] font-semibold transition-colors',
-                  filter === f.key
-                    ? 'border-transparent bg-brand-tint text-primary'
-                    : 'border-border-strong bg-card text-foreground-secondary hover:bg-muted'
-                )}
-              >
-                {f.label}
-              </Link>
-            );
-          })}
-        </div>
-        <SearchBox placeholder="Search by business name…" />
-      </div>
+      {noPayoutAccount > 0 && (
+        <InlineNotice>
+          {noPayoutAccount === 1 ? '1 business' : `${noPayoutAccount} businesses`} on this page{' '}
+          {noPayoutAccount === 1 ? 'has' : 'have'} no payout account, so the money they collect is held until the
+          owner adds one.
+        </InlineNotice>
+      )}
 
-      <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Business</TableHead>
-                <TableHead>Owner</TableHead>
-                <TableHead>Payout account</TableHead>
-                <TableHead className="text-right">Deliveries</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Added</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {result.data.map((b) => (
-                <TableRow key={b.id}>
-                  <TableCell>
-                    <Link href={`/businesses/${b.id}`} className="flex flex-col gap-0.5">
-                      <span className="font-semibold text-foreground hover:underline">{b.name}</span>
-                      <span className="text-[12px] text-muted-foreground">{b.pickupAddress?.text}</span>
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    {b.owner ? (
-                      <div className="flex flex-col gap-0.5">
-                        <span>{b.owner.name || b.owner.email}</span>
-                        <span className="text-[12px] text-muted-foreground">
-                          {b.owner.status === 'invited' ? 'Invite pending' : b.owner.email}
-                        </span>
+      <ListCard
+        toolbar={
+          <>
+            <SegmentedLinks
+              active={filter}
+              items={FILTERS.map((f) => ({
+                key: f.key,
+                label: f.label,
+                href: tabHref(f.key),
+                count: tabCounts[f.key]?.toLocaleString(),
+              }))}
+            />
+            <ToolbarEnd>
+              <SearchBox placeholder="Business name" />
+            </ToolbarEnd>
+          </>
+        }
+        footer={
+          <PaginationControls
+            skip={skip}
+            limit={LIMIT}
+            totalCount={result.totalCount}
+            basePath="/businesses"
+            searchParams={params}
+          />
+        }
+      >
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Business</TableHead>
+              <TableHead>Owner</TableHead>
+              <TableHead>Payout account</TableHead>
+              <TableHead className="text-right">Deliveries</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Added</TableHead>
+              <TableHead className="w-12" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {result.data.map((b) => (
+              <TableRow key={b.id} className="relative">
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <AvatarInitials name={b.name || undefined} shape="store" />
+                    <div className="min-w-0">
+                      <RowLink href={`/businesses/${b.id}`}>{b.name || 'No name yet'}</RowLink>
+                      <div className="max-w-[280px] truncate text-[12.5px] text-muted-foreground">
+                        {b.pickupAddress?.text || 'No pickup address'}
                       </div>
-                    ) : (
-                      '—'
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {b.payoutAccount ? (
-                      `${b.payoutAccount.bankName} ••${b.payoutAccount.last4}`
-                    ) : (
-                      <Badge variant="warning">Not set</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{(b.deliveries ?? 0).toLocaleString()}</TableCell>
-                  <TableCell>
-                    {canUpdate ? (
-                      <SuspendToggle suspended={b.status === 'suspended'} action={setBusinessSuspended.bind(null, b.id)} />
-                    ) : (
-                      <Badge variant={b.status === 'active' ? 'positive' : 'secondary'}>{b.status}</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>{formatDate(b.createdAt)}</TableCell>
-                </TableRow>
-              ))}
-              {result.data.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                    No businesses yet.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-
-      <PaginationControls skip={skip} limit={LIMIT} totalCount={result.totalCount} basePath="/businesses" searchParams={params} />
-    </div>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {b.owner ? (
+                    <>
+                      <div>{b.owner.name || b.owner.email}</div>
+                      <div className="text-[12.5px] text-muted-foreground">
+                        {b.owner.status === 'invited' ? 'Invite pending' : b.owner.email}
+                      </div>
+                    </>
+                  ) : (
+                    <Badge variant="warning">No owner</Badge>
+                  )}
+                </TableCell>
+                <TableCell className="text-foreground-secondary tabular-nums">
+                  {b.payoutAccount ? (
+                    `${b.payoutAccount.bankName} ••${b.payoutAccount.last4}`
+                  ) : (
+                    <Badge variant="warning">Not set</Badge>
+                  )}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{(b.deliveries ?? 0).toLocaleString()}</TableCell>
+                <TableCell>
+                  {b.status === 'active' || b.status === 'suspended' ? (
+                    <StatusPill suspended={b.status === 'suspended'} />
+                  ) : (
+                    <Badge variant="secondary">{humanize(b.status)}</Badge>
+                  )}
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-foreground-secondary tabular-nums">
+                  {formatDate(b.createdAt)}
+                </TableCell>
+                <TableCell>
+                  <RowChevron />
+                </TableCell>
+              </TableRow>
+            ))}
+            {result.data.length === 0 && (
+              <EmptyRow
+                colSpan={7}
+                title={search || filter !== 'all' ? 'No businesses match' : 'No businesses yet'}
+                body={
+                  search || filter !== 'all'
+                    ? 'Clear the search or switch tabs.'
+                    : 'Onboard a business to let them book pay-on-delivery runs.'
+                }
+              />
+            )}
+          </TableBody>
+        </Table>
+      </ListCard>
+    </PageStack>
   );
 }

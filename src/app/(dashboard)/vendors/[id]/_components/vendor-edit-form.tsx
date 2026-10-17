@@ -1,8 +1,7 @@
 'use client';
 
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/submit-button';
+import { SaveBar } from '@/components/save-bar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AdminVendor } from '@/lib/types';
@@ -27,7 +26,7 @@ export function VendorEditForm({ vendor }: { vendor: AdminVendor }) {
     values: form,
     set,
     submit,
-    isPending,
+    isPending, dirty, reset
   } = useEditForm<FormState>(
     {
       name: vendor.name ?? '',
@@ -73,11 +72,9 @@ export function VendorEditForm({ vendor }: { vendor: AdminVendor }) {
   return (
     <div
       id="edit-vendor"
-      className="rounded-[14px] border border-border bg-card p-[20px_22px] shadow-[var(--shadow-card)]"
+      className="flex flex-col gap-[18px] rounded-[10px] border border-border bg-card px-6 py-[22px]"
     >
-      <div className="mb-4 text-[15px] font-semibold text-foreground">
-        Edit vendor
-      </div>
+      <h3 className="text-[17px] leading-tight font-bold">Edit vendor</h3>
       <div className="flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
@@ -126,7 +123,7 @@ export function VendorEditForm({ vendor }: { vendor: AdminVendor }) {
               id="status"
               value={form.status}
               onChange={(e) => set({ status: e.target.value })}
-              className="flex h-[36px] w-full rounded-[9px] border border-input bg-card px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus:border-primary/50"
+              className="field w-full pr-9"
             >
               <option value="pending">Pending Review</option>
               <option value="approved">Approved</option>
@@ -134,18 +131,13 @@ export function VendorEditForm({ vendor }: { vendor: AdminVendor }) {
             </select>
           </div>
         </div>
-        <div>
-          <Button type="button" onClick={handleSave} disabled={isPending}>
-            {isPending ? (
-              <>
-                <Spinner />
-                Saving…
-              </>
-            ) : (
-              'Save changes'
-            )}
-          </Button>
-        </div>
+      <SaveBar
+        dirty={dirty}
+        saving={isPending}
+        label="Unsaved vendor changes"
+        onDiscard={reset}
+        onSave={handleSave}
+      />
       </div>
     </div>
   );

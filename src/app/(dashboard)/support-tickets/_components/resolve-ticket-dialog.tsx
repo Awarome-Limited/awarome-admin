@@ -26,7 +26,7 @@ export interface DropMoney {
 }
 
 const naira = (kobo: number) =>
-  `₦${(kobo / 100).toLocaleString('en-NG', { maximumFractionDigits: 2 })}`;
+  `₦ ${(kobo / 100).toLocaleString('en-NG', { maximumFractionDigits: 2 })}`;
 
 /**
  * Mirrors businessMoney in awarome-BE (businesses/utils/money.ts) so ops sees
@@ -240,7 +240,7 @@ export function ResolveTicketDialog({
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <span className="text-[11.5px] font-medium uppercase tracking-[0.06em]r text-muted-foreground">
         {label}
       </span>
       <span className="text-[13.5px] font-semibold tabular-nums text-foreground">

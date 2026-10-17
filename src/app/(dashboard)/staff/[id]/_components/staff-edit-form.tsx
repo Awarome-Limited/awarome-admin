@@ -1,7 +1,7 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/submit-button';
+import { ROLE_LABELS } from '@/lib/staff-roles';
+import { SaveBar } from '@/components/save-bar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AdminStaff } from '@/lib/types';
@@ -14,7 +14,7 @@ import { useEditForm } from '@/lib/use-edit-form';
 import { updateStaff } from '../../actions';
 
 const selectClass =
-  'h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50';
+  'field pr-9';
 
 interface FormState {
   firstName: string;
@@ -38,7 +38,7 @@ function hasGrant(
 }
 
 export function StaffEditForm({ staff }: { staff: AdminStaff }) {
-  const { values, set, submit, isPending } = useEditForm<FormState>(
+  const { values, set, submit, isPending, dirty, reset } = useEditForm<FormState>(
     {
       firstName: staff.firstName ?? '',
       lastName: staff.lastName ?? '',
@@ -103,7 +103,7 @@ export function StaffEditForm({ staff }: { staff: AdminStaff }) {
           >
             {Object.values(StaffRole).map((role) => (
               <option key={role} value={role}>
-                {role}
+                {ROLE_LABELS[role]}
               </option>
             ))}
           </select>
@@ -141,22 +141,13 @@ export function StaffEditForm({ staff }: { staff: AdminStaff }) {
           </tbody>
         </table>
       </div>
-
-      <Button
-        type="button"
-        className="self-start"
-        onClick={() => submit()}
-        disabled={isPending}
-      >
-        {isPending ? (
-          <>
-            <Spinner />
-            Saving…
-          </>
-        ) : (
-          'Save changes'
-        )}
-      </Button>
+      <SaveBar
+        dirty={dirty}
+        saving={isPending}
+        label="Unsaved staff changes"
+        onDiscard={reset}
+        onSave={() => submit()}
+      />
     </div>
   );
 }

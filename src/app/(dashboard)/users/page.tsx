@@ -4,7 +4,7 @@ import { AdminUser } from '@/lib/types';
 import { ApiErrorCard } from '@/components/api-error-card';
 import { SearchBox } from '@/components/search-box';
 import { PaginationControls } from '@/components/pagination-controls';
-import { SuspendToggle } from '@/components/suspend-toggle';
+import { StatusPill } from '@/components/account-status';
 import { AvatarInitials } from '@/components/avatar-initials';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -15,11 +15,13 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { formatDate } from '@/lib/format';
-import { setUserSuspended } from './actions';
+import { formatDate, formatPhone, humanize } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { ChevronRight } from 'lucide-react';
+import { SegmentedLinks } from '@/components/segmented';
 import { DateRangeFilter } from './_components/date-range-filter';
 import { ExportButton } from './_components/export-button';
+import { StatStrip } from '@/components/stat-strip';
 
 const LIMIT = 20;
 
@@ -104,132 +106,121 @@ export default async function UsersPage({
     { label: 'New this week', value: `+${newThisWeek.toLocaleString()}` },
   ];
 
+  // Carries the search box and the date range across, so switching tabs
+  // narrows the current query instead of silently resetting it.
+  const tabHref = (key: string) => {
+    const p = new URLSearchParams();
+    if (search) p.set('search', search);
+    if (dateFrom) p.set('dateFrom', dateFrom);
+    if (dateTo) p.set('dateTo', dateTo);
+    if (key !== 'all') p.set('filter', key);
+    const q = p.toString();
+    return `/users${q ? `?${q}` : ''}`;
+  };
+  const tabCounts: Record<string, number | undefined> = {
+    customers: customersCount,
+    'vendor-agents': agentsCount,
+  };
+
   return (
-    <div className="flex flex-col gap-4">
-      {/* Header */}
-      <div>
-        <h1 className="text-[23px] font-bold tracking-tight text-foreground">Users</h1>
-        <p className="mt-1 text-[14px] text-muted-foreground">Customers and vendor agents</p>
-      </div>
-
-      {/* Stat chips */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {chips.map((chip) => (
-          <div
-            key={chip.label}
-            className="flex flex-col gap-1 rounded-[12px] border border-border bg-card p-[13px_16px] shadow-[var(--shadow-card)]"
-          >
-            <span className="text-[12px] font-medium text-muted-foreground">{chip.label}</span>
-            <span className="text-[20px] font-bold tabular-nums text-foreground">{chip.value}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Toolbar */}
-      <div className="flex flex-col gap-2.5">
-        {/* Row 1: filter pills + search + export */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            {FILTERS.map((f) => {
-              const active = activeFilter === f.key;
-              const href = (() => {
-                // Carries the search box and the date range across, so
-                // switching tabs narrows the current query instead of
-                // silently resetting it.
-                const p = new URLSearchParams();
-                if (search) p.set('search', search);
-                if (dateFrom) p.set('dateFrom', dateFrom);
-                if (dateTo) p.set('dateTo', dateTo);
-                if (f.key !== 'all') p.set('filter', f.key);
-                const s = p.toString();
-                return `/users${s ? `?${s}` : ''}`;
-              })();
-              return (
-                <Link
-                  key={f.key}
-                  href={href}
-                  className={cn(
-                    'rounded-[9px] border px-3.5 py-[7px] text-[13px] font-semibold transition-colors',
-                    active
-                      ? 'border-transparent bg-brand-tint text-primary'
-                      : 'border-border-strong bg-card text-foreground-secondary hover:bg-muted'
-                  )}
-                >
-                  {f.label}
-                </Link>
-              );
-            })}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <SearchBox placeholder="Search by name, email, phone…" />
-            <ExportButton />
-          </div>
+    <div className="flex flex-col gap-7">
+      <div className="flex flex-wrap items-end justify-between gap-6">
+        <div>
+          <h1 className="page-title">Users</h1>
+          <p className="page-subtitle">Customers and vendor agents with an Awarome account.</p>
         </div>
+        <ExportButton />
+      </div>
 
-        {/* Row 2: date range filter */}
-        <div className="flex items-center">
+      <StatStrip stats={chips} />
+
+      <section className="overflow-hidden rounded-[10px] border border-border bg-card">
+        <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3.5">
+          <SegmentedLinks
+            active={activeFilter}
+            items={FILTERS.map((f) => ({
+              key: f.key,
+              label: f.label,
+              href: tabHref(f.key),
+              count: tabCounts[f.key]?.toLocaleString(),
+            }))}
+          />
           <DateRangeFilter />
+          <div className="ml-auto w-full sm:w-auto">
+            <SearchBox placeholder="Name, email or phone" />
+          </div>
         </div>
-      </div>
 
-      {/* Table card */}
-      <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="overflow-x-auto">
+        {result.data.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 px-6 py-14 text-center">
+            <span className="font-heading text-[18px] font-bold tracking-[-0.03em]">No users match</span>
+            <span className="text-[14px] text-foreground-secondary">
+              Nobody in this view right now. Clear the search or switch tabs.
+            </span>
+          </div>
+        ) : (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>User</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead>Source</TableHead>
+                <TableHead>Heard via</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Joined</TableHead>
+                <TableHead className="w-12" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {result.data.map((user) => (
-                <TableRow key={user._id} className="cursor-pointer">
-                  <TableCell>
-                    <Link href={`/users/${user._id}`} className="flex items-center gap-2.5">
-                      <AvatarInitials
-                        name={`${user.firstName ?? ''} ${user.lastName ?? ''}`}
-                        size="sm"
-                      />
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-semibold text-foreground hover:underline">
-                          {[user.firstName, user.lastName].filter(Boolean).join(' ') || '—'}
-                        </span>
-                        <span className="text-[12px] text-muted-foreground">{user.email}</span>
+              {result.data.map((user) => {
+                const name = [user.firstName, user.lastName].filter(Boolean).join(' ');
+                return (
+                  <TableRow key={user._id} className="relative cursor-pointer">
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <AvatarInitials name={name || undefined} />
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Link
+                              href={`/users/${user._id}`}
+                              className={cn(
+                                'font-medium after:absolute after:inset-0',
+                                name ? 'text-foreground' : 'text-muted-foreground'
+                              )}
+                            >
+                              {name || 'No name yet'}
+                            </Link>
+                            {!name && <Badge variant="warning">Incomplete profile</Badge>}
+                          </div>
+                          <div className="truncate text-[12.5px] text-muted-foreground">
+                            {user.email || 'No email'}
+                          </div>
+                        </div>
                       </div>
-                    </Link>
-                  </TableCell>
-                  <TableCell>{user.phone || '—'}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{user.role}</Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {user.source || '—'}
-                  </TableCell>
-                  <TableCell>
-                    <SuspendToggle
-                      suspended={!!user.suspended}
-                      action={setUserSuspended.bind(null, user._id)}
-                    />
-                  </TableCell>
-                  <TableCell>{formatDate(user.createdAt)}</TableCell>
-                </TableRow>
-              ))}
-              {result.data.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                    No users found.
-                  </TableCell>
-                </TableRow>
-              )}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-foreground-secondary tabular-nums">
+                      {formatPhone(user.phone)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{humanize(user.role)}</Badge>
+                    </TableCell>
+                    <TableCell className="text-foreground-secondary">{humanize(user.source)}</TableCell>
+                    <TableCell>
+                      <StatusPill suspended={!!user.suspended} />
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-foreground-secondary tabular-nums">
+                      {formatDate(user.createdAt)}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      <ChevronRight className="ml-auto size-4" />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
-        </div>
-        <div className="border-t border-border px-4 py-3">
+        )}
+        <div className="border-t border-border px-6 py-3.5">
           <PaginationControls
             skip={skip}
             limit={LIMIT}
@@ -238,7 +229,7 @@ export default async function UsersPage({
             searchParams={params}
           />
         </div>
-      </div>
+      </section>
     </div>
   );
 }

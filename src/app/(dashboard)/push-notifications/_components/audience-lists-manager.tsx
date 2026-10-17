@@ -57,11 +57,11 @@ export function AudienceListsManager({
   return (
     <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_1.5fr]">
       {/* Create a list */}
-      <div className="rounded-[14px] border border-border bg-card p-[20px_22px] shadow-[var(--shadow-card)]">
+      <div className="rounded-[8px] border border-border p-5">
         <div className="mb-4 text-[14.5px] font-semibold text-foreground">Create a list</div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <label className="flex flex-col gap-[7px]">
-            <span className="text-[13px] font-medium text-foreground-secondary">
+            <span className="text-[13.5px] font-medium text-foreground">
               List name <span className="text-destructive">*</span>
             </span>
             <input
@@ -70,12 +70,12 @@ export function AudienceListsManager({
               placeholder="e.g. Lagos customers, VIP users…"
               required
               maxLength={80}
-              className="w-full rounded-[10px] border border-input bg-background px-[14px] py-[11px] text-[13.5px] text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+              className="field w-full"
             />
           </label>
 
           <div className="flex flex-col gap-[7px]">
-            <span className="text-[13px] font-medium text-foreground-secondary">
+            <span className="text-[13.5px] font-medium text-foreground">
               Contacts <span className="text-destructive">*</span>
             </span>
             <ContactsInput state={contacts} disabled={isPending} />
@@ -84,7 +84,7 @@ export function AudienceListsManager({
           <button
             type="submit"
             disabled={isPending || contacts.count === 0}
-            className="inline-flex self-start items-center gap-[7px] rounded-[10px] bg-primary px-[18px] py-[10px] text-[13px] font-semibold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
+            className="inline-flex self-start items-center gap-[7px] rounded-full bg-primary px-[18px] py-[10px] text-[13px] font-semibold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
           >
             <svg
               width="15"
@@ -105,7 +105,7 @@ export function AudienceListsManager({
       </div>
 
       {/* Your lists table */}
-      <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
+      <div className="overflow-hidden rounded-[8px] border border-border">
         <div className="flex items-center gap-[9px] border-b border-border px-5 py-4">
           <span className="text-[14.5px] font-semibold text-foreground">Your lists</span>
           <span className="rounded-full bg-muted px-[9px] py-0.5 text-[12px] font-semibold tabular-nums text-foreground-secondary">
@@ -116,16 +116,16 @@ export function AudienceListsManager({
           <table className="w-full border-collapse">
             <thead>
               <tr>
-                <th className="px-5 py-[11px] text-left text-[11px] font-semibold uppercase tracking-[.04em] text-muted-foreground">
+                <th className="px-5 py-[11px] text-left text-[11.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
                   List
                 </th>
-                <th className="px-3.5 py-[11px] text-right text-[11px] font-semibold uppercase tracking-[.04em] text-muted-foreground">
+                <th className="px-3.5 py-[11px] text-right text-[11.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
                   Contacts
                 </th>
-                <th className="px-3.5 py-[11px] text-right text-[11px] font-semibold uppercase tracking-[.04em] text-muted-foreground">
+                <th className="px-3.5 py-[11px] text-right text-[11.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
                   Matched
                 </th>
-                <th className="px-3.5 py-[11px] text-left text-[11px] font-semibold uppercase tracking-[.04em] text-muted-foreground">
+                <th className="px-3.5 py-[11px] text-left text-[11.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
                   Created
                 </th>
                 <th className="px-5 py-[11px]" />

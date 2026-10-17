@@ -41,7 +41,7 @@ export const payoutTriggerLabel = (trigger: string) =>
 
 // Rider payouts are stored in naira, unlike wallet balances (kobo).
 export const naira = (value?: number | null) =>
-  `₦${(value ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  `₦ ${(value ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
 export const personName = (
   person?: { firstName?: string; lastName?: string; email?: string } | null,

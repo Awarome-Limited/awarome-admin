@@ -10,8 +10,9 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { formatDate } from '@/lib/format';
-import { cn } from '@/lib/utils';
+import { formatDate, formatPhone, humanize } from '@/lib/format';
+import { SegmentedLinks } from '@/components/segmented';
+import { EmptyRow, InlineNotice, ListCard, PageHeader, PageStack } from '@/components/page';
 import { ResolveDialog } from './_components/resolve-dialog';
 import {
   TripDetails,
@@ -106,7 +107,7 @@ function partyName(user?: Party | string) {
 
 function partyContact(user?: Party | string) {
   if (!user || typeof user === 'string') return '—';
-  return user.phone || user.email || '—';
+  return user.phone ? formatPhone(user.phone) : user.email || '—';
 }
 
 function contactOf(user?: Party | string) {
@@ -189,7 +190,7 @@ function tripDetailsFor(
       note: job.dropoffAddress?.note,
     },
     facts: [
-      { label: 'Value', value: `₦${amount.toLocaleString()}` },
+      { label: 'Value', value: `₦ ${amount.toLocaleString()}` },
       {
         label: 'Paid',
         value: job.isPaid ? 'Yes' : 'No',
@@ -247,39 +248,34 @@ export default async function CancellationsPage({
     ...orders.map((job) => ({ job, jobType: 'order' as const })),
   ];
 
-  return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[23px] font-bold tracking-tight text-foreground">
-            Cancellation requests
-          </h1>
-          <p className="mt-1 max-w-[70ch] text-[14px] text-muted-foreground">
-            Riders who cannot finish a run they have already collected. The
-            package is with them until you decide — approving ends the run for
-            that customer only, and on a batch the rest of the trip carries on.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {FILTERS.map((f) => (
-            <Link
-              key={f.key}
-              href={`/cancellations?filter=${f.key}`}
-              className={cn(
-                'rounded-[9px] border px-3.5 py-[7px] text-[13px] font-semibold transition-colors',
-                activeFilter === f.key
-                  ? 'border-transparent bg-brand-tint text-primary'
-                  : 'border-border-strong bg-card text-foreground-secondary hover:bg-muted'
-              )}
-            >
-              {f.label}
-            </Link>
-          ))}
-        </div>
-      </div>
+  const pendingTotal = (payload.counts?.orders ?? 0) + (payload.counts?.deliveries ?? 0);
 
-      <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="overflow-x-auto">
+  return (
+    <PageStack>
+      <PageHeader
+        title="Cancellations"
+        subtitle="Riders who can’t finish a run they’ve already collected. The package stays with them until you decide; approving ends the run for that customer only, and the rest of a batch carries on."
+      />
+
+      {isPending && rows.length > 0 && (
+        <InlineNotice>
+          {rows.length === 1 ? '1 rider is' : `${rows.length} riders are`} holding a package until you decide.
+        </InlineNotice>
+      )}
+
+      <ListCard
+        toolbar={
+          <SegmentedLinks
+            active={activeFilter}
+            items={FILTERS.map((f) => ({
+              key: f.key,
+              label: f.label,
+              href: `/cancellations?filter=${f.key}`,
+              count: f.key === 'pending' && isPending && pendingTotal > 0 ? pendingTotal : undefined,
+            }))}
+          />
+        }
+      >
           <Table>
             <TableHeader>
               <TableRow>
@@ -288,7 +284,7 @@ export default async function CancellationsPage({
                 <TableHead>Rider</TableHead>
                 <TableHead>Reason</TableHead>
                 <TableHead>Stage</TableHead>
-                <TableHead>Value</TableHead>
+                <TableHead className="text-right">Value</TableHead>
                 <TableHead>{isPending ? 'Raised' : 'Resolved'}</TableHead>
                 {isPending && <TableHead className="text-right">Decision</TableHead>}
                 {!isPending && <TableHead>Refund</TableHead>}
@@ -296,16 +292,11 @@ export default async function CancellationsPage({
             </TableHeader>
             <TableBody>
               {rows.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={9}
-                    className="py-10 text-center text-muted-foreground"
-                  >
-                    {isPending
-                      ? 'Nothing waiting — no rider is stuck with a package.'
-                      : 'Nothing here yet.'}
-                  </TableCell>
-                </TableRow>
+                <EmptyRow
+                  colSpan={8}
+                  title={isPending ? 'Nothing waiting' : 'Nothing here yet'}
+                  body={isPending ? 'No rider is stuck with a package.' : 'Decided requests show up here.'}
+                />
               )}
               {rows.map(({ job, jobType }) => {
                 const request = job.cancellationRequest || {};
@@ -324,19 +315,19 @@ export default async function CancellationsPage({
                         {jobType === 'order' ? (
                           <Link
                             href={`/orders/${job._id}`}
-                            className="font-medium hover:underline"
+                            className="font-medium tabular-nums hover:text-primary"
                           >
                             {reference}
                           </Link>
                         ) : (
                           <Link
                             href={`/deliveries/${job._id}`}
-                            className="font-medium hover:underline"
+                            className="font-medium tabular-nums hover:text-primary"
                           >
                             {reference}
                           </Link>
                         )}
-                        <span className="text-[12px] text-muted-foreground">
+                        <span className="text-[12.5px] text-muted-foreground">
                           {job.batchId ? `Batch ${job.batchId}` : 'Instant'}
                         </span>
                       </div>
@@ -344,7 +335,7 @@ export default async function CancellationsPage({
                     <TableCell>
                       <div className="flex flex-col gap-0.5">
                         <span>{customer}</span>
-                        <span className="text-[12px] text-muted-foreground">
+                        <span className="text-[12.5px] text-muted-foreground">
                           {partyContact(job.user)}
                         </span>
                       </div>
@@ -352,7 +343,7 @@ export default async function CancellationsPage({
                     <TableCell>
                       <div className="flex flex-col gap-0.5">
                         <span>{partyName(request.rider)}</span>
-                        <span className="text-[12px] text-muted-foreground">
+                        <span className="text-[12.5px] text-muted-foreground">
                           {partyContact(request.rider)}
                         </span>
                       </div>
@@ -361,29 +352,27 @@ export default async function CancellationsPage({
                       <div className="flex max-w-[28ch] flex-col gap-0.5">
                         <span>{REASONS[request.reason || ''] || request.reason || '—'}</span>
                         {request.note && (
-                          <span className="text-[12px] text-muted-foreground">
+                          <span className="text-[12.5px] text-muted-foreground">
                             “{request.note}”
                           </span>
                         )}
                         {!isPending && request.resolutionNote && (
-                          <span className="text-[12px] text-muted-foreground">
+                          <span className="text-[12.5px] text-muted-foreground">
                             Ops: {request.resolutionNote}
                           </span>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {STAGES[request.atStatus || ''] || request.atStatus || '—'}
+                    <TableCell>
+                      <Badge variant="info" dot>
+                        {STAGES[request.atStatus || ''] || humanize(request.atStatus)}
+                      </Badge>
                     </TableCell>
-                    <TableCell className="font-semibold tabular-nums">
-                      ₦{amount.toLocaleString()}
-                      {!job.isPaid && (
-                        <span className="ml-1 text-[12px] font-normal text-muted-foreground">
-                          unpaid
-                        </span>
-                      )}
+                    <TableCell className="text-right tabular-nums">
+                      <div className="font-medium">₦ {amount.toLocaleString()}</div>
+                      <div className="text-[12.5px] text-muted-foreground">{job.isPaid ? 'Paid' : 'Not paid'}</div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="whitespace-nowrap text-foreground-secondary tabular-nums">
                       {formatDate(
                         isPending ? request.requestedAt : request.resolvedAt
                       )}
@@ -427,7 +416,7 @@ export default async function CancellationsPage({
                         {request.refundQueued ? (
                           <Link href="/refunds" className="hover:underline">
                             <Badge variant="warning" dot>
-                              refund queued
+                              Refund queued
                             </Badge>
                           </Link>
                         ) : (
@@ -440,8 +429,7 @@ export default async function CancellationsPage({
               })}
             </TableBody>
           </Table>
-        </div>
-      </div>
-    </div>
+      </ListCard>
+    </PageStack>
   );
 }

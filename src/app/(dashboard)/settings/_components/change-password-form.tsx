@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { changePassword } from '../actions';
 
 const inputClass =
-  'w-full rounded-[10px] border border-input bg-background py-[11px] pl-[14px] pr-11 text-[14px] text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50';
+  'field pr-11';
 
 function PasswordInput({
   name,
@@ -82,14 +82,14 @@ export function ChangePasswordForm() {
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-5">
       <label className="flex flex-col gap-[7px]">
-        <span className="text-[13px] font-medium text-foreground-secondary">
+        <span className="text-[13.5px] font-medium text-foreground">
           Current password <span className="text-destructive">*</span>
         </span>
         <PasswordInput name="currentPassword" autoComplete="current-password" required />
       </label>
 
       <label className="flex flex-col gap-[7px]">
-        <span className="text-[13px] font-medium text-foreground-secondary">
+        <span className="text-[13.5px] font-medium text-foreground">
           New password <span className="text-destructive">*</span>
         </span>
         <PasswordInput
@@ -103,7 +103,7 @@ export function ChangePasswordForm() {
       </label>
 
       <label className="flex flex-col gap-[7px]">
-        <span className="text-[13px] font-medium text-foreground-secondary">
+        <span className="text-[13.5px] font-medium text-foreground">
           Confirm new password <span className="text-destructive">*</span>
         </span>
         <PasswordInput
@@ -121,7 +121,7 @@ export function ChangePasswordForm() {
         <button
           type="submit"
           disabled={isPending}
-          className="inline-flex items-center gap-2 rounded-[10px] bg-primary px-5 py-[11px] text-[13.5px] font-semibold text-primary-foreground shadow-[var(--shadow-card)] transition-all hover:brightness-110 disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-[11px] text-[13.5px] font-semibold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
         >
           {isPending ? 'Saving…' : 'Change password'}
         </button>

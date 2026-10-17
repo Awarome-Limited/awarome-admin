@@ -14,8 +14,19 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { formatDate, formatNaira, statusBadgeVariant } from '@/lib/format';
-import { cn } from '@/lib/utils';
+import { formatDate, formatNaira, humanize, statusBadgeVariant } from '@/lib/format';
+import { buttonVariants } from '@/components/ui/button';
+import { SegmentedLinks } from '@/components/segmented';
+import {
+  EmptyRow,
+  ListCard,
+  PageHeader,
+  PageStack,
+  RowChevron,
+  RowLink,
+  ToolbarEnd,
+} from '@/components/page';
+import { StatStrip } from '@/components/stat-strip';
 
 const LIMIT = 20;
 
@@ -94,127 +105,58 @@ export default async function WalletsPage({
   }
 
   const chips = [
-    { label: 'Total wallets', value: totalCount.toLocaleString() },
+    { label: 'All wallets', value: totalCount.toLocaleString() },
     { label: 'Subscribed', value: subscribedCount.toLocaleString() },
     { label: 'Expired', value: expiredCount.toLocaleString() },
     { label: 'Not subscribed', value: notSubscribedCount.toLocaleString() },
   ];
 
+  const tabHref = (key: string) => {
+    const p = new URLSearchParams();
+    if (search) p.set('search', search);
+    if (key !== 'all') p.set('filter', key);
+    const q = p.toString();
+    return `/payments/wallets${q ? `?${q}` : ''}`;
+  };
+  const tabCounts: Record<string, number> = {
+    all: totalCount,
+    subscribed: subscribedCount,
+    expired: expiredCount,
+    'not-subscribed': notSubscribedCount,
+  };
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[23px] font-bold tracking-tight text-foreground">Wallets</h1>
-          <p className="mt-1 text-[14px] text-muted-foreground">
-            Customer and vendor wallet balances
-          </p>
-        </div>
-        <Link
-          href="/payments"
-          className="inline-flex h-[34px] items-center gap-1.5 rounded-[9px] border border-border-strong bg-card px-3.5 text-[13px] font-semibold text-foreground-secondary hover:bg-muted"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M2 6h20v12H2zM2 10h20" />
-          </svg>
-          Transactions
-        </Link>
-      </div>
+    <PageStack>
+      <PageHeader
+        title="Wallets"
+        subtitle="Customer, vendor and partner wallet balances."
+        actions={
+          <Link href="/payments" className={buttonVariants({ variant: 'outline' })}>
+            Transactions
+          </Link>
+        }
+      />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {chips.map((chip) => (
-          <div
-            key={chip.label}
-            className="flex flex-col gap-1 rounded-[12px] border border-border bg-card p-[13px_16px] shadow-[var(--shadow-card)]"
-          >
-            <span className="text-[12px] font-medium text-muted-foreground">{chip.label}</span>
-            <span className="text-[20px] font-bold tabular-nums text-foreground">{chip.value}</span>
-          </div>
-        ))}
-      </div>
+      <StatStrip stats={chips} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {FILTERS.map((f) => {
-            const active = activeFilter === f.key;
-            const href = (() => {
-              const p = new URLSearchParams();
-              if (search) p.set('search', search);
-              if (f.key !== 'all') p.set('filter', f.key);
-              const s = p.toString();
-              return `/payments/wallets${s ? `?${s}` : ''}`;
-            })();
-            return (
-              <Link
-                key={f.key}
-                href={href}
-                className={cn(
-                  'rounded-[9px] border px-3.5 py-[7px] text-[13px] font-semibold transition-colors',
-                  active
-                    ? 'border-transparent bg-brand-tint text-primary'
-                    : 'border-border-strong bg-card text-foreground-secondary hover:bg-muted'
-                )}
-              >
-                {f.label}
-              </Link>
-            );
-          })}
-        </div>
-        <SearchBox placeholder="Search by owner…" />
-      </div>
-
-      <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Owner</TableHead>
-                <TableHead className="text-right">Balance</TableHead>
-                <TableHead>Subscription</TableHead>
-                <TableHead>Last funded</TableHead>
-                <TableHead className="text-right"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {result.data.map((wallet) => (
-                <TableRow key={wallet._id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2.5">
-                      <AvatarInitials name={ownerName(wallet)} size="sm" />
-                      <span className="font-medium text-foreground">{ownerName(wallet)}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right font-semibold tabular-nums text-foreground">
-                    {formatNaira(wallet.balance)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={statusBadgeVariant(wallet.subscriptionStatus)} dot>
-                      {wallet.subscriptionStatus}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDate(wallet.lastFundedAt)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Link
-                      href={`/payments/wallets/${wallet._id}`}
-                      className="inline-flex h-[30px] items-center rounded-[8px] border border-border-strong bg-card px-3 text-[12.5px] font-semibold text-foreground-secondary hover:bg-muted"
-                    >
-                      View wallet
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {result.data.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-                    No wallets found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="border-t border-border px-4 py-3">
+      <ListCard
+        toolbar={
+          <>
+            <SegmentedLinks
+              active={activeFilter}
+              items={FILTERS.map((f) => ({
+                key: f.key,
+                label: f.label,
+                href: tabHref(f.key),
+                count: tabCounts[f.key]?.toLocaleString(),
+              }))}
+            />
+            <ToolbarEnd>
+              <SearchBox placeholder="Owner name or email" />
+            </ToolbarEnd>
+          </>
+        }
+        footer={
           <PaginationControls
             skip={skip}
             limit={LIMIT}
@@ -222,8 +164,56 @@ export default async function WalletsPage({
             basePath="/payments/wallets"
             searchParams={params}
           />
-        </div>
-      </div>
-    </div>
+        }
+      >
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Owner</TableHead>
+              <TableHead>Subscription</TableHead>
+              <TableHead>Last funded</TableHead>
+              <TableHead className="text-right">Balance</TableHead>
+              <TableHead className="w-12" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {result.data.map((wallet) => {
+              const owner = ownerName(wallet);
+              const isPartner = !!wallet.partner && typeof wallet.partner !== 'string';
+              return (
+                <TableRow key={wallet._id} className="relative">
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <AvatarInitials name={owner === '—' ? undefined : owner} shape={isPartner ? 'store' : 'person'} />
+                      <div className="min-w-0">
+                        <RowLink href={`/payments/wallets/${wallet._id}`}>
+                          {owner === '—' ? 'No name yet' : owner}
+                        </RowLink>
+                        <div className="text-[12.5px] text-muted-foreground">{isPartner ? 'API partner' : 'Customer'}</div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={statusBadgeVariant(wallet.subscriptionStatus)} dot>
+                      {humanize(wallet.subscriptionStatus)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-foreground-secondary tabular-nums">
+                    {wallet.lastFundedAt ? formatDate(wallet.lastFundedAt) : 'Never'}
+                  </TableCell>
+                  <TableCell className="text-right font-medium tabular-nums">{formatNaira(wallet.balance)}</TableCell>
+                  <TableCell>
+                    <RowChevron />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+            {result.data.length === 0 && (
+              <EmptyRow colSpan={5} title="No wallets match" body="Clear the search or switch tabs." />
+            )}
+          </TableBody>
+        </Table>
+      </ListCard>
+    </PageStack>
   );
 }

@@ -17,10 +17,19 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { formatDate } from '@/lib/format';
+import { StatStrip } from '@/components/stat-strip';
+import {
+  EmptyRow,
+  ListCard,
+  PageHeader,
+  PageStack,
+  RowChevron,
+  RowLink,
+} from '@/components/page';
 
 const LIMIT = 20;
 
-const naira = (amount: number) => `₦${Math.round(amount).toLocaleString('en-NG')}`;
+const naira = (amount: number) => `₦ ${Math.round(amount).toLocaleString('en-NG')}`;
 
 function customerName(user: AdminBulkDelivery['user']) {
   if (!user || typeof user === 'string') return user || '—';
@@ -52,94 +61,37 @@ export default async function BulkDeliveriesPage({
     );
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[23px] font-bold tracking-tight text-foreground">Bulk deliveries</h1>
-          <p className="mt-1 text-[14px] text-muted-foreground">
-            Drops booked on a customer’s behalf from offline requests
-          </p>
-        </div>
-        {canCreate && (
-          <Link href="/bulk-deliveries/new" className={buttonVariants({ size: 'sm' })}>
-            <PlusIcon data-icon="inline-start" />
-            New bulk delivery
-          </Link>
-        )}
-      </div>
+  const outstanding = result.data.reduce((sum, b) => sum + (b.summary.vendor.outstanding ?? 0), 0);
+  const inProgress = result.data.filter((b) => {
+    const done = b.summary.drops - b.summary.cancelled;
+    return b.summary.delivered < done;
+  }).length;
 
-      <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Bulk</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Progress</TableHead>
-                <TableHead>Pricing</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">Vendor owes</TableHead>
-                <TableHead>Created</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {result.data.map((bulk) => {
-                const { summary } = bulk;
-                const done = summary.drops - summary.cancelled;
-                return (
-                  <TableRow key={bulk._id}>
-                    <TableCell>
-                      <Link
-                        href={`/bulk-deliveries/${bulk._id}`}
-                        className="rounded bg-chip px-2 py-0.5 font-mono text-xs hover:underline"
-                      >
-                        {bulk.bulkId}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="font-medium">{customerName(bulk.user)}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={summary.delivered === done && done > 0 ? 'positive' : 'warning'}
-                        dot
-                      >
-                        {summary.delivered}/{done} delivered
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {bulk.pricingMode === 'flat' ? 'Flat rate' : 'Standard'}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold tabular-nums">
-                      {naira(summary.totalFees)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {summary.vendor.outstanding > 0 ? (
-                        <span className="font-semibold text-warning">
-                          {naira(summary.vendor.outstanding)}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">
-                          {summary.vendor.drops ? 'Settled' : '—'}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatDate(bulk.createdAt).split(',')[0]}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {result.data.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
-                    No bulk deliveries yet.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="border-t border-border px-4 py-3">
+  return (
+    <PageStack>
+      <PageHeader
+        title="Bulk deliveries"
+        subtitle="Drops booked on a customer’s behalf from offline requests."
+        actions={
+          canCreate && (
+            <Link href="/bulk-deliveries/new" className={buttonVariants()}>
+              <PlusIcon />
+              New bulk delivery
+            </Link>
+          )
+        }
+      />
+
+      <StatStrip
+        stats={[
+          { label: 'Bulk bookings', value: result.totalCount.toLocaleString() },
+          { label: 'Still delivering', value: inProgress.toLocaleString(), meta: 'On this page' },
+          { label: 'Vendors still owe', value: naira(outstanding), meta: 'On this page' },
+        ]}
+      />
+
+      <ListCard
+        footer={
           <PaginationControls
             skip={skip}
             limit={LIMIT}
@@ -147,8 +99,74 @@ export default async function BulkDeliveriesPage({
             basePath="/bulk-deliveries"
             searchParams={params}
           />
-        </div>
-      </div>
-    </div>
+        }
+      >
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Bulk</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Progress</TableHead>
+              <TableHead>Pricing</TableHead>
+              <TableHead className="text-right">Total</TableHead>
+              <TableHead className="text-right">Vendor owes</TableHead>
+              <TableHead className="w-12" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {result.data.map((bulk) => {
+              const { summary } = bulk;
+              const done = summary.drops - summary.cancelled;
+              const pct = done > 0 ? summary.delivered / done : 0;
+              return (
+                <TableRow key={bulk._id} className="relative">
+                  <TableCell className="tabular-nums">
+                    <RowLink href={`/bulk-deliveries/${bulk._id}`}>{bulk.bulkId}</RowLink>
+                    <div className="text-[12.5px] whitespace-nowrap text-muted-foreground">
+                      {formatDate(bulk.createdAt)}
+                    </div>
+                  </TableCell>
+                  <TableCell>{customerName(bulk.user)}</TableCell>
+                  <TableCell className="min-w-[160px]">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={pct >= 1 ? 'h-full rounded-full bg-positive' : 'h-full rounded-full bg-primary'}
+                          style={{ width: `${pct * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-[13px] text-foreground-secondary tabular-nums">
+                        {summary.delivered} of {done}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{bulk.pricingMode === 'flat' ? 'Flat rate' : 'Standard'}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right font-medium tabular-nums">{naira(summary.totalFees)}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {summary.vendor.outstanding > 0 ? (
+                      <span className="font-medium text-warning">{naira(summary.vendor.outstanding)}</span>
+                    ) : (
+                      <span className="text-muted-foreground">{summary.vendor.drops ? 'Settled' : '—'}</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <RowChevron />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+            {result.data.length === 0 && (
+              <EmptyRow
+                colSpan={7}
+                title="No bulk deliveries yet"
+                body="Book a customer’s drops in one go from an offline request."
+              />
+            )}
+          </TableBody>
+        </Table>
+      </ListCard>
+    </PageStack>
   );
 }

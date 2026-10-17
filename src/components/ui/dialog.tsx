@@ -55,7 +55,7 @@ function DialogContent({
         data-slot="dialog-content"
         data-size={size}
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100vh-2rem)] w-full -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-2xl bg-popover p-5 text-popover-foreground shadow-[var(--shadow-card)] ring-1 ring-foreground/10 duration-100 outline-none data-[size=sm]:max-w-sm data-[size=default]:max-w-lg data-[size=lg]:max-w-2xl data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100vh-2rem)] w-full -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-[10px] bg-popover p-6 text-popover-foreground shadow-[0_12px_40px_rgba(18,4,96,0.18)] ring-1 ring-foreground/10 duration-100 outline-none data-[size=sm]:max-w-sm data-[size=default]:max-w-lg data-[size=lg]:max-w-2xl data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}
@@ -104,7 +104,7 @@ function DialogTitle({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("text-base font-semibold text-foreground", className)}
+      className={cn("font-heading text-[19px] font-bold tracking-[-0.03em] text-foreground", className)}
       {...props}
     />
   )

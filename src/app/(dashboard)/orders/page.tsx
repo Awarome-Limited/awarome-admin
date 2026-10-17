@@ -15,17 +15,27 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { formatDate, statusBadgeVariant } from '@/lib/format';
-import { cn } from '@/lib/utils';
+import { formatDate, humanize, statusBadgeVariant } from '@/lib/format';
+import { StatStrip } from '@/components/stat-strip';
+import { SegmentedLinks } from '@/components/segmented';
+import {
+  EmptyRow,
+  ListCard,
+  PageHeader,
+  PageStack,
+  RowChevron,
+  RowLink,
+  ToolbarEnd,
+} from '@/components/page';
 
 const LIMIT = 20;
 
 const FILTERS = [
   { key: 'all', label: 'All' },
   { key: 'confirmed', label: 'Confirmed' },
-  { key: 'pending', label: 'Pending' },
+  { key: 'pending', label: 'Pending payment' },
   { key: 'failed', label: 'Failed' },
-  { key: 'initialized', label: 'Initialized' },
+  { key: 'initialized', label: 'Checkout started' },
 ] as const;
 
 function filterToQuery(filter: string): Record<string, string> {
@@ -34,8 +44,8 @@ function filterToQuery(filter: string): Record<string, string> {
 }
 
 function customerName(user: AdminOrder['user']) {
-  if (!user || typeof user === 'string') return user || '—';
-  return [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || '—';
+  if (!user || typeof user === 'string') return user || 'No name yet';
+  return [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || 'No name yet';
 }
 
 function vendorName(vendor: AdminOrder['vendor'], vendorMap: Map<string, string>) {
@@ -103,125 +113,68 @@ export default async function OrdersPage({
   const vendorMap = new Map(vendors.map((v) => [v._id, v.businessName || v.name || '—']));
 
   const chips = [
-    { label: 'Total orders', value: totalOrdersCount.toLocaleString() },
+    { label: 'All orders', value: totalOrdersCount.toLocaleString() },
     { label: 'Confirmed', value: confirmedCount.toLocaleString() },
-    { label: 'Pending', value: pendingCount.toLocaleString() },
+    { label: 'Pending payment', value: pendingCount.toLocaleString() },
     { label: 'Failed', value: failedCount.toLocaleString() },
   ];
 
+  const tabHref = (key: string) => {
+    const p = new URLSearchParams();
+    if (search) p.set('search', search);
+    if (vendor) p.set('vendor', vendor);
+    if (channel) p.set('channel', channel);
+    if (key !== 'all') p.set('filter', key);
+    const q = p.toString();
+    return `/orders${q ? `?${q}` : ''}`;
+  };
+  const tabCounts: Record<string, number> = {
+    all: totalOrdersCount,
+    confirmed: confirmedCount,
+    pending: pendingCount,
+    failed: failedCount,
+  };
+  const vendorLabel = vendor ? vendorMap.get(vendor) : undefined;
+
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-[23px] font-bold tracking-tight text-foreground">Orders</h1>
-        <p className="mt-1 text-[14px] text-muted-foreground">All customer orders</p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {chips.map((chip) => (
-          <div
-            key={chip.label}
-            className="flex flex-col gap-1 rounded-[12px] border border-border bg-card p-[13px_16px] shadow-[var(--shadow-card)]"
-          >
-            <span className="text-[12px] font-medium text-muted-foreground">{chip.label}</span>
-            <span className="text-[20px] font-bold tabular-nums text-foreground">{chip.value}</span>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {FILTERS.map((f) => {
-            const active = activeFilter === f.key;
-            const href = (() => {
-              const p = new URLSearchParams();
-              if (search) p.set('search', search);
-              if (vendor) p.set('vendor', vendor);
-              if (f.key !== 'all') p.set('filter', f.key);
-              const s = p.toString();
-              return `/orders${s ? `?${s}` : ''}`;
-            })();
-            return (
-              <Link
-                key={f.key}
-                href={href}
-                className={cn(
-                  'rounded-[9px] border px-3.5 py-[7px] text-[13px] font-semibold transition-colors',
-                  active
-                    ? 'border-transparent bg-brand-tint text-primary'
-                    : 'border-border-strong bg-card text-foreground-secondary hover:bg-muted'
-                )}
-              >
-                {f.label}
+    <PageStack>
+      <PageHeader
+        title="Orders"
+        subtitle={
+          vendorLabel ? (
+            <>
+              Orders from <strong className="font-medium text-foreground">{vendorLabel}</strong>.{' '}
+              <Link href="/orders" className="text-primary hover:text-warning">
+                Show all orders
               </Link>
-            );
-          })}
-        </div>
-        <div className="flex items-center gap-2">
-          <ChannelFilter />
-          <SearchBox placeholder="Search by order ID or customer…" />
-        </div>
-      </div>
+            </>
+          ) : (
+            'Marketplace orders from customers, by payment and delivery stage.'
+          )
+        }
+      />
 
-      <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order ID</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Vendor</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Delivery</TableHead>
-                <TableHead>Channel</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead>Date</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {result.data.map((order) => (
-                <TableRow key={order._id} className="cursor-pointer">
-                  <TableCell>
-                    <Link
-                      href={`/orders/${order._id}`}
-                      className="rounded bg-chip px-2 py-0.5 font-mono text-xs hover:underline"
-                    >
-                      {order.orderId}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="font-medium">{customerName(order.user)}</TableCell>
-                  <TableCell className="text-muted-foreground">{vendorName(order.vendor, vendorMap)}</TableCell>
-                  <TableCell>
-                    <Badge variant={statusBadgeVariant(order.status)} dot>
-                      {order.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={statusBadgeVariant(order.orderDeliveryStatus)} dot>
-                      {order.orderDeliveryStatus}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <ChannelBadge channel={order.channel as Channel | undefined} />
-                  </TableCell>
-                  <TableCell className="text-right font-semibold tabular-nums">
-                    ₦{(order.totalPrice ?? 0).toLocaleString()}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDate(order.createdAt)}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {result.data.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
-                    No orders found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="border-t border-border px-4 py-3">
+      <StatStrip stats={chips} />
+
+      <ListCard
+        toolbar={
+          <>
+            <SegmentedLinks
+              active={activeFilter}
+              items={FILTERS.map((f) => ({
+                key: f.key,
+                label: f.label,
+                href: tabHref(f.key),
+                count: tabCounts[f.key]?.toLocaleString(),
+              }))}
+            />
+            <ChannelFilter />
+            <ToolbarEnd>
+              <SearchBox placeholder="Order ID or customer" />
+            </ToolbarEnd>
+          </>
+        }
+        footer={
           <PaginationControls
             skip={skip}
             limit={LIMIT}
@@ -229,8 +182,59 @@ export default async function OrdersPage({
             basePath="/orders"
             searchParams={params}
           />
-        </div>
-      </div>
-    </div>
+        }
+      >
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Order</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Store</TableHead>
+              <TableHead>Payment</TableHead>
+              <TableHead>Stage</TableHead>
+              <TableHead>Channel</TableHead>
+              <TableHead className="text-right">Total</TableHead>
+              <TableHead className="w-12" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {result.data.map((order) => (
+              <TableRow key={order._id} className="relative">
+                <TableCell className="tabular-nums">
+                  <RowLink href={`/orders/${order._id}`}>{order.orderId}</RowLink>
+                  <div className="text-[12.5px] whitespace-nowrap text-muted-foreground">
+                    {formatDate(order.createdAt)}
+                  </div>
+                </TableCell>
+                <TableCell>{customerName(order.user)}</TableCell>
+                <TableCell className="text-foreground-secondary">{vendorName(order.vendor, vendorMap)}</TableCell>
+                <TableCell>
+                  <Badge variant={statusBadgeVariant(order.status)} dot>
+                    {humanize(order.status)}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={statusBadgeVariant(order.orderDeliveryStatus)} dot>
+                    {humanize(order.orderDeliveryStatus)}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <ChannelBadge channel={order.channel as Channel | undefined} />
+                </TableCell>
+                <TableCell className="text-right font-medium tabular-nums">
+                  ₦ {(order.totalPrice ?? 0).toLocaleString()}
+                </TableCell>
+                <TableCell>
+                  <RowChevron />
+                </TableCell>
+              </TableRow>
+            ))}
+            {result.data.length === 0 && (
+              <EmptyRow colSpan={8} title="No orders match" body="Clear the search, channel or tab." />
+            )}
+          </TableBody>
+        </Table>
+      </ListCard>
+    </PageStack>
   );
 }

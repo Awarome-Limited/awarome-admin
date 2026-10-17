@@ -9,7 +9,7 @@ import { formatDate } from '@/lib/format';
 import type { RiderCollectionCredit } from '@/lib/types';
 import { resolveRiderCollectionCredit } from '../../bulk-deliveries/actions';
 
-const naira = (amount: number) => `₦${Math.round(amount).toLocaleString('en-NG')}`;
+const naira = (amount: number) => `₦ ${Math.round(amount).toLocaleString('en-NG')}`;
 
 const KIND: Record<RiderCollectionCredit['kind'], string> = {
   'no-drop': 'Arrived while the rider wasn’t at a bulk drop the receiver pays',
@@ -46,17 +46,17 @@ export function RiderCollectionCredits({
                 <span className="font-semibold tabular-nums">{naira(credit.amount)}</span>
                 {credit.senderName ? ` from ${credit.senderName}${credit.senderBank ? ` (${credit.senderBank})` : ''}` : ''}
                 {' '}into {rider || 'a rider'}’s account{' '}
-                <span className="font-mono">{credit.accountNumber}</span>
+                <span className="tabular-nums">{credit.accountNumber}</span>
               </span>
               <span className="text-muted-foreground">
                 {KIND[credit.kind]} · {formatDate(credit.at)}
               </span>
               {credit.delivery?.bulk && (
-                <Link href={`/bulk-deliveries/${credit.delivery.bulk}`} className="text-primary hover:underline">
+                <Link href={`/bulk-deliveries/${credit.delivery.bulk}`} className="text-primary hover:text-warning">
                   {credit.delivery.receiver?.name ?? credit.delivery.deliveryId}
                 </Link>
               )}
-              <span className="font-mono text-[11px] text-muted-foreground">{credit.reference}</span>
+              <span className="tabular-nums text-[11px] text-muted-foreground">{credit.reference}</span>
             </div>
             {canUpdate && (
               <Button

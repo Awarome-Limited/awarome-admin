@@ -1,284 +1,140 @@
 import { PermissionModule } from '@/lib/permissions';
 
 /**
- * Sidebar order is the order of this list: People first, so customers,
- * businesses, vendors and riders are one click away. Analytics lives on the
- * dashboard (`/`), which the sidebar always shows at the top.
+ * The sidebar is seven workspaces, not a flat list of links (DESIGN.md §2).
+ * Only the active workspace expands; a collapsed one shows a yellow dot when a
+ * page inside it has a queue waiting. Add new pages to an existing workspace.
  */
+
+/** Pages whose pending work gets a yellow count badge in the sidebar. */
+export type QueueKey = 'riderApprovals' | 'supportTickets' | 'cancellations' | 'unassigned';
+
+export type QueueCounts = Partial<Record<QueueKey, number>>;
+
 export interface NavItem {
   label: string;
   href: string;
-  module: PermissionModule;
-  icon: string;
-  category: string;
+  /** Omitted for pages every staff member can open (Dashboard, Settings). */
+  module?: PermissionModule;
+  queue?: QueueKey;
 }
 
-export const DASHBOARD_ICON = 'M3 3h7v7H3z M14 3h7v7h-7z M14 14h7v7h-7z M3 14h7v7H3z';
+export interface NavWorkspace {
+  label: string;
+  icon: string;
+  items: NavItem[];
+}
 
-export const NAV_ITEMS: NavItem[] = [
-  // People
+export const NAV_WORKSPACES: NavWorkspace[] = [
   {
-    label: 'Users',
-    href: '/users',
-    module: PermissionModule.USERS,
+    label: 'Overview',
+    icon: 'M3 3h7v9H3z M14 3h7v5h-7z M14 12h7v9h-7z M3 16h7v5H3z',
+    items: [{ label: 'Dashboard', href: '/' }],
+  },
+  {
+    label: 'People',
     icon: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75',
-    category: 'People',
+    items: [
+      { label: 'Users', href: '/users', module: PermissionModule.USERS },
+      { label: 'Businesses', href: '/businesses', module: PermissionModule.BUSINESSES },
+      { label: 'Vendors', href: '/vendors', module: PermissionModule.VENDORS },
+      { label: 'Riders', href: '/riders', module: PermissionModule.RIDERS },
+      {
+        label: 'Rider approvals',
+        href: '/riders/approvals',
+        module: PermissionModule.RIDERS,
+        queue: 'riderApprovals',
+      },
+      { label: 'API partners', href: '/partners', module: PermissionModule.PARTNERS },
+    ],
   },
   {
-    label: 'Businesses',
-    href: '/businesses',
-    module: PermissionModule.BUSINESSES,
-    icon: 'M3 21h18 M5 21V7l7-4 7 4v14 M9 21v-6h6v6 M9 10h.01 M15 10h.01',
-    category: 'People',
-  },
-  {
-    label: 'Vendors',
-    href: '/vendors',
-    module: PermissionModule.VENDORS,
-    icon: 'M3 9l1.5-5h15L21 9 M4 9v10h16V9 M9 19v-6h6v6',
-    category: 'People',
-  },
-  {
-    label: 'Riders',
-    href: '/riders',
-    module: PermissionModule.RIDERS,
-    icon: 'M5.5 17.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5 M18.5 17.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5 M5.5 12.5L9 6h4l2.5 4 M12 6l2 9',
-    category: 'People',
-  },
-  {
-    label: 'Rider Approvals',
-    href: '/riders/approvals',
-    module: PermissionModule.RIDERS,
-    icon: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M16 11l2 2 4-4',
-    category: 'People',
-  },
-  {
-    label: 'API partners',
-    href: '/partners',
-    module: PermissionModule.PARTNERS,
-    icon: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M19 8v6 M22 11h-6',
-    category: 'People',
-  },
-
-  // Operations
-  {
-    label: 'Orders',
-    href: '/orders',
-    module: PermissionModule.ORDERS,
+    label: 'Operations',
     icon: 'M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z M3 6h18 M16 10a4 4 0 0 1-8 0',
-    category: 'Operations',
+    items: [
+      { label: 'Orders', href: '/orders', module: PermissionModule.ORDERS },
+      { label: 'Deliveries', href: '/deliveries', module: PermissionModule.DELIVERIES },
+      { label: 'Bulk deliveries', href: '/bulk-deliveries', module: PermissionModule.DELIVERIES },
+      {
+        label: 'Support tickets',
+        href: '/support-tickets',
+        module: PermissionModule.ORDERS,
+        queue: 'supportTickets',
+      },
+      {
+        label: 'Cancellations',
+        href: '/cancellations',
+        module: PermissionModule.ORDERS,
+        queue: 'cancellations',
+      },
+    ],
   },
   {
-    label: 'Deliveries',
-    href: '/deliveries',
-    module: PermissionModule.DELIVERIES,
-    icon: 'M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z M12 13a3 3 0 1 1 0-6 3 3 0 0 1 0 6z',
-    category: 'Operations',
-  },
-  {
-    label: 'Bulk Deliveries',
-    href: '/bulk-deliveries',
-    module: PermissionModule.DELIVERIES,
-    icon: 'M3 7h13v10H3z M7 3h13v10 M7 11h5 M7 14h3',
-    category: 'Operations',
-  },
-  {
-    label: 'Support Tickets',
-    href: '/support-tickets',
-    module: PermissionModule.ORDERS,
-    icon: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z M12 7v4 M12 14h.01',
-    category: 'Operations',
-  },
-  {
-    label: 'Cancellations',
-    href: '/cancellations',
-    module: PermissionModule.ORDERS,
-    icon: 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z M12 9v4 M12 17h.01',
-    category: 'Operations',
-  },
-
-  // Dispatch
-  {
-    label: 'Forming Batches',
-    href: '/forming-batches',
-    module: PermissionModule.DELIVERIES,
-    icon: 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z M12 22V12 M3.3 7L12 12l8.7-5',
-    category: 'Dispatch',
-  },
-  {
-    label: 'Batches',
-    href: '/batches',
-    module: PermissionModule.DELIVERIES,
+    label: 'Dispatch',
     icon: 'M3 7h11v10H3z M14 10h4l3 3v4h-7 M7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4 M17 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4',
-    category: 'Dispatch',
+    items: [
+      {
+        label: 'Unassigned',
+        href: '/unassigned',
+        module: PermissionModule.ORDERS,
+        queue: 'unassigned',
+      },
+      { label: 'Forming batches', href: '/forming-batches', module: PermissionModule.DELIVERIES },
+      { label: 'Batches', href: '/batches', module: PermissionModule.DELIVERIES },
+    ],
   },
   {
-    label: 'Unassigned',
-    href: '/unassigned',
-    module: PermissionModule.ORDERS,
-    icon: 'M22 12h-6l-2 3h-4l-2-3H2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6z M5.45 5.11L2 12h20l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z',
-    category: 'Dispatch',
-  },
-
-  // Finance
-  {
-    label: 'Payments',
-    href: '/payments',
-    module: PermissionModule.PAYMENTS,
+    label: 'Finance',
     icon: 'M21 4H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z M1 10h22',
-    category: 'Finance',
+    items: [
+      { label: 'Payments', href: '/payments', module: PermissionModule.PAYMENTS },
+      { label: 'Wallets', href: '/payments/wallets', module: PermissionModule.PAYMENTS },
+      { label: 'Refunds', href: '/refunds', module: PermissionModule.PAYMENTS },
+      { label: 'Rider payouts', href: '/payouts', module: PermissionModule.PAYMENTS },
+      { label: 'Vendor payouts', href: '/vendor-payouts', module: PermissionModule.PAYMENTS },
+      { label: 'Business payouts', href: '/business-payouts', module: PermissionModule.PAYMENTS },
+      { label: 'Bulk receivables', href: '/bulk-receivables', module: PermissionModule.PAYMENTS },
+    ],
   },
   {
-    label: 'Wallets',
-    href: '/payments/wallets',
-    module: PermissionModule.PAYMENTS,
-    icon: 'M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4 M4 6v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4 M18 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
-    category: 'Finance',
-  },
-  {
-    label: 'Refunds',
-    href: '/refunds',
-    module: PermissionModule.PAYMENTS,
-    icon: 'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8 M3 3v5h5',
-    category: 'Finance',
-  },
-  {
-    label: 'Rider Payouts',
-    href: '/payouts',
-    module: PermissionModule.PAYMENTS,
-    icon: 'M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
-    category: 'Finance',
-  },
-  {
-    label: 'Vendor Payouts',
-    href: '/vendor-payouts',
-    module: PermissionModule.PAYMENTS,
-    icon: 'M3 9l1.5-5h15L21 9 M4 9v10h16V9 M12 11v6 M14.5 12.5h-3.25a1.25 1.25 0 0 0 0 2.5h1.5a1.25 1.25 0 0 1 0 2.5H9.5',
-    category: 'Finance',
-  },
-  {
-    label: 'Business Payouts',
-    href: '/business-payouts',
-    module: PermissionModule.PAYMENTS,
-    icon: 'M3 21h18 M5 21V7l7-4 7 4v14 M12 9v8 M14.5 10.5h-3.25a1.25 1.25 0 0 0 0 2.5h1.5a1.25 1.25 0 0 1 0 2.5H9.5',
-    category: 'Finance',
-  },
-  {
-    label: 'Bulk Receivables',
-    href: '/bulk-receivables',
-    module: PermissionModule.PAYMENTS,
-    icon: 'M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
-    category: 'Finance',
-  },
-
-  // Catalog & Marketing
-  {
-    label: 'Products',
-    href: '/products',
-    module: PermissionModule.PRODUCTS,
-    icon: 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z M3.3 7L12 12l8.7-5 M12 22V12',
-    category: 'Catalog & Marketing',
-  },
-  {
-    label: 'Promo Codes',
-    href: '/promo-codes',
-    module: PermissionModule.PROMO_CODES,
-    icon: 'M19 5L5 19 M6.5 8a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3 M17.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3',
-    category: 'Catalog & Marketing',
-  },
-  {
-    label: 'Campaigns',
-    href: '/campaigns',
-    module: PermissionModule.CAMPAIGNS,
+    label: 'Catalog & marketing',
     icon: 'M3 11l18-5v12L3 14v-3z M11.6 16.8a3 3 0 1 1-5.8-1.6',
-    category: 'Catalog & Marketing',
+    items: [
+      { label: 'Products', href: '/products', module: PermissionModule.PRODUCTS },
+      { label: 'Promo codes', href: '/promo-codes', module: PermissionModule.PROMO_CODES },
+      { label: 'Campaigns', href: '/campaigns', module: PermissionModule.CAMPAIGNS },
+      {
+        label: 'Push notifications',
+        href: '/push-notifications',
+        module: PermissionModule.NOTIFICATIONS,
+      },
+      { label: 'Customer emails', href: '/customer-emails', module: PermissionModule.NOTIFICATIONS },
+      { label: 'Banners', href: '/banners', module: PermissionModule.ADS },
+      { label: 'Carts', href: '/carts', module: PermissionModule.CARTS },
+    ],
   },
   {
-    label: 'Push Notifications',
-    href: '/push-notifications',
-    module: PermissionModule.NOTIFICATIONS,
-    icon: 'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9 M13.73 21a2 2 0 0 1-3.46 0',
-    category: 'Catalog & Marketing',
-  },
-  {
-    label: 'Customer Emails',
-    href: '/customer-emails',
-    module: PermissionModule.NOTIFICATIONS,
-    icon: 'M4 4h16v16H4z M4 7l8 6 8-6',
-    category: 'Catalog & Marketing',
-  },
-  {
-    label: 'Banners',
-    href: '/banners',
-    module: PermissionModule.ADS,
-    icon: 'M2 5.5h20v13H2z M2 10h20 M6 14.5h6',
-    category: 'Catalog & Marketing',
-  },
-  {
-    label: 'Carts',
-    href: '/carts',
-    module: PermissionModule.CARTS,
-    icon: 'M9 22a1 1 0 1 0 0-2 1 1 0 0 0 0 2 M20 22a1 1 0 1 0 0-2 1 1 0 0 0 0 2 M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6',
-    category: 'Catalog & Marketing',
-  },
-
-  // Configuration
-  {
-    label: 'Pricing',
-    href: '/pricing',
-    module: PermissionModule.PRICING,
-    icon: 'M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z M7 7h.01',
-    category: 'Configuration',
-  },
-  {
-    label: 'Dispatch Rules',
-    href: '/dispatch',
-    module: PermissionModule.PRICING,
-    icon: 'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
-    category: 'Configuration',
-  },
-  {
-    label: 'Delivery Options',
-    href: '/delivery-options',
-    module: PermissionModule.PRICING,
-    icon: 'M14 17V5a1 1 0 0 0-1-1H2v13h4 M14 9h4l3 3v5h-3 M6.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4 M17.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4',
-    category: 'Configuration',
-  },
-  {
-    label: 'Delivery Zones',
-    href: '/zones',
-    module: PermissionModule.PRICING,
-    icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M2 12h20 M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z',
-    category: 'Configuration',
-  },
-  {
-    label: 'Service Area',
-    href: '/service-area',
-    module: PermissionModule.PRICING,
-    icon: 'M9 3L3 6v15l6-3 6 3 6-3V3l-6 3-6-3z M9 3v15 M15 6v15',
-    category: 'Configuration',
-  },
-  {
-    label: 'Operating Hours',
-    href: '/operating-hours',
-    module: PermissionModule.PRICING,
-    icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M12 6v6l4 2',
-    category: 'Configuration',
-  },
-
-  // Admin
-  {
-    label: 'Staff',
-    href: '/staff',
-    module: PermissionModule.STAFF,
-    icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z M9 12l2 2 4-4',
-    category: 'Admin',
-  },
-  {
-    label: 'Activity Logs',
-    href: '/activity-logs',
-    module: PermissionModule.ACTIVITY_LOGS,
-    icon: 'M22 12h-4l-3 9L9 3l-3 9H2',
-    category: 'Admin',
+    label: 'Configuration',
+    icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
+    items: [
+      { label: 'Pricing', href: '/pricing', module: PermissionModule.PRICING },
+      { label: 'Dispatch rules', href: '/dispatch', module: PermissionModule.PRICING },
+      { label: 'Delivery options', href: '/delivery-options', module: PermissionModule.PRICING },
+      { label: 'Delivery zones', href: '/zones', module: PermissionModule.PRICING },
+      { label: 'Service area', href: '/service-area', module: PermissionModule.PRICING },
+      { label: 'Operating hours', href: '/operating-hours', module: PermissionModule.PRICING },
+      { label: 'Staff', href: '/staff', module: PermissionModule.STAFF },
+      { label: 'Activity logs', href: '/activity-logs', module: PermissionModule.ACTIVITY_LOGS },
+      { label: 'Settings', href: '/settings' },
+    ],
   },
 ];
+
+/** The nav item a pathname belongs to: the longest href that prefixes it. */
+export function matchNavItem<T extends NavItem>(items: T[], pathname: string): T | undefined {
+  return items
+    .filter((item) =>
+      item.href === '/' ? pathname === '/' : pathname === item.href || pathname.startsWith(item.href + '/')
+    )
+    .sort((a, b) => b.href.length - a.href.length)[0];
+}

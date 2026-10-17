@@ -5,7 +5,8 @@ import { AdminAudienceList } from '@/lib/types';
 import { broadcastPushNotification } from '../actions';
 import { ComposeForm } from './compose-form';
 import { AudienceListsManager } from './audience-lists-manager';
-import { PushPreviewCard } from './push-preview-card';
+import { LockScreen, PushPreviewCard } from './push-preview-card';
+import { Panel } from '@/components/page';
 
 export function PushNotificationsClient({
   initialLists,
@@ -21,46 +22,34 @@ export function PushNotificationsClient({
   }
 
   return (
-    <div className="flex flex-col gap-[18px]">
-      {/* Compose + Preview grid */}
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1.55fr_1fr]">
-        <div className="rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]">
-          <div className="mb-[18px] text-[15px] font-semibold text-foreground">Compose</div>
+    <div className="flex flex-col gap-7">
+      <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
+        <Panel title="Compose">
           <ComposeForm
             action={broadcastPushNotification}
             audienceLists={audienceLists}
             onTitleChange={setPreviewTitle}
             onBodyChange={setPreviewBody}
           />
-        </div>
+        </Panel>
 
-        <div className="flex flex-col rounded-[14px] border border-border bg-card p-[22px_24px] shadow-[var(--shadow-card)]">
-          <div className="mb-1.5 text-[15px] font-semibold text-foreground">Preview</div>
-          <div className="mb-[18px] text-[12.5px] text-muted-foreground">
-            How it appears on a device.
-          </div>
-          <div
-            className="flex-1 rounded-[18px] p-4"
-            style={{ background: 'linear-gradient(150deg, var(--brand-tint), var(--muted, #f4f5f7))' }}
-          >
+        <div className="flex flex-col gap-3 lg:sticky lg:top-6">
+          <span className="text-[12px] font-medium tracking-[0.08em] text-muted-foreground uppercase">Preview</span>
+          <LockScreen>
             <PushPreviewCard title={previewTitle} body={previewBody} />
-          </div>
+          </LockScreen>
         </div>
-      </div>
+      </section>
 
-      {/* Audience lists header */}
-      <div className="flex flex-wrap items-end justify-between gap-3 pt-1">
-        <div>
-          <h2 className="text-[17px] font-bold tracking-tight text-foreground">
-            Audience lists
-          </h2>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            Upload a CSV of phone numbers to create a reusable, targetable audience.
-          </p>
+      <Panel
+        flush
+        title="Audience lists"
+        description="Upload a CSV of phone numbers to create a reusable, targetable audience."
+      >
+        <div className="p-5">
+          <AudienceListsManager lists={audienceLists} onListCreated={handleListCreated} />
         </div>
-      </div>
-
-      <AudienceListsManager lists={audienceLists} onListCreated={handleListCreated} />
+      </Panel>
     </div>
   );
 }

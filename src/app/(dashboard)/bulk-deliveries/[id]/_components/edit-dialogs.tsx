@@ -26,7 +26,7 @@ import {
 import { AddressInput } from '../../_components/address-input';
 
 const inputClass =
-  'h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive';
+  'field w-full';
 
 /** The API's reply says what changed; a pricing note in it deserves longer. */
 function announce(message: string) {
@@ -116,7 +116,7 @@ export interface BulkPricingContext {
   terms: BulkPricingTerms;
 }
 
-const naira = (amount: number) => `₦${Math.round(amount).toLocaleString('en-NG')}`;
+const naira = (amount: number) => `₦ ${Math.round(amount).toLocaleString('en-NG')}`;
 
 /** Mirrors the API: once money has moved on a drop, its price is fixed. */
 function priceLocked(drop: BulkDeliveryDrop) {
@@ -327,7 +327,7 @@ export function EditDropDialog({
             </span>
           </div>
 
-          <div className="flex flex-col gap-3 rounded-[12px] border border-border p-3.5">
+          <div className="flex flex-col gap-3 rounded-[10px] border border-border p-3.5">
             <div className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-2">
                 <span className="text-[13px] font-semibold text-foreground">Price</span>
@@ -421,7 +421,7 @@ export function EditDropDialog({
                       <button
                         type="button"
                         onClick={() => setFeeOverride('')}
-                        className="ml-2 font-semibold text-primary hover:underline"
+                        className="ml-2 font-semibold text-primary hover:text-warning"
                       >
                         Use tariff
                       </button>
