@@ -133,17 +133,16 @@ const QUEUES: { key: QueueKey; label: string; meta: string; href: string }[] = [
 async function NeedsYouNow({ profile }: { profile: StaffProfile }) {
   const counts = await getQueueCounts(profile);
   const tiles = QUEUES.filter((q) => counts[q.key] !== undefined);
-  if (tiles.length === 0) return null;
   const waiting = tiles.filter((q) => counts[q.key]! > 0);
+  // Only there when something is actually waiting; an all-zero panel is noise.
+  if (waiting.length === 0) return null;
 
   return (
     <section className="flex flex-col gap-4 rounded-[10px] border border-border bg-card px-[22px] py-5">
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
         <AsteriskMark />
         <h2 className="text-[19px] leading-tight font-bold">Needs you now</h2>
-        <span className="text-[13px] text-muted-foreground">
-          {waiting.length > 0 ? 'Queues that block customers or riders' : 'Nothing is waiting on you'}
-        </span>
+        <span className="text-[13px] text-muted-foreground">Queues that block customers or riders</span>
       </div>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-3">
         {tiles.map((q) => {
