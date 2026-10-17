@@ -20,6 +20,7 @@ interface DispatchConfig {
   riderCommissionPercent: number;
   riderDebtThreshold: number;
   businessBatchMaxDrops: number;
+  riderAppMinBuild?: number;
 }
 
 export default async function DispatchPage() {
@@ -53,6 +54,7 @@ export default async function DispatchPage() {
       pickupRadiusKm: num('pickupRadiusKm'),
       selectionCutoffMinutes: num('selectionCutoffMinutes'),
       businessBatchMaxDrops: num('businessBatchMaxDrops'),
+      riderAppMinBuild: num('riderAppMinBuild'),
       batchMaxWaitMs: num('batchMaxWaitMinutes') * 60 * 1000,
       batchMaxSize: {
         bike: num('batchMaxSizeBike'),
@@ -138,6 +140,13 @@ export default async function DispatchPage() {
       sub: 'A business batch booking goes out as one trip, broadcast to riders. This caps how many drops that trip can carry (at least 3). For same-route businesses, every drop must also be within the dropoff radius above of one another.',
       fields: [
         { label: 'Max drops per batch', name: 'businessBatchMaxDrops', unit: '#', value: config.businessBatchMaxDrops ?? 8 },
+      ],
+    },
+    {
+      title: 'Courier app',
+      sub: 'Riders on an older build of the courier app are stopped until they update. Set it to the build number of a release (the number in brackets, e.g. 14 for 1.0.11 (14)) once that release is live in both stores. 0 lets every build through. Newer releases are always offered to riders, whatever this says.',
+      fields: [
+        { label: 'Oldest build allowed', name: 'riderAppMinBuild', unit: '#', value: config.riderAppMinBuild ?? 0 },
       ],
     },
     {
