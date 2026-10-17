@@ -116,8 +116,8 @@ export default async function PayoutDetailPage({
                 {!accountChanged && (
                   <PayoutActionButton
                     label="Approve and pay"
-                    title={`Send ${naira(payout.amount)} to ${personName(rider)}?`}
-                    description={`${naira(payout.amount)} is sent by Paystack transfer to ${bank.bankName ?? 'their bank'} •••• ${bank.accountNumber?.slice(-4) ?? ''} (${bank.accountName ?? 'no name on file'}). This can't be undone once Paystack accepts it.`}
+                    title={`Send ${naira(payout.amount - (payout.fee ?? 0))} to ${personName(rider)}?`}
+                    description={`${naira(payout.amount - (payout.fee ?? 0))}${payout.fee ? ` (${naira(payout.amount)} less the ${naira(payout.fee)} transfer fee the courier pays)` : ''} is sent by Paystack transfer to ${bank.bankName ?? 'their bank'} •••• ${bank.accountNumber?.slice(-4) ?? ''} (${bank.accountName ?? 'no name on file'}). This can't be undone once Paystack accepts it.`}
                     confirmLabel="Approve and send"
                     successMessage="Approved — transfer sent to Paystack"
                     action={approvePayoutRequest.bind(null, payout._id)}
@@ -184,6 +184,12 @@ export default async function PayoutDetailPage({
             </CardHeader>
             <CardContent className="flex flex-col gap-3 text-sm">
               <DetailRow label="Amount" value={<span className="font-semibold tabular-nums">{naira(payout.amount)}</span>} />
+              {!!payout.fee && (
+                <>
+                  <DetailRow label="Transfer fee" value={<span className="tabular-nums">{naira(payout.fee)} · paid by the courier</span>} />
+                  <DetailRow label="Sent to bank" value={<span className="tabular-nums">{naira(payout.amount - payout.fee)}</span>} />
+                </>
+              )}
               <DetailRow label="Reference" value={<span className="tabular-nums text-xs">{payout.reference}</span>} />
               {payout.trigger === 'offline' && (
                 <>

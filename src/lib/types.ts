@@ -988,6 +988,8 @@ export interface AdminRiderPayout {
   }) | null;
   run?: string | PayoutRunRef | null;
   amount: number;
+  /** Paystack's transfer fee, paid by the courier: the bank receives amount − fee. */
+  fee?: number;
   currency: string;
   status: RiderPayoutStatus;
   reference: string;
