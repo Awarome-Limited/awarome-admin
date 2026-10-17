@@ -1055,6 +1055,10 @@ export interface RiderPayoutSummary {
   totalPaid: number;
   payoutsCount: number;
   lastPaidAt: string | null;
+  /** Lifetime pay for jobs done, net of commission, however it was settled. */
+  totalEarned?: number;
+  totalCommission?: number;
+  earningsCount?: number;
 }
 
 /** One movement on a courier's wallet, from GET /admins/payouts/riders/:id/ledger. Naira. */

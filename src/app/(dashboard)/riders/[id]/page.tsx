@@ -136,6 +136,13 @@ export default async function RiderDetailPage({
   ];
   if (payoutSummary) {
     stats.push(
+      {
+        label: 'Total earnings',
+        value: naira(payoutSummary.totalEarned ?? 0),
+        meta: payoutSummary.totalCommission
+          ? `After ${naira(payoutSummary.totalCommission)} commission`
+          : 'Net of commission',
+      },
       owes > 0
         ? {
             label: 'Owes Awarome',
@@ -155,11 +162,6 @@ export default async function RiderDetailPage({
       }
     );
   }
-  stats.push({
-    label: 'Verification',
-    value: verificationLabel,
-    meta: rider.verificationNote || (verificationStatus === 'approved' ? 'Can receive jobs' : undefined),
-  });
 
   return (
     <PageStack>
@@ -167,7 +169,14 @@ export default async function RiderDetailPage({
         back={{ href: '/riders', label: 'All riders' }}
         avatar={<AvatarInitials name={name || undefined} size="lg" />}
         title={name || 'No name yet'}
-        status={<StatusPill suspended={!!rider.suspended} />}
+        status={
+          <span className="flex flex-wrap items-center gap-2">
+            <StatusPill suspended={!!rider.suspended} />
+            <Badge variant={verificationVariant} dot>
+              {verificationStatus === 'approved' ? 'Verified' : verificationLabel}
+            </Badge>
+          </span>
+        }
         meta={[
           rider.vehicleType && humanize(rider.vehicleType),
           rider.status && humanize(rider.status),
