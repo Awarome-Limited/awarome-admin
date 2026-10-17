@@ -1054,6 +1054,36 @@ export interface RiderPayoutSummary {
   lastPaidAt: string | null;
 }
 
+/** One movement on a courier's wallet, from GET /admins/payouts/riders/:id/ledger. Naira. */
+export interface RiderLedgerEntry {
+  _id: string;
+  type:
+    | 'rider-earning'
+    | 'rider-withdrawal'
+    | 'rider-cash-collection'
+    | 'rider-wallet-funding'
+    | 'rider-adjustment'
+    | string;
+  /** Signed: what this entry did to the balance. */
+  amount: number;
+  status: string;
+  /** The balance once this entry landed; null for failed entries, which never count. */
+  balanceAfter: number | null;
+  note: string | null;
+  reference: string | null;
+  order: { _id: string; orderId?: string } | null;
+  delivery: { _id: string; deliveryId?: string } | null;
+  /** Awarome's cut, on an earning. */
+  commission: number | null;
+  grossFee: number | null;
+  payout: { _id: string; status: RiderPayoutStatus; trigger: RiderPayoutTrigger } | null;
+  /** Staff who made an adjustment or recorded a bank payout. */
+  staff: { name: string } | null;
+  /** Who sent a top-up. */
+  sender: string | null;
+  createdAt: string;
+}
+
 export interface PayoutSettings {
   payoutsEnabled: boolean;
   payoutHourLagos: number;

@@ -31,7 +31,7 @@ import { RiderDocuments } from '@/components/rider-documents';
 import { getRiderPosition, setRiderSuspended } from '../actions';
 import { RiderLocationMap } from '@/components/rider-location-map';
 import { riderPosition } from '@/lib/rider-position';
-import type { RiderPayoutSummary } from '@/lib/types';
+import type { RiderLedgerEntry, RiderPayoutSummary } from '@/lib/types';
 import { getSession } from '@/lib/session';
 import { hasPermission, PermissionAction, PermissionModule } from '@/lib/permissions';
 import { payRiderNow, recordRiderBankPayout } from '../../payouts/actions';
@@ -41,8 +41,10 @@ import { naira, payoutStatusLabel, payoutStatusVariant } from '../../payouts/pay
 import type { RiderCollectionAccount } from '@/lib/types';
 import { RiderCollectionAccountCard } from './_components/collection-account';
 import { AdjustBalanceDialog } from './_components/adjust-balance-dialog';
+import { WalletLedger } from './_components/wallet-ledger';
 
 const LIMIT = 10;
+const LEDGER_LIMIT = 15;
 
 export default async function RiderDetailPage({
   params,
@@ -54,6 +56,7 @@ export default async function RiderDetailPage({
   const { id } = await params;
   const query = await searchParams;
   const skip = Number(query.skip ?? 0);
+  const ledgerSkip = Number(query.wskip ?? 0);
 
   let rider: AdminRider;
   let orders: PaginatedResponse<AdminOrder>;
@@ -83,13 +86,16 @@ export default async function RiderDetailPage({
     !!session && hasPermission(session.profile, PermissionModule.PAYMENTS, PermissionAction.VIEW);
   const canPay =
     !!session && hasPermission(session.profile, PermissionModule.PAYMENTS, PermissionAction.UPDATE);
-  const payoutSummary = canViewPayouts
-    ? await authedFetch<SingleResponse<RiderPayoutSummary>>(
-        `/admins/payouts/riders/${id}/summary`
-      )
-        .then((r) => r.data)
-        .catch(() => null)
-    : null;
+  const [payoutSummary, ledger] = canViewPayouts
+    ? await Promise.all([
+        authedFetch<SingleResponse<RiderPayoutSummary>>(`/admins/payouts/riders/${id}/summary`)
+          .then((r) => r.data)
+          .catch(() => null),
+        authedFetch<PaginatedResponse<RiderLedgerEntry>>(
+          `/admins/payouts/riders/${id}/ledger?skip=${ledgerSkip}&limit=${LEDGER_LIMIT}`
+        ).catch(() => null),
+      ])
+    : [null, null];
 
   const canUpdateRider =
     !!session && hasPermission(session.profile, PermissionModule.RIDERS, PermissionAction.UPDATE);
@@ -377,6 +383,32 @@ export default async function RiderDetailPage({
               >
                 Payout history
               </Link>
+            </Panel>
+          )}
+
+          {ledger && (
+            <Panel
+              flush
+              title="Wallet activity"
+              aside={
+                <span className="text-[13px] text-muted-foreground tabular-nums">
+                  {ledger.totalCount.toLocaleString()} {ledger.totalCount === 1 ? 'entry' : 'entries'}
+                </span>
+              }
+            >
+              <WalletLedger entries={ledger.data} />
+              {ledger.totalCount > LEDGER_LIMIT && (
+                <div className="border-t border-border px-6 py-3.5">
+                  <PaginationControls
+                    skip={ledgerSkip}
+                    limit={LEDGER_LIMIT}
+                    totalCount={ledger.totalCount}
+                    basePath={`/riders/${id}`}
+                    searchParams={query}
+                    skipParam="wskip"
+                  />
+                </div>
+              )}
             </Panel>
           )}
 
