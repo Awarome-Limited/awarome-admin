@@ -1,6 +1,7 @@
 'use client';
 
 import { MapPinIcon } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -118,20 +119,32 @@ export function AddressInput<A extends DeliveryAddress = DeliveryAddress>({
         aria-invalid={!resolved && query.trim().length > 0}
         title={resolved ? value.address : 'Pick a suggestion so the rider gets an exact location'}
         className={cn(
-          'field pr-24',
-          compact && 'h-9 px-2.5 text-[13.5px]',
+          'field',
+          // Room on the right for the status, so long addresses never run under it.
+          compact ? 'h-9 pr-8 pl-2.5 text-[13.5px]' : 'pr-28',
           !resolved && query.trim() && 'border-warning bg-warning-bg focus-visible:border-warning'
         )}
       />
-      <span className="pointer-events-none absolute top-1/2 right-3 flex -translate-y-1/2 items-center gap-1 text-[12px] text-muted-foreground">
-        {isResolving ? (
-          'Locating…'
-        ) : isSearching ? (
-          'Searching…'
+      <span
+        aria-live="polite"
+        className={cn(
+          'pointer-events-none absolute top-1/2 flex -translate-y-1/2 items-center gap-1 text-[12px] text-muted-foreground',
+          compact ? 'right-2.5' : 'right-3'
+        )}
+      >
+        {isResolving || isSearching ? (
+          compact ? (
+            <Spinner className="size-3.5" />
+          ) : (
+            <>
+              <Spinner className="size-3.5" />
+              {isResolving ? 'Locating…' : 'Searching…'}
+            </>
+          )
         ) : resolved ? (
           <>
-            <MapPinIcon className="size-3.5 text-positive" />
-            Pinned
+            <MapPinIcon className="size-3.5 text-positive" aria-label="Pinned" />
+            {!compact && 'Pinned'}
           </>
         ) : null}
       </span>
